@@ -9,7 +9,7 @@ const Navbar = () => {
           to="/" 
           className="text-2xl font-extrabold text-slate-900 tracking-tight hover:opacity-90 transition"
         >
-          NTMS<span className="text-blue-600">.</span>
+          NTMS<span className="text-amber-500">.</span>
         </Link>
 
         {/* Authentication Navigation */}
@@ -23,7 +23,7 @@ const Navbar = () => {
           
           <Link 
             to="/register" 
-            className="text-sm font-medium bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-500 transition"
+            className="text-sm font-medium bg-slate-950 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-slate-800 hover:scale-105 active:scale-95 transition duration-200"
           >
             Get Started
           </Link>
