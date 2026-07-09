@@ -1,13 +1,91 @@
 const mongoose = require("mongoose");
 
+/**
+ * Customer Model
+ *
+ * Purpose: Extended profile for customer users
+ * - Links to User model
+ * - Stores business/company information
+ * - Maintains customer-specific data
+ *
+ * Relationships:
+ * - References User model via userId
+ * - One-to-Many with Shipment model
+ */
 const customerSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    phone: { type: String, required: true },
-    address: { type: String },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
+    companyName: {
+      type: String,
+      trim: true,
+      maxlength: [100, "Company name cannot exceed 100 characters"],
+    },
+    address: {
+      street: {
+        type: String,
+        trim: true,
+      },
+      city: {
+        type: String,
+        trim: true,
+      },
+      state: {
+        type: String,
+        trim: true,
+      },
+      zipCode: {
+        type: String,
+        trim: true,
+      },
+      country: {
+        type: String,
+        trim: true,
+        default: "Pakistan",
+      },
+    },
+    contactPerson: {
+      name: {
+        type: String,
+        trim: true,
+      },
+      phone: {
+        type: String,
+        trim: true,
+      },
+      email: {
+        type: String,
+        trim: true,
+        lowercase: true,
+      },
+    },
+    totalShipments: {
+      type: Number,
+      default: 0,
+    },
+    totalSpent: {
+      type: Number,
+      default: 0,
+    },
+    creditLimit: {
+      type: Number,
+      default: 0,
+    },
+    notes: {
+      type: String,
+      trim: true,
+    },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  },
 );
+
+// Index for faster queries
+customerSchema.index({ userId: 1 });
 
 module.exports = mongoose.model("Customer", customerSchema);

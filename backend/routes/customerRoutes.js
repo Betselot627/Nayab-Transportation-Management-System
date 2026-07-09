@@ -1,11 +1,34 @@
 const express = require("express");
 const router = express.Router();
-const customerController = require("../controllers/customerController");
+const {
+  getAllCustomers,
+  getCustomerById,
+  getMyProfile,
+  updateMyProfile,
+  getCustomerShipments,
+  updateCustomer,
+  deleteCustomer,
+} = require("../controllers/customerController");
+const { protect } = require("../middleware/authMiddleware");
+const { authorize } = require("../middleware/roleMiddleware");
 
-router.get("/", customerController.getAllCustomers);
-router.get("/:id", customerController.getCustomerById);
-router.post("/", customerController.createCustomer);
-router.put("/:id", customerController.updateCustomer);
-router.delete("/:id", customerController.deleteCustomer);
+/**
+ * Customer Management Routes
+ *
+ * Base URL: /api/customers
+ */
+
+router.use(protect);
+
+// Customer own profile routes
+router.get("/profile/me", authorize("customer"), getMyProfile);
+router.put("/profile/me", authorize("customer"), updateMyProfile);
+
+// Admin routes
+router.get("/", authorize("admin"), getAllCustomers);
+router.get("/:id", authorize("admin"), getCustomerById);
+router.put("/:id", authorize("admin"), updateCustomer);
+router.delete("/:id", authorize("admin"), deleteCustomer);
+router.get("/:id/shipments", authorize("admin"), getCustomerShipments);
 
 module.exports = router;

@@ -1,11 +1,42 @@
 const express = require("express");
 const router = express.Router();
-const driverController = require("../controllers/driverController");
+const {
+  getAllDrivers,
+  getDriverById,
+  createDriver,
+  updateDriver,
+  deleteDriver,
+  updateDriverStatus,
+  getAvailableDrivers,
+} = require("../controllers/driverController");
+const { protect } = require("../middleware/authMiddleware");
+const { authorize } = require("../middleware/roleMiddleware");
 
-router.get("/", driverController.getAllDrivers);
-router.get("/:id", driverController.getDriverById);
-router.post("/", driverController.createDriver);
-router.put("/:id", driverController.updateDriver);
-router.delete("/:id", driverController.deleteDriver);
+/**
+ * Driver Management Routes
+ *
+ * Base URL: /api/drivers
+ *
+ * Access Control:
+ * - GET: Admin, Dispatcher
+ * - POST/PUT/DELETE: Admin only
+ */
+
+router.use(protect);
+
+router
+  .route("/")
+  .get(authorize("admin", "dispatcher"), getAllDrivers)
+  .post(authorize("admin"), createDriver);
+
+router.get("/available", authorize("admin", "dispatcher"), getAvailableDrivers);
+
+router
+  .route("/:id")
+  .get(authorize("admin", "dispatcher"), getDriverById)
+  .put(authorize("admin"), updateDriver)
+  .delete(authorize("admin"), deleteDriver);
+
+router.put("/:id/status", authorize("admin", "driver"), updateDriverStatus);
 
 module.exports = router;
