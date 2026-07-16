@@ -5,13 +5,14 @@ const DriverLayout = () => {
   const links = [
     { path: "/driver/dashboard", label: "Dashboard" },
     { path: "/driver/my-trips", label: "My Trips" },
+    { path: "/driver/trip-details", label: "Trip Details" },
     { path: "/driver/update-status", label: "Update Status" },
   ];
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar links={links} />
-      <main className="flex-grow p-6 bg-gray-100">
+      <main className="flex-1 overflow-x-hidden">
         <Outlet />
       </main>
     </div>

@@ -105,8 +105,8 @@ function App() {
           >
             <Route path="dashboard" element={<DriverDashboard />} />
             <Route path="my-trips" element={<MyTrips />} />
-            <Route path="trip-details" element={<TripDetails />} />
-            <Route path="update-status" element={<UpdateStatus />} />
+            <Route path="trip-details/:id" element={<TripDetails />} />
+            <Route path="update-status/:id" element={<UpdateStatus />} />
           </Route>
 
           <Route

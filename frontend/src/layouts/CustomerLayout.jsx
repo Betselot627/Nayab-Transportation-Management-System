@@ -11,9 +11,9 @@ const CustomerLayout = () => {
   ];
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar links={links} />
-      <main className="flex-grow p-6 bg-gray-100">
+      <main className="flex-1 overflow-x-hidden">
         <Outlet />
       </main>
     </div>

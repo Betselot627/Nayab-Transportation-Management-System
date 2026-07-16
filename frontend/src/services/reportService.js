@@ -1,23 +1,35 @@
 import api from "./api";
 
 export const reportService = {
-  getShipmentReports: async (filters) => {
-    const response = await api.get("/reports/shipments", { params: filters });
+  // Get dashboard statistics
+  getDashboardStats: async () => {
+    const response = await api.get("/reports/dashboard");
     return response.data;
   },
 
-  getVehicleReports: async (filters) => {
-    const response = await api.get("/reports/vehicles", { params: filters });
+  // Get financial report
+  getFinancialReport: async (params = {}) => {
+    const response = await api.get("/reports/financial", { params });
     return response.data;
   },
 
-  getDriverReports: async (filters) => {
-    const response = await api.get("/reports/drivers", { params: filters });
+  // Get driver performance
+  getDriverPerformance: async () => {
+    const response = await api.get("/reports/driver-performance");
     return response.data;
   },
 
-  getFinancialReports: async (filters) => {
-    const response = await api.get("/reports/financial", { params: filters });
+  // Get vehicle utilization
+  getVehicleUtilization: async () => {
+    const response = await api.get("/reports/vehicle-utilization");
+    return response.data;
+  },
+
+  // Get monthly report
+  getMonthlyReport: async (year, month) => {
+    const response = await api.get("/reports/monthly", {
+      params: { year, month },
+    });
     return response.data;
   },
 };

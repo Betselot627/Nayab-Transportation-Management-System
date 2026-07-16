@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Truck,
   MapPin,
@@ -7,10 +8,12 @@ import {
   Clock,
   BarChart3,
   PackageCheck,
-  Route
+  Route,
 } from "lucide-react";
 
 const Home = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-white font-sans antialiased overflow-x-hidden">
       <style>{`
@@ -56,7 +59,6 @@ const Home = () => {
       <section className="relative overflow-hidden bg-slate-950 text-white">
         <div className="container mx-auto px-6 py-20 lg:py-32">
           <div className="grid items-center gap-12 md:grid-cols-2">
-            
             {/* Left Content */}
             <div className="space-y-6 text-center md:text-left">
               <span className="anim-fade-up inline-block text-xs font-semibold tracking-widest text-amber-400 uppercase">
@@ -67,14 +69,21 @@ const Home = () => {
                 <span className="block text-slate-300 mt-1">Management</span>
               </h1>
               <p className="anim-fade-up delay-200 max-w-xl text-lg text-slate-400 leading-relaxed mx-auto md:mx-0">
-                Nayab Transportation Management System helps businesses manage vehicles,
-                drivers, shipments, and deliveries efficiently through one powerful, unified digital platform.
+                Nayab Transportation Management System helps businesses manage
+                vehicles, drivers, shipments, and deliveries efficiently through
+                one powerful, unified digital platform.
               </p>
               <div className="anim-fade-up delay-300 flex flex-wrap justify-center md:justify-start gap-4 pt-2">
-                <button className="bg-amber-500 text-slate-950 px-8 py-3.5 rounded-lg font-semibold shadow-lg shadow-amber-900/20 hover:bg-amber-400 hover:scale-105 active:scale-95 transition duration-200">
+                <button
+                  onClick={() => navigate("/login")}
+                  className="bg-amber-500 text-slate-950 px-8 py-3.5 rounded-lg font-semibold shadow-lg shadow-amber-900/20 hover:bg-amber-400 hover:scale-105 active:scale-95 transition duration-200"
+                >
                   Book Shipment
                 </button>
-                <button className="border border-slate-700 bg-white/5 backdrop-blur-sm text-white px-8 py-3.5 rounded-lg font-medium hover:bg-white/10 hover:scale-105 active:scale-95 transition duration-200">
+                <button
+                  onClick={() => navigate("/login")}
+                  className="border border-slate-700 bg-white/5 backdrop-blur-sm text-white px-8 py-3.5 rounded-lg font-medium hover:bg-white/10 hover:scale-105 active:scale-95 transition duration-200"
+                >
                   Track Delivery
                 </button>
               </div>
@@ -91,11 +100,12 @@ const Home = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent" />
                 <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg border border-white/10">
                   <Truck className="w-4 h-4 text-amber-400" />
-                  <span className="text-sm font-medium text-white">Live Fleet Overview</span>
+                  <span className="text-sm font-medium text-white">
+                    Live Fleet Overview
+                  </span>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </section>
@@ -105,13 +115,25 @@ const Home = () => {
         <div className="container mx-auto">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 bg-white rounded-2xl p-8 shadow-xl border border-slate-100">
             <div className="anim-fade-up delay-100">
-              <StatCard icon={<Truck />} number="500+" text="Vehicles Managed" />
+              <StatCard
+                icon={<Truck />}
+                number="500+"
+                text="Vehicles Managed"
+              />
             </div>
             <div className="anim-fade-up delay-200">
-              <StatCard icon={<Users />} number="200+" text="Registered Drivers" />
+              <StatCard
+                icon={<Users />}
+                number="200+"
+                text="Registered Drivers"
+              />
             </div>
             <div className="anim-fade-up delay-300">
-              <StatCard icon={<PackageCheck />} number="10K+" text="Completed Shipments" />
+              <StatCard
+                icon={<PackageCheck />}
+                number="10K+"
+                text="Completed Shipments"
+              />
             </div>
             <div className="anim-fade-up delay-400">
               <StatCard icon={<Route />} number="50+" text="Active Routes" />
@@ -128,7 +150,8 @@ const Home = () => {
               Our Transportation Services
             </h2>
             <p className="text-lg text-slate-600 mt-4">
-              Complete solutions designed to streamline modern logistics and fleet operations.
+              Complete solutions designed to streamline modern logistics and
+              fleet operations.
             </p>
           </div>
 
@@ -138,6 +161,7 @@ const Home = () => {
                 icon={<Truck />}
                 title="Fleet Management"
                 description="Manage vehicles, availability, maintenance logs, and performance from a single centralized dashboard."
+                onClick={() => navigate("/login")}
               />
             </div>
             <div className="anim-fade-up delay-200">
@@ -145,6 +169,7 @@ const Home = () => {
                 icon={<MapPin />}
                 title="Shipment Tracking"
                 description="Monitor precise delivery locations and track active transportation routes accurately in real time."
+                onClick={() => navigate("/login")}
               />
             </div>
             <div className="anim-fade-up delay-300">
@@ -152,6 +177,7 @@ const Home = () => {
                 icon={<BarChart3 />}
                 title="Reports & Analytics"
                 description="Generate detailed operations reports and make smarter business decisions based on real data."
+                onClick={() => navigate("/login")}
               />
             </div>
           </div>
@@ -162,7 +188,6 @@ const Home = () => {
       <section className="bg-slate-950 text-white py-24">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-16 items-center">
-            
             {/* Info Side */}
             <div className="anim-fade-up space-y-8">
               <div className="space-y-4">
@@ -170,15 +195,25 @@ const Home = () => {
                   Why Choose NTMS?
                 </h2>
                 <p className="text-slate-400 text-lg leading-relaxed">
-                  Our platform eliminates manual paperwork, optimizes team communication,
-                  and hands transportation providers absolute control over their dynamic assets.
+                  Our platform eliminates manual paperwork, optimizes team
+                  communication, and hands transportation providers absolute
+                  control over their dynamic assets.
                 </p>
               </div>
 
               <div className="space-y-5">
-                <Feature icon={<ShieldCheck />} text="Secure and reliable enterprise-grade operations" />
-                <Feature icon={<Clock />} text="Save valuable hours with fully automated workflows" />
-                <Feature icon={<BarChart3 />} text="Deep analytical tools for performance tracking" />
+                <Feature
+                  icon={<ShieldCheck />}
+                  text="Secure and reliable enterprise-grade operations"
+                />
+                <Feature
+                  icon={<Clock />}
+                  text="Save valuable hours with fully automated workflows"
+                />
+                <Feature
+                  icon={<BarChart3 />}
+                  text="Deep analytical tools for performance tracking"
+                />
               </div>
             </div>
 
@@ -188,13 +223,16 @@ const Home = () => {
                 Ready to optimize your transportation ecosystem?
               </h3>
               <p className="text-slate-400 leading-relaxed">
-                Join NTMS today to transition your logistics architecture to the cloud and boost efficiency.
+                Join NTMS today to transition your logistics architecture to the
+                cloud and boost efficiency.
               </p>
-              <button className="w-full sm:w-auto bg-amber-500 text-slate-950 px-8 py-3.5 rounded-lg font-semibold shadow hover:bg-amber-400 hover:scale-105 active:scale-95 transition duration-200">
+              <button
+                onClick={() => navigate("/register")}
+                className="w-full sm:w-auto bg-amber-500 text-slate-950 px-8 py-3.5 rounded-lg font-semibold shadow hover:bg-amber-400 hover:scale-105 active:scale-95 transition duration-200"
+              >
                 Get Started Free
               </button>
             </div>
-
           </div>
         </div>
       </section>
@@ -209,27 +247,32 @@ const StatCard = ({ icon, number, text }) => (
     <div className="flex items-center justify-center text-amber-600 bg-amber-50 w-12 h-12 rounded-xl mb-4">
       {React.cloneElement(icon, { className: "w-6 h-6" })}
     </div>
-    <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{number}</span>
+    <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+      {number}
+    </span>
     <span className="text-sm font-medium text-slate-500 mt-1">{text}</span>
   </div>
 );
 
-const ServiceCard = ({ icon, title, description }) => (
-  <div className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
-    <div className="flex items-center justify-center text-amber-600 bg-amber-50 w-12 h-12 rounded-xl mb-6">
-      {React.cloneElement(icon, { className: "w-6 h-6" })}
+const ServiceCard = ({ icon, title, description, onClick }) => (
+  <div
+    onClick={onClick}
+    className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300 cursor-pointer"
+  >
+    <div className="flex items-center justify-center text-amber-600 bg-amber-50 w-14 h-14 rounded-xl mb-5">
+      {React.cloneElement(icon, { className: "w-7 h-7" })}
     </div>
     <h3 className="text-xl font-bold text-slate-900 mb-3">{title}</h3>
-    <p className="text-slate-600 leading-relaxed text-sm">{description}</p>
+    <p className="text-slate-600 leading-relaxed">{description}</p>
   </div>
 );
 
 const Feature = ({ icon, text }) => (
   <div className="flex items-start gap-4">
-    <div className="flex-shrink-0 text-amber-400 bg-white/5 p-1.5 rounded-lg mt-0.5">
+    <div className="flex items-center justify-center text-amber-400 bg-amber-500/10 w-10 h-10 rounded-lg flex-shrink-0">
       {React.cloneElement(icon, { className: "w-5 h-5" })}
     </div>
-    <p className="text-slate-300 font-medium">{text}</p>
+    <p className="text-slate-300 leading-relaxed pt-1.5">{text}</p>
   </div>
 );
 
