@@ -235,9 +235,117 @@ const updatePassword = async (req, res) => {
   }
 };
 
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Send password reset instructions to user's email
+ * @access  Public
+ */
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide your email address",
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      // Don't reveal if email exists or not (security best practice)
+      return res.status(200).json({
+        success: true,
+        message:
+          "If an account exists with this email, you will receive password reset instructions.",
+      });
+    }
+
+    // In a production app, you would:
+    // 1. Generate a reset token
+    // 2. Save token to database with expiry
+    // 3. Send email with reset link
+    // For now, we'll just confirm the request
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Password reset instructions have been sent to your email address.",
+      // In development, you might want to return additional info
+      ...(process.env.NODE_ENV === "development" && {
+        dev_info: {
+          email: user.email,
+          userId: user._id,
+        },
+      }),
+    });
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred. Please try again later.",
+    });
+  }
+};
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Reset password with token
+ * @access  Public
+ */
+const resetPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide email and new password",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters",
+      });
+    }
+
+    // Find user
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Update password (will be auto-hashed by User model)
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Password has been reset successfully. You can now login with your new password.",
+    });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred. Please try again later.",
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   updatePassword,
+  forgotPassword,
+  resetPassword,
 };

@@ -28,7 +28,7 @@ const shipmentSchema = new mongoose.Schema(
     shipmentNumber: {
       type: String,
       unique: true,
-      required: true,
+      sparse: true, // Allow temporarily null until pre-save hook generates it
     },
     pickupLocation: {
       address: {
@@ -182,13 +182,16 @@ const shipmentSchema = new mongoose.Schema(
 );
 
 // Pre-save middleware to generate shipment number
-shipmentSchema.pre("save", async function (next) {
+shipmentSchema.pre("save", function (next) {
   if (!this.shipmentNumber) {
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
-    const count = await mongoose.model("Shipment").countDocuments();
-    this.shipmentNumber = `SHP-${year}${month}-${String(count + 1).padStart(5, "0")}`;
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
+    this.shipmentNumber = `SHP-${year}${month}-${timestamp}${random}`;
   }
   next();
 });

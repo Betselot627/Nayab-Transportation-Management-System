@@ -5,6 +5,8 @@ const {
   login,
   getMe,
   updatePassword,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
 
@@ -16,6 +18,8 @@ const { protect } = require("../middleware/authMiddleware");
  * Public Routes:
  * - POST /register - Register new user
  * - POST /login - User login
+ * - POST /forgot-password - Request password reset
+ * - POST /reset-password - Reset password with email
  *
  * Protected Routes:
  * - GET /me - Get current user
@@ -25,6 +29,8 @@ const { protect } = require("../middleware/authMiddleware");
 // Public routes
 router.post("/register", register);
 router.post("/login", login);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 // Protected routes
 router.get("/me", protect, getMe);
