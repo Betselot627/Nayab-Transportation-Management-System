@@ -182,7 +182,7 @@ const shipmentSchema = new mongoose.Schema(
 );
 
 // Pre-save middleware to generate shipment number
-shipmentSchema.pre("save", function (next) {
+shipmentSchema.pre("save", async function () {
   if (!this.shipmentNumber) {
     const date = new Date();
     const year = date.getFullYear();
@@ -193,7 +193,6 @@ shipmentSchema.pre("save", function (next) {
       .padStart(3, "0");
     this.shipmentNumber = `SHP-${year}${month}-${timestamp}${random}`;
   }
-  next();
 });
 
 // Indexes

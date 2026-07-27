@@ -14,13 +14,18 @@ const mongoose = require("mongoose");
  * - payment: Payment notifications
  * - maintenance: Vehicle maintenance alerts
  * - system: General system notifications
+ * - vehicle_registration: New vehicle registration by driver
+ * - vehicle_approval: Vehicle approved by admin
+ * - vehicle_rejection: Vehicle rejected by admin
+ * - vehicle_assignment: Vehicle assigned to customer
  */
 const notificationSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "User ID is required"],
+      required: false, // Allow null for admin broadcast notifications
+      default: null,
     },
     title: {
       type: String,
@@ -43,6 +48,10 @@ const notificationSchema = new mongoose.Schema(
         "system",
         "alert",
         "info",
+        "vehicle_registration",
+        "vehicle_approval",
+        "vehicle_rejection",
+        "vehicle_assignment",
       ],
     },
     priority: {

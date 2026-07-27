@@ -1,5 +1,6 @@
 const Shipment = require("../models/Shipment");
 const Customer = require("../models/Customer");
+const Driver = require("../models/Driver");
 const Trip = require("../models/Trip");
 const Notification = require("../models/Notification");
 
@@ -144,7 +145,14 @@ const getShipmentById = async (req, res) => {
  */
 const assignShipment = async (req, res) => {
   try {
-    const { driverId, vehicleId } = req.body;
+    const { driverId } = req.body;
+
+    if (!driverId) {
+      return res.status(400).json({
+        success: false,
+        message: "Driver ID is required",
+      });
+    }
 
     const shipment = await Shipment.findById(req.params.id);
 
@@ -155,31 +163,135 @@ const assignShipment = async (req, res) => {
       });
     }
 
+    // Verify driver exists
+    const driver = await Driver.findById(driverId);
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: "Driver not found",
+      });
+    }
+
+    // Find driver's approved and available vehicles
+    const Vehicle = require("../models/Vehicle");
+    const driverVehicles = await Vehicle.find({
+      registeredBy: driverId,
+      approvalStatus: "approved",
+      status: "available",
+    }).sort({ "capacity.weight": 1 });
+
+    if (driverVehicles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Driver has no approved and available vehicles",
+      });
+    }
+
+    // Smart vehicle selection based on cargo type
+    const cargoType = shipment.cargoDetails?.type?.toLowerCase() || "";
+    const cargoWeight = shipment.cargoDetails?.weight || 0;
+    const cargoUnit = shipment.cargoDetails?.unit || "kg";
+
+    let selectedVehicle = null;
+
+    // Convert cargo weight to kg for comparison
+    const cargoWeightKg =
+      cargoUnit === "ton" ? cargoWeight * 1000 : cargoWeight;
+
+    // Filter vehicles by type recommendation
+    let recommendedVehicles = driverVehicles;
+
+    if (
+      cargoType.includes("document") ||
+      cargoType.includes("envelope") ||
+      cargoType.includes("letter")
+    ) {
+      recommendedVehicles = driverVehicles.filter((v) =>
+        ["pickup", "van"].includes(v.type),
+      );
+    } else if (
+      cargoType.includes("furniture") ||
+      cargoType.includes("heavy") ||
+      cargoType.includes("machinery")
+    ) {
+      recommendedVehicles = driverVehicles.filter((v) =>
+        ["truck", "trailer"].includes(v.type),
+      );
+    } else if (
+      cargoType.includes("fragile") ||
+      cargoType.includes("electronics")
+    ) {
+      recommendedVehicles = driverVehicles.filter((v) =>
+        ["van", "pickup"].includes(v.type),
+      );
+    } else if (
+      cargoType.includes("bulk") ||
+      cargoType.includes("construction")
+    ) {
+      recommendedVehicles = driverVehicles.filter((v) =>
+        ["truck", "trailer"].includes(v.type),
+      );
+    }
+
+    // If no type match, use all driver vehicles
+    if (recommendedVehicles.length === 0) {
+      recommendedVehicles = driverVehicles;
+    }
+
+    // Find vehicle with sufficient capacity
+    for (const vehicle of recommendedVehicles) {
+      const vehicleCapacityKg =
+        vehicle.capacity.unit === "ton"
+          ? vehicle.capacity.weight * 1000
+          : vehicle.capacity.weight;
+
+      if (vehicleCapacityKg >= cargoWeightKg) {
+        selectedVehicle = vehicle;
+        break;
+      }
+    }
+
+    // If no vehicle with sufficient capacity, use the largest available
+    if (!selectedVehicle) {
+      selectedVehicle = recommendedVehicles[recommendedVehicles.length - 1];
+    }
+
     // Update shipment
     shipment.driverId = driverId;
-    shipment.vehicleId = vehicleId;
+    shipment.vehicleId = selectedVehicle._id;
     shipment.status = "assigned";
 
     shipment.statusHistory.push({
       status: "assigned",
       updatedBy: req.user._id,
-      remarks: "Driver and vehicle assigned",
+      remarks: `Driver and vehicle (${selectedVehicle.plateNumber}) auto-assigned`,
     });
 
     await shipment.save();
+
+    // Update vehicle status
+    selectedVehicle.status = "in_use";
+    selectedVehicle.assignedCustomer = shipment.customerId;
+    selectedVehicle.assignedItemType = shipment.cargoDetails?.type;
+    selectedVehicle.assignedAt = new Date();
+    await selectedVehicle.save();
+
+    // Update driver status
+    driver.status = "on_trip";
+    await driver.save();
 
     // Create trip
     const trip = await Trip.create({
       shipmentId: shipment._id,
       driverId,
-      vehicleId,
+      vehicleId: selectedVehicle._id,
     });
 
     // Create notification for driver
     await Notification.create({
-      userId: driverId,
+      userId: driver.userId,
       title: "New Trip Assigned",
-      message: `You have been assigned to shipment ${shipment.shipmentNumber}`,
+      message: `You have been assigned to shipment ${shipment.shipmentNumber} with vehicle ${selectedVehicle.plateNumber}`,
       type: "trip",
       relatedEntity: {
         entityType: "shipment",
@@ -190,7 +302,16 @@ const assignShipment = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Shipment assigned successfully",
-      data: { shipment, trip },
+      data: {
+        shipment,
+        trip,
+        selectedVehicle: {
+          _id: selectedVehicle._id,
+          plateNumber: selectedVehicle.plateNumber,
+          type: selectedVehicle.type,
+          model: selectedVehicle.model,
+        },
+      },
     });
   } catch (error) {
     console.error("Assign Shipment Error:", error);

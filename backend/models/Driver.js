@@ -78,6 +78,12 @@ const driverSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    vehicles: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Vehicle",
+      },
+    ],
     emergencyContact: {
       name: String,
       phone: String,

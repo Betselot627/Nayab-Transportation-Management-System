@@ -5,8 +5,8 @@ const DriverLayout = () => {
   const links = [
     { path: "/driver/dashboard", label: "Dashboard" },
     { path: "/driver/my-trips", label: "My Trips" },
-    { path: "/driver/trip-details", label: "Trip Details" },
-    { path: "/driver/update-status", label: "Update Status" },
+    { path: "/driver/my-vehicles", label: "My Vehicles" },
+    { path: "/driver/register-vehicle", label: "Register Vehicle" },
   ];
 
   return (

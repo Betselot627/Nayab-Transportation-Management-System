@@ -34,6 +34,8 @@ import DriverDashboard from "./pages/driver/DriverDashboard";
 import MyTrips from "./pages/driver/MyTrips";
 import TripDetails from "./pages/driver/TripDetails";
 import UpdateStatus from "./pages/driver/UpdateStatus";
+import RegisterVehicle from "./pages/driver/RegisterVehicle";
+import MyVehicles from "./pages/driver/MyVehicles";
 
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import BookShipment from "./pages/customer/BookShipment";
@@ -105,6 +107,8 @@ function App() {
           >
             <Route path="dashboard" element={<DriverDashboard />} />
             <Route path="my-trips" element={<MyTrips />} />
+            <Route path="my-vehicles" element={<MyVehicles />} />
+            <Route path="register-vehicle" element={<RegisterVehicle />} />
             <Route path="trip-details/:id" element={<TripDetails />} />
             <Route path="update-status/:id" element={<UpdateStatus />} />
           </Route>
