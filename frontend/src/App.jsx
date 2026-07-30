@@ -18,11 +18,22 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import Users from "./pages/admin/Users";
 import Vehicles from "./pages/admin/Vehicles";
+import AddVehicle from "./pages/admin/AddVehicle";
 import Drivers from "./pages/admin/Drivers";
+import AddDriver from "./pages/admin/AddDriver";
 import Shipments from "./pages/admin/Shipments";
-import Maintenance from "./pages/admin/Maintenance";
+import CustomerManagement from "./pages/admin/CustomerManagement";
+import AddCustomer from "./pages/admin/AddCustomer";
+import BookingManagement from "./pages/admin/BookingManagement";
+import AddBooking from "./pages/admin/AddBooking";
+import MaintenanceManagement from "./pages/admin/MaintenanceManagement";
+import AddMaintenance from "./pages/admin/AddMaintenance";
+import VehicleAvailability from "./pages/admin/VehicleAvailability";
+import LiveTracking from "./pages/admin/LiveTracking";
+import TrackingHistory from "./pages/admin/TrackingHistory";
 import Payments from "./pages/admin/Payments";
 import Reports from "./pages/admin/Reports";
+import Settings from "./pages/admin/Settings";
 
 import DispatcherDashboard from "./pages/dispatcher/DispatcherDashboard";
 import Bookings from "./pages/dispatcher/Bookings";
@@ -71,11 +82,27 @@ function App() {
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<Users />} />
             <Route path="vehicles" element={<Vehicles />} />
+            <Route path="vehicles/add" element={<AddVehicle />} />
+            <Route path="vehicles/edit/:id" element={<AddVehicle />} />
             <Route path="drivers" element={<Drivers />} />
-            <Route path="shipments" element={<Shipments />} />
-            <Route path="maintenance" element={<Maintenance />} />
+            <Route path="drivers/add" element={<AddDriver />} />
+            <Route path="drivers/edit/:id" element={<AddDriver />} />
+            <Route path="customers" element={<CustomerManagement />} />
+            <Route path="customers/add" element={<AddCustomer />} />
+            <Route path="customers/edit/:id" element={<AddCustomer />} />
+            <Route path="bookings" element={<BookingManagement />} />
+            <Route path="bookings/add" element={<AddBooking />} />
+            <Route path="bookings/edit/:id" element={<AddBooking />} />
+            <Route path="maintenance" element={<MaintenanceManagement />} />
+            <Route path="maintenance/add" element={<AddMaintenance />} />
+            <Route path="maintenance/edit/:id" element={<AddMaintenance />} />
+            <Route path="calendar" element={<VehicleAvailability />} />
+            <Route path="tracking/live" element={<LiveTracking />} />
+            <Route path="tracking/history" element={<TrackingHistory />} />
             <Route path="payments" element={<Payments />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="shipments" element={<Shipments />} />
           </Route>
 
           <Route
