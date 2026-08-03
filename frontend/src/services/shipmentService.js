@@ -42,4 +42,10 @@ export const shipmentService = {
     const response = await api.get("/shipments/stats");
     return response.data;
   },
+
+  // Approve shipment (Admin auto-assign)
+  approveShipment: async (id) => {
+    const response = await api.put(`/shipments/${id}/approve`);
+    return response.data;
+  },
 };

@@ -58,6 +58,11 @@ export const AuthProvider = ({ children }) => {
       
       // Fallback: Check for default admin credentials to allow testing of pages
       if (credentials.email === "admin@ntms.com" && credentials.password === "admin123") {
+        if (credentials.role && credentials.role !== "admin") {
+          const errMsg = `Access Denied: Your account role is 'admin' but you selected the role '${credentials.role}'.`;
+          setError(errMsg);
+          return { success: false, error: errMsg };
+        }
         const mockAdminUser = {
           _id: "mock-admin-999",
           name: "Admin User",

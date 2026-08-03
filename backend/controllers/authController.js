@@ -1,6 +1,9 @@
 const User = require("../models/User");
 const Customer = require("../models/Customer");
 const Driver = require("../models/Driver");
+const Vehicle = require("../models/Vehicle");
+const Shipment = require("../models/Shipment");
+const Trip = require("../models/Trip");
 const generateToken = require("../utils/generateToken");
 
 /**
@@ -103,7 +106,7 @@ const register = async (req, res) => {
  */
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     // Validation
     if (!email || !password) {
@@ -138,6 +141,14 @@ const login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
+      });
+    }
+
+    // RBAC validation during login
+    if (role && user.role !== role) {
+      return res.status(403).json({
+        success: false,
+        message: `Access Denied: Your account role is '${user.role}' but you selected the role '${role}'.`,
       });
     }
 
@@ -341,6 +352,36 @@ const resetPassword = async (req, res) => {
   }
 };
 
+/**
+ * @route   GET /api/auth/public-stats
+ * @desc    Get public stats for Home page Hero dashboard
+ * @access  Public
+ */
+const getPublicStats = async (req, res) => {
+  try {
+    const vehiclesCount = await Vehicle.countDocuments({ approvalStatus: "approved" });
+    const driversCount = await Driver.countDocuments();
+    const completedShipmentsCount = await Shipment.countDocuments({ status: "completed" });
+    const activeTripsCount = await Trip.countDocuments({ status: "in_progress" });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        vehiclesManaged: vehiclesCount,
+        registeredDrivers: driversCount,
+        completedShipments: completedShipmentsCount,
+        activeRoutes: activeTripsCount,
+      },
+    });
+  } catch (error) {
+    console.error("Get Public Stats Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -348,4 +389,5 @@ module.exports = {
   updatePassword,
   forgotPassword,
   resetPassword,
+  getPublicStats,
 };

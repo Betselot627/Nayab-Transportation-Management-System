@@ -130,9 +130,43 @@ const getMyProfile = async (req, res) => {
  */
 const updateMyProfile = async (req, res) => {
   try {
+    const { name, email, phone, address } = req.body;
+
+    // Update User model fields
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (name) user.name = name;
+    if (email) {
+      const emailExists = await User.findOne({ email, _id: { $ne: req.user._id } });
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: "Email is already in use by another account",
+        });
+      }
+      user.email = email;
+    }
+    if (phone) user.phone = phone;
+    await user.save();
+
+    // Update Customer model fields
+    const customerUpdate = {};
+    if (address) {
+      customerUpdate.address = address;
+    }
+    if (req.body.companyName) {
+      customerUpdate.companyName = req.body.companyName;
+    }
+
     const customer = await Customer.findOneAndUpdate(
       { userId: req.user._id },
-      req.body,
+      customerUpdate,
       { new: true, runValidators: true },
     ).populate("userId");
 

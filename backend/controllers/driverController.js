@@ -279,6 +279,103 @@ const getAvailableDrivers = async (req, res) => {
   }
 };
 
+const getMyProfile = async (req, res) => {
+  try {
+    const driver = await Driver.findOne({ userId: req.user._id }).populate(
+      "userId",
+      "name email phone",
+    );
+
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: "Driver profile not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: driver,
+    });
+  } catch (error) {
+    console.error("Get Driver Profile Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const updateMyProfile = async (req, res) => {
+  try {
+    const { name, email, phone, licenseNumber, experience } = req.body;
+
+    // Update User model fields
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (name) user.name = name;
+    if (email) {
+      const emailExists = await User.findOne({ email, _id: { $ne: req.user._id } });
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: "Email is already in use by another account",
+        });
+      }
+      user.email = email;
+    }
+    if (phone) user.phone = phone;
+    await user.save();
+
+    // Update Driver model fields
+    const driverUpdate = {};
+    if (licenseNumber) {
+      const licenseExists = await Driver.findOne({ licenseNumber, userId: { $ne: req.user._id } });
+      if (licenseExists) {
+        return res.status(400).json({
+          success: false,
+          message: "License number already registered",
+        });
+      }
+      driverUpdate.licenseNumber = licenseNumber;
+    }
+    if (experience !== undefined) driverUpdate.experience = experience;
+    if (req.body.fullName) driverUpdate.fullName = req.body.fullName;
+    if (req.body.emergencyContact) driverUpdate.emergencyContact = req.body.emergencyContact;
+
+    const driver = await Driver.findOneAndUpdate(
+      { userId: req.user._id },
+      driverUpdate,
+      { new: true, runValidators: true },
+    ).populate("userId");
+
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: "Driver profile not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: driver,
+    });
+  } catch (error) {
+    console.error("Update Driver Profile Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllDrivers,
   getDriverById,
@@ -287,4 +384,6 @@ module.exports = {
   deleteDriver,
   updateDriverStatus,
   getAvailableDrivers,
+  getMyProfile,
+  updateMyProfile,
 };

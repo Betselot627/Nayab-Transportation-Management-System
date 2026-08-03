@@ -25,4 +25,9 @@ export const authService = {
     const response = await api.get("/auth/me");
     return response.data;
   },
+  
+  getPublicStats: async () => {
+    const response = await api.get("/auth/public-stats");
+    return response.data;
+  },
 };

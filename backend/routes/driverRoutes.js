@@ -8,6 +8,8 @@ const {
   deleteDriver,
   updateDriverStatus,
   getAvailableDrivers,
+  getMyProfile,
+  updateMyProfile,
 } = require("../controllers/driverController");
 const { protect } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/roleMiddleware");
@@ -23,6 +25,9 @@ const { authorize } = require("../middleware/roleMiddleware");
  */
 
 router.use(protect);
+
+router.get("/profile/me", authorize("driver"), getMyProfile);
+router.put("/profile/me", authorize("driver"), updateMyProfile);
 
 router
   .route("/")

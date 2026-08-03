@@ -42,6 +42,27 @@ const createShipment = async (req, res) => {
     customer.totalShipments += 1;
     await customer.save();
 
+    // Trigger notification to Admin(s)
+    try {
+      const User = require("../models/User");
+      const admins = await User.find({ role: "admin" });
+      for (const admin of admins) {
+        await Notification.create({
+          userId: admin._id,
+          title: "New Booking Pending Approval",
+          message: `A new booking ${shipment.shipmentNumber || shipment._id} has been created and is pending approval.`,
+          type: "shipment",
+          priority: "medium",
+          relatedEntity: {
+            entityType: "shipment",
+            entityId: shipment._id,
+          },
+        });
+      }
+    } catch (notifError) {
+      console.error("Failed to trigger new booking notification to admins:", notifError.message);
+    }
+
     res.status(201).json({
       success: true,
       message: "Shipment created successfully",
@@ -460,6 +481,161 @@ const getShipmentStats = async (req, res) => {
   }
 };
 
+/**
+ * @route   PUT /api/shipments/:id/approve
+ * @desc    Approve booking and auto-assign available driver and vehicle (Admin only)
+ * @access  Private/Admin
+ */
+const approveShipment = async (req, res) => {
+  try {
+    const shipment = await Shipment.findById(req.params.id);
+
+    if (!shipment) {
+      return res.status(404).json({
+        success: false,
+        message: "Shipment not found",
+      });
+    }
+
+    if (shipment.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: `Shipment is already ${shipment.status} and cannot be approved.`,
+      });
+    }
+
+    // Find all available drivers
+    const drivers = await Driver.find({ status: "available" }).populate("userId");
+    
+    let selectedDriver = null;
+    let selectedVehicle = null;
+
+    const Vehicle = require("../models/Vehicle");
+
+    // Loop through available drivers to find one who has an approved & available vehicle
+    for (const driver of drivers) {
+      const vehicles = await Vehicle.find({
+        registeredBy: driver._id,
+        approvalStatus: "approved",
+        status: "available",
+      });
+
+      if (vehicles.length > 0) {
+        selectedDriver = driver;
+
+        // Auto selection based on weight capacity
+        const cargoWeight = shipment.cargoDetails?.weight || 0;
+        const cargoUnit = shipment.cargoDetails?.unit || "kg";
+        const cargoWeightKg = cargoUnit === "ton" ? cargoWeight * 1000 : cargoWeight;
+
+        // Sort vehicles by capacity ascending to find the smallest suitable vehicle
+        vehicles.sort((a, b) => {
+          const capA = a.capacity.unit === "ton" ? a.capacity.weight * 1000 : a.capacity.weight;
+          const capB = b.capacity.unit === "ton" ? b.capacity.weight * 1000 : b.capacity.weight;
+          return capA - capB;
+        });
+
+        // Pick first vehicle that can carry the load
+        for (const vehicle of vehicles) {
+          const vehicleCapKg = vehicle.capacity.unit === "ton" ? vehicle.capacity.weight * 1000 : vehicle.capacity.weight;
+          if (vehicleCapKg >= cargoWeightKg) {
+            selectedVehicle = vehicle;
+            break;
+          }
+        }
+
+        // Fallback: if no vehicle is large enough, pick the largest one
+        if (!selectedVehicle) {
+          selectedVehicle = vehicles[vehicles.length - 1];
+        }
+        break;
+      }
+    }
+
+    if (!selectedDriver || !selectedVehicle) {
+      return res.status(400).json({
+        success: false,
+        message: "No available driver with an approved and available vehicle could be found for auto-assignment.",
+      });
+    }
+
+    // Update shipment details
+    shipment.driverId = selectedDriver._id;
+    shipment.vehicleId = selectedVehicle._id;
+    shipment.status = "approved"; // Status transitions to approved
+    shipment.statusHistory.push({
+      status: "approved",
+      updatedBy: req.user._id,
+      remarks: `Booking approved. Auto-assigned driver ${selectedDriver.fullName} and vehicle ${selectedVehicle.plateNumber}.`,
+    });
+
+    await shipment.save();
+
+    // Update vehicle status
+    selectedVehicle.status = "in_use";
+    selectedVehicle.assignedCustomer = shipment.customerId;
+    selectedVehicle.assignedItemType = shipment.cargoDetails?.type;
+    selectedVehicle.assignedAt = new Date();
+    await selectedVehicle.save();
+
+    // Update driver status
+    selectedDriver.status = "on_trip";
+    await selectedDriver.save();
+
+    // Create the active trip
+    const trip = await Trip.create({
+      shipmentId: shipment._id,
+      driverId: selectedDriver._id,
+      vehicleId: selectedVehicle._id,
+    });
+
+    // Notify Driver
+    if (selectedDriver.userId) {
+      await Notification.create({
+        userId: selectedDriver.userId._id,
+        title: "New Trip Assigned",
+        message: `You have been assigned to shipment ${shipment.shipmentNumber} with vehicle ${selectedVehicle.plateNumber}.`,
+        type: "trip",
+        relatedEntity: {
+          entityType: "shipment",
+          entityId: shipment._id,
+        },
+      });
+    }
+
+    // Notify Customer
+    const customer = await Customer.findById(shipment.customerId);
+    if (customer && customer.userId) {
+      await Notification.create({
+        userId: customer.userId,
+        title: "Booking Approved",
+        message: `Your booking ${shipment.shipmentNumber} has been approved and scheduled. Driver: ${selectedDriver.fullName}, Vehicle: ${selectedVehicle.plateNumber}.`,
+        type: "shipment",
+        relatedEntity: {
+          entityType: "shipment",
+          entityId: shipment._id,
+        },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Shipment approved and driver/vehicle auto-assigned successfully",
+      data: {
+        shipment,
+        trip,
+      },
+    });
+
+  } catch (error) {
+    console.error("Approve Shipment Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createShipment,
   getAllShipments,
@@ -468,4 +644,5 @@ module.exports = {
   updateShipmentStatus,
   deleteShipment,
   getShipmentStats,
+  approveShipment,
 };

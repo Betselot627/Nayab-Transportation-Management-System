@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { authService } from "../../services/authService";
 import {
   Truck,
   MapPin,
@@ -13,6 +14,31 @@ import {
 
 const Home = () => {
   const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    vehiclesManaged: "500+",
+    registeredDrivers: "200+",
+    completedShipments: "10K+",
+    activeRoutes: "50+",
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await authService.getPublicStats();
+        if (res && res.success && res.data) {
+          setStats({
+            vehiclesManaged: String(res.data.vehiclesManaged),
+            registeredDrivers: String(res.data.registeredDrivers),
+            completedShipments: String(res.data.completedShipments),
+            activeRoutes: String(res.data.activeRoutes),
+          });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch real-time public stats:", err);
+      }
+    };
+    fetchStats();
+  }, []);
 
   return (
     <div className="min-h-screen bg-white font-sans antialiased overflow-x-hidden">
@@ -117,26 +143,26 @@ const Home = () => {
             <div className="anim-fade-up delay-100">
               <StatCard
                 icon={<Truck />}
-                number="500+"
+                number={stats.vehiclesManaged}
                 text="Vehicles Managed"
               />
             </div>
             <div className="anim-fade-up delay-200">
               <StatCard
                 icon={<Users />}
-                number="200+"
+                number={stats.registeredDrivers}
                 text="Registered Drivers"
               />
             </div>
             <div className="anim-fade-up delay-300">
               <StatCard
                 icon={<PackageCheck />}
-                number="10K+"
+                number={stats.completedShipments}
                 text="Completed Shipments"
               />
             </div>
             <div className="anim-fade-up delay-400">
-              <StatCard icon={<Route />} number="50+" text="Active Routes" />
+              <StatCard icon={<Route />} number={stats.activeRoutes} text="Active Routes" />
             </div>
           </div>
         </div>

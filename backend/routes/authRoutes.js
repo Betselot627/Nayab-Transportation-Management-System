@@ -7,6 +7,7 @@ const {
   updatePassword,
   forgotPassword,
   resetPassword,
+  getPublicStats,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
 
@@ -20,6 +21,7 @@ const { protect } = require("../middleware/authMiddleware");
  * - POST /login - User login
  * - POST /forgot-password - Request password reset
  * - POST /reset-password - Reset password with email
+ * - GET /public-stats - Public dashboard stats for Home page
  *
  * Protected Routes:
  * - GET /me - Get current user
@@ -31,6 +33,7 @@ router.post("/register", register);
 router.post("/login", login);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
+router.get("/public-stats", getPublicStats);
 
 // Protected routes
 router.get("/me", protect, getMe);

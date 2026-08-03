@@ -46,6 +46,7 @@ import MyTrips from "./pages/driver/MyTrips";
 import TripDetails from "./pages/driver/TripDetails";
 import UpdateStatus from "./pages/driver/UpdateStatus";
 import RegisterVehicle from "./pages/driver/RegisterVehicle";
+import DriverProfile from "./pages/driver/Profile";
 import MyVehicles from "./pages/driver/MyVehicles";
 
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
@@ -54,9 +55,12 @@ import MyBookings from "./pages/customer/MyBookings";
 import TrackShipment from "./pages/customer/TrackShipment";
 import Profile from "./pages/customer/Profile";
 
+import ScrollToTop from "./components/common/ScrollToTop";
+
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <AuthProvider>
         <Routes>
           <Route element={<MainLayout />}>
@@ -138,6 +142,7 @@ function App() {
             <Route path="register-vehicle" element={<RegisterVehicle />} />
             <Route path="trip-details/:id" element={<TripDetails />} />
             <Route path="update-status/:id" element={<UpdateStatus />} />
+            <Route path="profile" element={<DriverProfile />} />
           </Route>
 
           <Route

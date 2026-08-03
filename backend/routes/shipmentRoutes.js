@@ -8,6 +8,7 @@ const {
   updateShipmentStatus,
   deleteShipment,
   getShipmentStats,
+  approveShipment,
 } = require("../controllers/shipmentController");
 const { protect } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/roleMiddleware");
@@ -38,6 +39,7 @@ router
   .delete(authorize("admin", "customer"), deleteShipment);
 
 router.put("/:id/assign", authorize("admin", "dispatcher"), assignShipment);
+router.put("/:id/approve", authorize("admin"), approveShipment);
 router.patch("/:id/status", updateShipmentStatus);
 
 module.exports = router;

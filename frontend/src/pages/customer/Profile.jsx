@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User, Mail, Phone, MapPin, Lock, Save } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
@@ -11,10 +11,10 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState("profile");
 
   const [profileData, setProfileData] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
-    address: user?.address || "",
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -22,6 +22,31 @@ const Profile = () => {
     newPassword: "",
     confirmPassword: "",
   });
+
+  // Fetch full customer profile on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/customers/profile/me`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (response.data && response.data.success && response.data.data) {
+          const customer = response.data.data;
+          setProfileData({
+            name: customer.userId?.name || "",
+            email: customer.userId?.email || "",
+            phone: customer.userId?.phone || "",
+            address: customer.address?.street || "",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch customer profile:", error);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleProfileChange = (e) => {
     setProfileData({ ...profileData, [e.target.name]: e.target.value });
@@ -37,12 +62,28 @@ const Profile = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/users/profile`,
-        profileData,
+        `${import.meta.env.VITE_API_URL}/customers/profile/me`,
+        {
+          name: profileData.name,
+          email: profileData.email,
+          phone: profileData.phone,
+          address: {
+            street: profileData.address,
+          },
+        },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      setUser(response.data);
-      toast.success("Profile updated successfully");
+      if (response.data && response.data.success) {
+        const updated = response.data.data;
+        setUser({
+          ...user,
+          name: updated.userId?.name || updated.name,
+          email: updated.userId?.email || updated.email,
+          phone: updated.userId?.phone || updated.phone,
+          address: updated.address?.street || "",
+        });
+        toast.success("Profile updated successfully");
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update profile");
     } finally {

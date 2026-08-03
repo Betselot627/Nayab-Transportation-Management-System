@@ -67,15 +67,16 @@ const Vehicles = () => {
           model: String(v.year),
           vehicleGroup: v.type.charAt(0).toUpperCase() + v.type.slice(1),
           activeStatus: v.status === "available" ? "Running" : v.status === "maintenance" ? "Maintenance" : "Idle",
+          approvalStatus: v.approvalStatus || "approved",
         }));
         setVehicles(mapped);
       } else {
         // Use Mock data fallback
-        setVehicles(mockVehicles);
+        setVehicles(mockVehicles.map(v => ({ ...v, approvalStatus: "approved" })));
       }
     } catch (err) {
       console.warn("REST API offline, initializing with mock data:", err);
-      setVehicles(mockVehicles);
+      setVehicles(mockVehicles.map(v => ({ ...v, approvalStatus: "approved" })));
     } finally {
       setLoading(false);
     }
@@ -116,6 +117,41 @@ const Vehicles = () => {
         return "error";
       default:
         return "default";
+    }
+  };
+
+  const getApprovalBadgeVariant = (status) => {
+    switch (status?.toLowerCase()) {
+      case "approved":
+        return "success";
+      case "pending":
+        return "warning";
+      case "rejected":
+        return "error";
+      default:
+        return "default";
+    }
+  };
+
+  const handleApproveVehicle = async (id) => {
+    try {
+      await vehicleService.approveVehicle(id);
+      toast.success("Vehicle approved successfully");
+      fetchVehicles();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to approve vehicle");
+    }
+  };
+
+  const handleRejectVehicle = async (id) => {
+    const reason = window.prompt("Please enter the reason for rejecting this vehicle:");
+    if (reason === null) return; // cancelled
+    try {
+      await vehicleService.rejectVehicle(id, reason);
+      toast.success("Vehicle registration rejected");
+      fetchVehicles();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to reject vehicle");
     }
   };
 
@@ -372,6 +408,11 @@ const Vehicles = () => {
                     Active Status <ArrowUpDown className="w-3.5 h-3.5" />
                   </div>
                 </th>
+                <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("approvalStatus")}>
+                  <div className="flex items-center gap-1">
+                    Approval Status <ArrowUpDown className="w-3.5 h-3.5" />
+                  </div>
+                </th>
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>
             </thead>
@@ -394,13 +435,34 @@ const Vehicles = () => {
                     <td className="py-4 px-6 text-gray-600 dark:text-gray-300">
                       <Badge variant="purple">{vehicle.vehicleGroup}</Badge>
                     </td>
-                    <td className="py-4 px-6">
+                     <td className="py-4 px-6">
                       <Badge variant={getBadgeVariant(vehicle.activeStatus)}>
                         {vehicle.activeStatus}
                       </Badge>
                     </td>
+                    <td className="py-4 px-6">
+                      <Badge variant={getApprovalBadgeVariant(vehicle.approvalStatus)}>
+                        {vehicle.approvalStatus}
+                      </Badge>
+                    </td>
                     <td className="py-4 px-6 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end items-center gap-2">
+                        {vehicle.approvalStatus === "pending" && (
+                          <div className="flex gap-1.5 mr-2">
+                            <button
+                              onClick={() => handleApproveVehicle(vehicle.id)}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectVehicle(vehicle.id)}
+                              className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
                         <button
                           onClick={() => triggerDelete(vehicle.id)}
                           className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors"

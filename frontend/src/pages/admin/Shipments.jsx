@@ -82,6 +82,19 @@ const Shipments = () => {
     }
   };
 
+  const handleApprove = async (id) => {
+    try {
+      setLoading(true);
+      await shipmentService.approveShipment(id);
+      toast.success("Shipment approved & driver/vehicle auto-assigned!");
+      await fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to approve shipment");
+      console.error(err);
+      setLoading(false);
+    }
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       pending: "bg-yellow-100 text-yellow-800",
@@ -224,15 +237,23 @@ const Shipments = () => {
                     </td>
                     <td className="px-6 py-4">
                       {shipment.status === "pending" && (
-                        <button
-                          onClick={() => {
-                            setSelectedShipment(shipment);
-                            setShowAssignModal(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-900 text-sm font-medium"
-                        >
-                          Assign
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleApprove(shipment._id)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedShipment(shipment);
+                              setShowAssignModal(true);
+                            }}
+                            className="border border-slate-350 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            Assign Manual
+                          </button>
+                        </div>
                       )}
                       {shipment.status === "delivered" && (
                         <button
