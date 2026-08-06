@@ -125,7 +125,7 @@ const GlobalSearch = () => {
       </div>
 
       {isOpen && query.trim() && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[32rem] overflow-y-auto animate-slide-down">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[32rem] overflow-y-auto animate-slide-down">
           {hasResults ? (
             <div className="p-2 space-y-3">
               {/* Vehicles */}
@@ -140,7 +140,7 @@ const GlobalSearch = () => {
                       <button
                         key={v.id}
                         onClick={() => handleSelect(v.path)}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-55 dark:hover:bg-gray-850 rounded-lg flex items-center justify-between text-sm transition-colors duration-150 group"
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center justify-between text-sm transition-colors duration-150 group"
                       >
                         <div>
                           <span className="font-medium text-gray-900 dark:text-white">{v.name}</span>
@@ -165,7 +165,7 @@ const GlobalSearch = () => {
                       <button
                         key={d.id}
                         onClick={() => handleSelect(d.path)}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-55 dark:hover:bg-gray-850 rounded-lg flex items-center justify-between text-sm transition-colors duration-150 group"
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center justify-between text-sm transition-colors duration-150 group"
                       >
                         <div>
                           <span className="font-medium text-gray-900 dark:text-white">{d.name}</span>
@@ -190,7 +190,7 @@ const GlobalSearch = () => {
                       <button
                         key={c.id}
                         onClick={() => handleSelect(c.path)}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-55 dark:hover:bg-gray-850 rounded-lg flex items-center justify-between text-sm transition-colors duration-150 group"
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center justify-between text-sm transition-colors duration-150 group"
                       >
                         <div>
                           <span className="font-medium text-gray-900 dark:text-white">{c.name}</span>
@@ -215,7 +215,7 @@ const GlobalSearch = () => {
                       <button
                         key={b.id}
                         onClick={() => handleSelect(b.path)}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-55 dark:hover:bg-gray-850 rounded-lg flex items-center justify-between text-sm transition-colors duration-150 group"
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center justify-between text-sm transition-colors duration-150 group"
                       >
                         <div>
                           <span className="font-medium text-gray-900 dark:text-white">{b.id}</span>

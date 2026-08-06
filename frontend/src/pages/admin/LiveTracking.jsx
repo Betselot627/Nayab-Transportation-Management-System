@@ -144,7 +144,7 @@ const LiveTracking = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[75vh]">
         {/* Left Side: Vehicle Telemetry Cards */}
-        <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-4 shadow-sm space-y-4 overflow-y-auto h-full">
+        <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-4 shadow-sm space-y-4 overflow-y-auto h-full">
           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">
             Active Operating Fleet
           </h3>
@@ -153,7 +153,7 @@ const LiveTracking = () => {
               <div
                 key={v.id}
                 onClick={() => centerOnVehicle(v)}
-                className="p-4 border border-gray-150 dark:border-gray-850 hover:border-blue-500 dark:hover:border-blue-400 rounded-xl hover:shadow-md cursor-pointer transition-all duration-200 space-y-3"
+                className="p-4 border border-gray-250 dark:border-gray-800 hover:border-blue-500 dark:hover:border-blue-400 rounded-xl hover:shadow-md cursor-pointer transition-all duration-200 space-y-3"
               >
                 <div className="flex justify-between items-start">
                   <div>
@@ -166,7 +166,7 @@ const LiveTracking = () => {
                   <Badge variant={getBadgeVariant(v.status)}>{v.status}</Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs text-gray-650 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-850">
+                <div className="grid grid-cols-2 gap-2 text-xs text-gray-650 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-1">
                     <Gauge className="w-3.5 h-3.5 text-gray-400" />
                     <span>{v.speed} km/h</span>

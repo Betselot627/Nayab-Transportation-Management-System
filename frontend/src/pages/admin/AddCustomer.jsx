@@ -118,7 +118,7 @@ const AddCustomer = () => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Core fields */}
-        <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
           <h2 className="text-md font-bold text-gray-800 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-3">
             Customer Profile Form
           </h2>
@@ -257,7 +257,7 @@ const AddCustomer = () => {
           <button
             type="button"
             onClick={() => navigate("/admin/customers")}
-            className="flex-1 py-3 border border-gray-350 dark:border-gray-700 rounded-xl font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="flex-1 py-3 border border-gray-400 dark:border-gray-700 rounded-xl font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             Cancel
           </button>

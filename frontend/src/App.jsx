@@ -62,6 +62,7 @@ const BookShipment = lazy(() => import("./pages/customer/BookShipment"));
 const MyBookings = lazy(() => import("./pages/customer/MyBookings"));
 const TrackShipment = lazy(() => import("./pages/customer/TrackShipment"));
 const Profile = lazy(() => import("./pages/customer/Profile"));
+const ShipmentDetails = lazy(() => import("./pages/customer/ShipmentDetails"));
 
 function App() {
   return (
@@ -167,6 +168,7 @@ function App() {
               <Route path="my-bookings" element={<MyBookings />} />
               <Route path="track-shipment" element={<TrackShipment />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="shipment-details/:id" element={<ShipmentDetails />} />
             </Route>
           </Routes>
         </Suspense>

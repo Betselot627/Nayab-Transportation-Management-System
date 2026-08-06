@@ -46,7 +46,7 @@ const CustomerLayout = () => {
         <header className="sticky top-0 z-30 flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 py-3 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm">
           {/* Left: Breadcrumbs */}
           <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 overflow-x-auto">
-            <span className="capitalize text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-700 whitespace-nowrap">
+            <span className="capitalize text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded bg-purple-100 text-purple-700 whitespace-nowrap">
               Customer
             </span>
             {pathnames.slice(0, 3).map((value, index) => {
@@ -62,7 +62,7 @@ const CustomerLayout = () => {
                   <ChevronRight className="w-3 h-3 text-gray-400" />
                   <Link
                     to={to}
-                    className={`hover:text-blue-600 flex items-center gap-1 sm:gap-1.5 transition-colors whitespace-nowrap ${
+                    className={`hover:text-purple-600 flex items-center gap-1 sm:gap-1.5 transition-colors whitespace-nowrap ${
                       last ? "text-gray-900 font-semibold" : ""
                     }`}
                   >
@@ -99,8 +99,10 @@ const CustomerLayout = () => {
                   {user?.role || "Customer"}
                 </p>
               </div>
-              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold ring-2 ring-blue-500/20 shadow-inner text-sm">
-                {user?.name ? (
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold ring-2 ring-purple-500/20 shadow-inner text-sm overflow-hidden">
+                {user?.profileImage ? (
+                  <img src={user.profileImage} alt="Avatar" className="w-full h-full object-cover" />
+                ) : user?.name ? (
                   user.name[0].toUpperCase()
                 ) : (
                   <User className="w-4 h-4 sm:w-5 sm:h-5" />

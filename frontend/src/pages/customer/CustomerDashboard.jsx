@@ -9,7 +9,6 @@ import {
   Loader,
   Plus,
   MapPin,
-  Truck,
   ArrowRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -51,22 +50,22 @@ const CustomerDashboard = () => {
 
   const getStatusColor = (status) => {
     const colors = {
-      pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-      approved: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-      assigned: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
-      picked_up: "bg-violet-500/10 text-violet-500 border-violet-500/20",
-      in_transit: "bg-sky-500/10 text-sky-500 border-sky-500/20",
-      delivered: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-      completed: "bg-slate-500/10 text-slate-500 border-slate-500/20",
-      cancelled: "bg-rose-500/10 text-rose-500 border-rose-500/20",
+      pending: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+      approved: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+      assigned: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
+      picked_up: "bg-violet-500/10 text-violet-600 border-violet-500/20",
+      in_transit: "bg-sky-500/10 text-sky-605 border-sky-500/20",
+      delivered: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+      completed: "bg-slate-500/10 text-slate-600 border-slate-500/20",
+      cancelled: "bg-rose-500/10 text-rose-600 border-rose-500/20",
     };
-    return colors[status] || "bg-slate-500/10 text-slate-500 border-slate-500/20";
+    return colors[status] || "bg-slate-500/10 text-slate-600 border-slate-500/20";
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader className="animate-spin h-8 w-8 text-blue-600" />
+        <Loader className="animate-spin h-8 w-8 text-purple-600" />
       </div>
     );
   }
@@ -85,7 +84,7 @@ const CustomerDashboard = () => {
         </div>
         <Link
           to="/customer/book-shipment"
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shrink-0"
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg shadow-purple-500/20 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shrink-0 text-sm"
         >
           <Plus className="h-5 w-5" />
           Book New Shipment
@@ -106,7 +105,7 @@ const CustomerDashboard = () => {
               </h3>
               <p className="text-slate-450 text-xs font-medium">All registered orders</p>
             </div>
-            <div className="bg-blue-50 dark:bg-blue-950/50 p-4 rounded-xl text-blue-600">
+            <div className="bg-purple-50 dark:bg-purple-950/50 p-4 rounded-xl text-purple-600">
               <Package className="h-6 w-6" />
             </div>
           </div>
@@ -122,9 +121,9 @@ const CustomerDashboard = () => {
               <h3 className="text-3xl font-extrabold text-slate-950 dark:text-white tracking-tight">
                 {stats.pending}
               </h3>
-              <p className="text-amber-600 text-xs font-semibold">Awaiting admin review</p>
+              <p className="text-yellow-600 text-xs font-semibold">Awaiting admin review</p>
             </div>
-            <div className="bg-amber-50 dark:bg-amber-950/50 p-4 rounded-xl text-amber-600">
+            <div className="bg-yellow-50 dark:bg-yellow-950/50 p-4 rounded-xl text-yellow-600">
               <Clock className="h-6 w-6" />
             </div>
           </div>
@@ -189,7 +188,7 @@ const CustomerDashboard = () => {
             </p>
             <Link
               to="/customer/book-shipment"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-all shadow-sm"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl transition-all shadow-sm"
             >
               <Plus className="h-4 w-4" />
               Book Shipment
@@ -243,7 +242,7 @@ const CustomerDashboard = () => {
                     <td className="py-4 px-4 text-right">
                       <Link
                         to={`/customer/track-shipment?id=${shipment._id}`}
-                        className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 font-bold text-sm"
+                        className="inline-flex items-center gap-1.5 text-purple-600 hover:text-purple-755 font-bold text-sm"
                       >
                         Track Shipment
                         <ArrowRight className="w-4 h-4" />

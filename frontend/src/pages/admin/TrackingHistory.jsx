@@ -149,12 +149,12 @@ const TrackingHistory = () => {
       </div>
 
       {/* Query controls form */}
-      <form onSubmit={handleSearch} className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
+      <form onSubmit={handleSearch} className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
           
           {/* Select Vehicle */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-gray-450 dark:text-gray-400">Vehicle</label>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Vehicle</label>
             <select
               value={vehicle}
               onChange={(e) => setVehicle(e.target.value)}
@@ -168,7 +168,7 @@ const TrackingHistory = () => {
 
           {/* Select Driver */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-gray-450 dark:text-gray-400">Driver</label>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Driver</label>
             <select
               value={driver}
               onChange={(e) => setDriver(e.target.value)}
@@ -182,7 +182,7 @@ const TrackingHistory = () => {
 
           {/* Choose Date */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-gray-450 dark:text-gray-400">Travel Date</label>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Travel Date</label>
             <input
               type="date"
               value={date}
@@ -204,8 +204,8 @@ const TrackingHistory = () => {
       {/* Metrics Summary and Map Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[65vh]">
         {/* Route Details Panel */}
-        <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6 overflow-y-auto h-full">
-          <h3 className="text-sm font-bold text-gray-850 dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-gray-850 pb-3">
+        <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6 overflow-y-auto h-full">
+          <h3 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-gray-800 pb-3">
             Trip Analytics Summary
           </h3>
 
@@ -220,7 +220,7 @@ const TrackingHistory = () => {
             </div>
 
             {/* Distance Travelled */}
-            <div className="flex justify-between items-center py-3 border-y border-gray-100 dark:border-gray-850">
+            <div className="flex justify-between items-center py-3 border-y border-gray-100 dark:border-gray-800">
               <span className="text-xs font-semibold text-gray-500">Distance Travelled</span>
               <span className="text-sm font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
                 <TrendingUp className="w-4 h-4" /> {tripStats.distance}
@@ -228,7 +228,7 @@ const TrackingHistory = () => {
             </div>
 
             {/* Total Stops */}
-            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-850">
+            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800">
               <span className="text-xs font-semibold text-gray-500">Total Stops</span>
               <span className="text-sm font-bold text-gray-900 dark:text-white">
                 {tripStats.stops} Stops
@@ -236,7 +236,7 @@ const TrackingHistory = () => {
             </div>
 
             {/* Start Time */}
-            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-850">
+            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800">
               <span className="text-xs font-semibold text-gray-500 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-gray-400" /> Start Time
               </span>

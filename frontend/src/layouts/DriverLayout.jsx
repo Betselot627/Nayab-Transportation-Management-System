@@ -22,6 +22,7 @@ const DriverLayout = () => {
     { path: "/driver/my-trips", label: "My Trips" },
     { path: "/driver/my-vehicles", label: "My Vehicles" },
     { path: "/driver/register-vehicle", label: "Register Vehicle" },
+    { path: "/driver/profile", label: "Profile" },
   ];
 
   // Dynamic Breadcrumb generation

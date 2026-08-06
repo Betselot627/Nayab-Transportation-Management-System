@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
         return;
       }
-      
+
       try {
         const response = await authService.getCurrentUser();
         setUser(response.data);
@@ -54,10 +54,16 @@ export const AuthProvider = ({ children }) => {
       }
       throw new Error("Invalid response format");
     } catch (err) {
-      console.warn("Backend login failed or server offline. Trying local admin simulation...", err);
-      
+      console.warn(
+        "Backend login failed or server offline. Trying local admin simulation...",
+        err,
+      );
+
       // Fallback: Check for default admin credentials to allow testing of pages
-      if (credentials.email === "admin@ntms.com" && credentials.password === "admin123") {
+      if (
+        credentials.email === "admin@ntms.com" &&
+        credentials.password === "admin123"
+      ) {
         if (credentials.role && credentials.role !== "admin") {
           const errMsg = `Access Denied: Your account role is 'admin' but you selected the role '${credentials.role}'.`;
           setError(errMsg);
@@ -76,8 +82,10 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem("token", mockAdminUser.token);
         return { success: true, data: mockAdminUser };
       }
-      
-      const errorMessage = err.response?.data?.message || "Login failed - Make sure credentials are correct";
+
+      const errorMessage =
+        err.response?.data?.message ||
+        "Login failed - Make sure credentials are correct";
       setError(errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -105,6 +113,13 @@ export const AuthProvider = ({ children }) => {
     setError(null);
   };
 
+  const updateUser = (updatedData) => {
+    setUser((prevUser) => ({
+      ...prevUser,
+      ...updatedData,
+    }));
+  };
+
   const value = {
     user,
     setUser,
@@ -113,6 +128,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateUser,
     isAuthenticated: !!user,
     isAdmin: user?.role === "admin",
     isDispatcher: user?.role === "dispatcher",

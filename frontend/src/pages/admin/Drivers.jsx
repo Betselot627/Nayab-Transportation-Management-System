@@ -235,7 +235,7 @@ const Drivers = () => {
       {/* Driver Photo Preview Modal */}
       {previewPhoto && (
         <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 animate-fade-in" onClick={() => setPreviewPhoto(null)}>
-          <div className="relative bg-white dark:bg-gray-950 border dark:border-gray-800 rounded-2xl p-2 max-w-sm w-full shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
+          <div className="relative bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-2xl p-2 max-w-sm w-full shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => setPreviewPhoto(null)}
               className="absolute top-4 right-4 p-1.5 bg-black/60 hover:bg-black/85 text-white rounded-full transition-transform hover:scale-105 z-10"
@@ -251,19 +251,19 @@ const Drivers = () => {
       {previewDoc && (
         <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 animate-fade-in" onClick={() => setPreviewDoc(null)}>
           <div className="relative bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl animate-scale-up flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center pb-4 border-b border-gray-150 dark:border-gray-800">
+            <div className="flex justify-between items-center pb-4 border-b border-gray-250 dark:border-gray-800">
               <h3 className="text-md font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-500" />
                 Driver License & Documents Viewer
               </h3>
-              <button onClick={() => setPreviewDoc(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-350">
+              <button onClick={() => setPreviewDoc(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto mt-6 flex justify-center bg-gray-50 dark:bg-gray-950 border dark:border-gray-850 p-4 rounded-xl">
+            <div className="flex-1 overflow-y-auto mt-6 flex justify-center bg-gray-50 dark:bg-gray-900 border dark:border-gray-800 p-4 rounded-xl">
               <img src={previewDoc} alt="Document View" className="object-contain max-h-[50vh] rounded-lg shadow-sm border border-gray-200 dark:border-gray-800" />
             </div>
-            <div className="flex justify-end gap-3 mt-6 border-t border-gray-150 dark:border-gray-800 pt-4">
+            <div className="flex justify-end gap-3 mt-6 border-t border-gray-250 dark:border-gray-800 pt-4">
               <button
                 onClick={() => setPreviewDoc(null)}
                 className="px-5 py-2 border border-gray-300 dark:border-gray-700 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -293,7 +293,7 @@ const Drivers = () => {
       </div>
 
       {/* Filter and Search Panel */}
-      <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+      <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
         
         {/* Searching */}
         <div className="relative flex-1 max-w-md">
@@ -333,11 +333,11 @@ const Drivers = () => {
       </div>
 
       {/* Drivers List Table */}
-      <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50/75 dark:bg-gray-900/50 border-b border-gray-150 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase select-none">
+              <tr className="bg-gray-50/75 dark:bg-gray-900/50 border-b border-gray-250 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase select-none">
                 <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("rollNumber")}>
                   <div className="flex items-center gap-1">
                     Roll # <ArrowUpDown className="w-3.5 h-3.5" />
@@ -374,7 +374,7 @@ const Drivers = () => {
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150 dark:divide-gray-800 text-sm">
+            <tbody className="divide-y divide-gray-250 dark:divide-gray-800 text-sm">
               {currentDrivers.length > 0 ? (
                 currentDrivers.map((driver) => (
                   <tr key={driver.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors">
@@ -389,10 +389,10 @@ const Drivers = () => {
                         className="w-10 h-10 rounded-full object-cover shadow-sm hover:ring-2 hover:ring-blue-500/50 cursor-zoom-in transition-all"
                       />
                     </td>
-                    <td className="py-4 px-6 font-semibold text-gray-800 dark:text-gray-250">
+                    <td className="py-4 px-6 font-semibold text-gray-800 dark:text-gray-300">
                       {driver.fullName}
                     </td>
-                    <td className="py-4 px-6 text-gray-600 dark:text-gray-350">
+                    <td className="py-4 px-6 text-gray-600 dark:text-gray-400">
                       {driver.mobileNumber}
                     </td>
                     <td className="py-4 px-6 font-mono text-gray-500 dark:text-gray-400">
@@ -459,7 +459,7 @@ const Drivers = () => {
 
         {/* Pagination controls */}
         {filteredDrivers.length > itemsPerPage && (
-          <div className="p-4 bg-gray-50/50 dark:bg-gray-900/10 border-t border-gray-150 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+          <div className="p-4 bg-gray-50/50 dark:bg-gray-900/10 border-t border-gray-250 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>
               Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredDrivers.length)} of {filteredDrivers.length} drivers
             </span>
@@ -467,7 +467,7 @@ const Drivers = () => {
               <button
                 onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 disabled:opacity-50 transition-colors flex items-center gap-1"
+                className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors flex items-center gap-1"
               >
                 <ChevronLeft className="w-3.5 h-3.5" /> Previous
               </button>
@@ -478,7 +478,7 @@ const Drivers = () => {
                   className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
                     currentPage === idx + 1
                       ? "bg-blue-600 text-white"
-                      : "border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-850"
+                      : "border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                   }`}
                 >
                   {idx + 1}
@@ -487,7 +487,7 @@ const Drivers = () => {
               <button
                 onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 disabled:opacity-50 transition-colors flex items-center gap-1"
+                className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors flex items-center gap-1"
               >
                 Next <ChevronRight className="w-3.5 h-3.5" />
               </button>

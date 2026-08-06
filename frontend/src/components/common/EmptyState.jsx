@@ -10,7 +10,7 @@ const EmptyState = ({
   className = "",
 }) => {
   return (
-    <div className={`flex flex-col items-center justify-center text-center p-8 py-12 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-xl shadow-sm ${className}`}>
+    <div className={`flex flex-col items-center justify-center text-center p-8 py-12 bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-xl shadow-sm ${className}`}>
       <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/20 rounded-full flex items-center justify-center mb-4 text-blue-500 dark:text-blue-400">
         <Icon className="w-8 h-8" />
       </div>

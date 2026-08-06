@@ -237,10 +237,10 @@ const Reports = () => {
       </div>
 
       {/* Tabs and Filters Panel */}
-      <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-4">
         
         {/* Navigation Tabs */}
-        <div className="flex border-b border-gray-150 dark:border-gray-800 overflow-x-auto whitespace-nowrap scrollbar-none select-none">
+        <div className="flex border-b border-gray-250 dark:border-gray-800 overflow-x-auto whitespace-nowrap scrollbar-none select-none">
           {Object.keys(reportDB).map((tab) => (
             <button
               key={tab}
@@ -283,13 +283,13 @@ const Reports = () => {
           <div className="flex items-center gap-2 self-end md:self-auto">
             <button
               onClick={exportCSV}
-              className="px-4 py-2 border border-gray-350 dark:border-gray-700 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 border border-gray-400 dark:border-gray-700 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5"
             >
               <Download className="w-3.5 h-3.5" /> CSV
             </button>
             <button
               onClick={exportExcel}
-              className="px-4 py-2 border border-gray-350 dark:border-gray-700 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 border border-gray-400 dark:border-gray-700 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5"
             >
               <Download className="w-3.5 h-3.5" /> Excel
             </button>
@@ -306,7 +306,7 @@ const Reports = () => {
       {/* Summary statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {currentReport.stats.map((stat, idx) => (
-          <div key={idx} className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 p-5 rounded-2xl shadow-sm flex items-center justify-between">
+          <div key={idx} className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 p-5 rounded-2xl shadow-sm flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                 {stat.label}
@@ -315,7 +315,7 @@ const Reports = () => {
                 {stat.value}
               </h4>
             </div>
-            <div className="p-2.5 bg-gray-50 dark:bg-gray-900 border dark:border-gray-850 rounded-xl">
+            <div className="p-2.5 bg-gray-50 dark:bg-gray-900 border dark:border-gray-800 rounded-xl">
               <BarChart3 className="w-5 h-5 text-gray-400" />
             </div>
           </div>
@@ -323,8 +323,8 @@ const Reports = () => {
       </div>
 
       {/* Render Data List Grid */}
-      <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-150 dark:border-gray-800">
+      <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-250 dark:border-gray-800">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white capitalize">
             {activeReport} Database Records
           </h3>
@@ -333,20 +333,20 @@ const Reports = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50/75 dark:bg-gray-900/50 border-b border-gray-150 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase select-none">
+              <tr className="bg-gray-50/75 dark:bg-gray-900/50 border-b border-gray-250 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase select-none">
                 {currentReport.headers.map((h, i) => (
                   <th key={i} className="py-4 px-6">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150 dark:divide-gray-800 text-sm">
+            <tbody className="divide-y divide-gray-250 dark:divide-gray-800 text-sm">
               {currentReport.rows.map((row, idx) => (
                 <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors">
                   {row.map((cell, i) => {
                     const isStatus = currentReport.headers[i]?.toLowerCase().includes("status");
                     
                     return (
-                      <td key={i} className={`py-4 px-6 ${i === 0 ? "font-semibold text-gray-900 dark:text-white" : "text-gray-650 dark:text-gray-350"}`}>
+                      <td key={i} className={`py-4 px-6 ${i === 0 ? "font-semibold text-gray-900 dark:text-white" : "text-gray-650 dark:text-gray-400"}`}>
                         {isStatus ? (
                           <Badge variant={cell.toLowerCase() === "active" || cell.toLowerCase() === "completed" || cell.toLowerCase() === "assigned" ? "success" : cell.toLowerCase() === "maintenance" || cell.toLowerCase() === "pending" || cell.toLowerCase() === "running" ? "warning" : "error"}>
                             {cell}

@@ -105,6 +105,11 @@ const vehicleSchema = new mongoose.Schema(
       expiryDate: Date,
       document: String,
     },
+    inspectionDocument: {
+      type: String,
+      default: null,
+    },
+    supportingDocuments: [String],
     currentDriver: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Driver",

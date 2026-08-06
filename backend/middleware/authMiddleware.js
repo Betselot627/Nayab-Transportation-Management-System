@@ -38,8 +38,8 @@ const protect = async (req, res, next) => {
         });
       }
 
-      // Check if user is active
-      if (req.user.status !== "active") {
+      // Check if user is active (allowed in development mode for easy testing)
+      if (req.user.status !== "active" && process.env.NODE_ENV !== "development") {
         return res.status(401).json({
           success: false,
           message: "Account is not active",

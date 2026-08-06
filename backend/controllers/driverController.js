@@ -263,7 +263,7 @@ const getAvailableDrivers = async (req, res) => {
   try {
     const drivers = await Driver.find({ status: "available" })
       .populate("userId", "name phone")
-      .sort({ totalTrips: 1 }); // Sort by least busy first
+      .sort({ lastAssignedAt: 1, createdAt: 1 }); // Fair queue: longest waiting first
 
     res.status(200).json({
       success: true,
@@ -281,16 +281,23 @@ const getAvailableDrivers = async (req, res) => {
 
 const getMyProfile = async (req, res) => {
   try {
-    const driver = await Driver.findOne({ userId: req.user._id }).populate(
+    let driver = await Driver.findOne({ userId: req.user._id }).populate(
       "userId",
       "name email phone",
     );
 
     if (!driver) {
-      return res.status(404).json({
-        success: false,
-        message: "Driver profile not found",
+      driver = await Driver.create({
+        userId: req.user._id,
+        fullName: req.user.name,
+        licenseNumber: `PENDING-${req.user._id.toString().substring(18)}`,
+        licenseExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        experience: 0,
       });
+      driver = await Driver.findById(driver._id).populate(
+        "userId",
+        "name email phone",
+      );
     }
 
     res.status(200).json({
@@ -308,7 +315,7 @@ const getMyProfile = async (req, res) => {
 
 const updateMyProfile = async (req, res) => {
   try {
-    const { name, email, phone, licenseNumber, experience } = req.body;
+    const { name, email, phone, licenseNumber, experience, licenseExpiry, profileImage, licenseImage, documents } = req.body;
 
     // Update User model fields
     const user = await User.findById(req.user._id);
@@ -320,6 +327,7 @@ const updateMyProfile = async (req, res) => {
     }
 
     if (name) user.name = name;
+    if (profileImage) user.profileImage = profileImage;
     if (email) {
       const emailExists = await User.findOne({ email, _id: { $ne: req.user._id } });
       if (emailExists) {
@@ -333,6 +341,18 @@ const updateMyProfile = async (req, res) => {
     if (phone) user.phone = phone;
     await user.save();
 
+    // Ensure Driver model exists
+    let driverExists = await Driver.findOne({ userId: req.user._id });
+    if (!driverExists) {
+      await Driver.create({
+        userId: req.user._id,
+        fullName: user.name,
+        licenseNumber: `PENDING-${req.user._id.toString().substring(18)}`,
+        licenseExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        experience: 0,
+      });
+    }
+
     // Update Driver model fields
     const driverUpdate = {};
     if (licenseNumber) {
@@ -345,9 +365,19 @@ const updateMyProfile = async (req, res) => {
       }
       driverUpdate.licenseNumber = licenseNumber;
     }
-    if (experience !== undefined) driverUpdate.experience = experience;
+    if (experience !== undefined) driverUpdate.experience = Number(experience);
+    if (licenseExpiry) driverUpdate.licenseExpiry = new Date(licenseExpiry);
+    if (licenseImage) driverUpdate.licenseImage = licenseImage;
     if (req.body.fullName) driverUpdate.fullName = req.body.fullName;
     if (req.body.emergencyContact) driverUpdate.emergencyContact = req.body.emergencyContact;
+
+    if (documents) {
+      driverUpdate.documents = {
+        cnic: documents.cnic || undefined,
+        medicalCertificate: documents.medicalCertificate || undefined,
+        other: documents.other || undefined,
+      };
+    }
 
     const driver = await Driver.findOneAndUpdate(
       { userId: req.user._id },

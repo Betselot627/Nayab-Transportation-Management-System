@@ -187,7 +187,7 @@ const BookingManagement = () => {
       </div>
 
       {/* Search and Filters Section */}
-      <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
           
           {/* Search */}
@@ -269,11 +269,11 @@ const BookingManagement = () => {
       </div>
 
       {/* Bookings Table List */}
-      <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50/75 dark:bg-gray-900/50 border-b border-gray-150 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase select-none">
+              <tr className="bg-gray-50/75 dark:bg-gray-900/50 border-b border-gray-250 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase select-none">
                 <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("rollNumber")}>
                   <div className="flex items-center gap-1">
                     Booking # <ArrowUpDown className="w-3.5 h-3.5" />
@@ -308,17 +308,17 @@ const BookingManagement = () => {
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150 dark:divide-gray-800 text-sm">
+            <tbody className="divide-y divide-gray-250 dark:divide-gray-800 text-sm">
               {currentBookings.length > 0 ? (
                 currentBookings.map((booking) => (
                   <tr key={booking.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors">
                     <td className="py-4 px-6 font-semibold text-gray-900 dark:text-white">
                       {booking.rollNumber}
                     </td>
-                    <td className="py-4 px-6 font-semibold text-gray-800 dark:text-gray-250">
+                    <td className="py-4 px-6 font-semibold text-gray-800 dark:text-gray-300">
                       {booking.customer}
                     </td>
-                    <td className="py-4 px-6 text-gray-600 dark:text-gray-350">
+                    <td className="py-4 px-6 text-gray-600 dark:text-gray-400">
                       {booking.vehicle}
                     </td>
                     <td className="py-4 px-6 text-gray-500 dark:text-gray-400 font-mono text-xs">
@@ -327,7 +327,7 @@ const BookingManagement = () => {
                     <td className="py-4 px-6 text-gray-600 dark:text-gray-300">
                       {booking.tripType}
                     </td>
-                    <td className="py-4 px-6 text-gray-600 dark:text-gray-350">
+                    <td className="py-4 px-6 text-gray-600 dark:text-gray-400">
                       {booking.assignedDriver}
                     </td>
                     <td className="py-4 px-6">
@@ -368,7 +368,7 @@ const BookingManagement = () => {
 
         {/* Pagination controls */}
         {filteredBookings.length > itemsPerPage && (
-          <div className="p-4 bg-gray-50/50 dark:bg-gray-900/10 border-t border-gray-150 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+          <div className="p-4 bg-gray-50/50 dark:bg-gray-900/10 border-t border-gray-250 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>
               Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredBookings.length)} of {filteredBookings.length} bookings
             </span>
@@ -376,7 +376,7 @@ const BookingManagement = () => {
               <button
                 onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 disabled:opacity-50 transition-colors flex items-center gap-1"
+                className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors flex items-center gap-1"
               >
                 <ChevronLeft className="w-3.5 h-3.5" /> Previous
               </button>
@@ -387,7 +387,7 @@ const BookingManagement = () => {
                   className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
                     currentPage === idx + 1
                       ? "bg-blue-600 text-white"
-                      : "border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-850"
+                      : "border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                   }`}
                 >
                   {idx + 1}
@@ -396,7 +396,7 @@ const BookingManagement = () => {
               <button
                 onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 disabled:opacity-50 transition-colors flex items-center gap-1"
+                className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors flex items-center gap-1"
               >
                 Next <ChevronRight className="w-3.5 h-3.5" />
               </button>

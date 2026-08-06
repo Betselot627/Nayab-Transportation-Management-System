@@ -83,7 +83,7 @@ const VehicleAvailability = () => {
       const dayCells = [];
       // Empty buffer cells
       for (let i = 0; i < firstDay; i++) {
-        dayCells.push(<div key={`empty-${i}`} className="min-h-24 bg-gray-50/50 dark:bg-gray-900/10 border border-gray-150 dark:border-gray-800/50"></div>);
+        dayCells.push(<div key={`empty-${i}`} className="min-h-24 bg-gray-50/50 dark:bg-gray-900/10 border border-gray-250 dark:border-gray-800/50"></div>);
       }
 
       // Active day cells
@@ -92,7 +92,7 @@ const VehicleAvailability = () => {
         const dayEvents = getFilteredEventsForDate(currentDayStr);
 
         dayCells.push(
-          <div key={`day-${day}`} className="min-h-28 bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-850 p-2 space-y-1.5 hover:shadow-inner transition-shadow flex flex-col justify-between">
+          <div key={`day-${day}`} className="min-h-28 bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 p-2 space-y-1.5 hover:shadow-inner transition-shadow flex flex-col justify-between">
             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{day}</span>
             <div className="space-y-1 overflow-y-auto max-h-20 flex-1">
               {dayEvents.map((evt) => (
@@ -116,7 +116,7 @@ const VehicleAvailability = () => {
     if (view === "week") {
       const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       return (
-        <div className="grid grid-cols-7 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-gray-950 p-4 gap-4">
+        <div className="grid grid-cols-7 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-gray-900 p-4 gap-4">
           {weekdays.map((dayName, idx) => {
             const tempDate = new Date(selectedDate);
             tempDate.setDate(tempDate.getDate() - tempDate.getDay() + idx);
@@ -124,8 +124,8 @@ const VehicleAvailability = () => {
             const dayEvents = getFilteredEventsForDate(dateStr);
 
             return (
-              <div key={idx} className="space-y-3 min-h-60 flex flex-col border-r border-gray-100 dark:border-gray-850 last:border-none pr-2">
-                <div className="text-center pb-2 border-b border-gray-100 dark:border-gray-850">
+              <div key={idx} className="space-y-3 min-h-60 flex flex-col border-r border-gray-100 dark:border-gray-800 last:border-none pr-2">
+                <div className="text-center pb-2 border-b border-gray-100 dark:border-gray-800">
                   <p className="text-xs text-gray-400 font-semibold uppercase">{dayName.slice(0, 3)}</p>
                   <p className="text-sm font-bold text-gray-800 dark:text-white mt-1">{tempDate.getDate()}</p>
                 </div>
@@ -157,8 +157,8 @@ const VehicleAvailability = () => {
       const dayEvents = getFilteredEventsForDate(currentDayStr);
       
       return (
-        <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-4 shadow-sm max-w-lg mx-auto">
-          <div className="pb-3 border-b border-gray-150 dark:border-gray-800 text-center">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-4 shadow-sm max-w-lg mx-auto">
+          <div className="pb-3 border-b border-gray-250 dark:border-gray-800 text-center">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">
               {selectedDate.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </h3>
@@ -198,7 +198,7 @@ const VehicleAvailability = () => {
       {/* Event Details Modal popup */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in" onClick={() => setSelectedEvent(null)}>
-          <div className="relative bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-scale-up space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="relative bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-scale-up space-y-4" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setSelectedEvent(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <X className="w-5 h-5" />
             </button>
@@ -240,7 +240,7 @@ const VehicleAvailability = () => {
         </div>
         
         {/* Toggle Scheduler Views */}
-        <div className="flex border border-gray-300 dark:border-gray-700 rounded-xl overflow-hidden self-start sm:self-auto bg-white dark:bg-gray-950">
+        <div className="flex border border-gray-300 dark:border-gray-700 rounded-xl overflow-hidden self-start sm:self-auto bg-white dark:bg-gray-900">
           {["month", "week", "day"].map((vName) => (
             <button
               key={vName}
@@ -248,7 +248,7 @@ const VehicleAvailability = () => {
               className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
                 view === vName
                   ? "bg-blue-600 text-white"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-850"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
               {vName}
@@ -258,7 +258,7 @@ const VehicleAvailability = () => {
       </div>
 
       {/* Filters and Navigation */}
-      <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+      <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
         
         {/* Navigation Controls */}
         <div className="flex items-center gap-3">
@@ -282,7 +282,7 @@ const VehicleAvailability = () => {
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Legend indicator */}
-          <div className="flex items-center gap-3 text-xs pr-4 border-r border-gray-250 dark:border-gray-800">
+          <div className="flex items-center gap-3 text-xs pr-4 border-r border-gray-300 dark:border-gray-800">
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-green-500"></span> Available</span>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-blue-500"></span> Booked</span>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-red-500"></span> Maintenance</span>
@@ -307,7 +307,7 @@ const VehicleAvailability = () => {
 
       {/* Weekday headers for Month/Week Views */}
       {(view === "month" || view === "week") && (
-        <div className="grid grid-cols-7 text-center text-xs font-bold text-gray-400 uppercase tracking-widest bg-gray-50/75 dark:bg-gray-900/50 py-3 rounded-lg border border-gray-150 dark:border-gray-800">
+        <div className="grid grid-cols-7 text-center text-xs font-bold text-gray-400 uppercase tracking-widest bg-gray-50/75 dark:bg-gray-900/50 py-3 rounded-lg border border-gray-250 dark:border-gray-800">
           <span>Sun</span>
           <span>Mon</span>
           <span>Tue</span>

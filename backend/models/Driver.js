@@ -94,6 +94,10 @@ const driverSchema = new mongoose.Schema(
       medicalCertificate: String,
       other: [String],
     },
+    lastAssignedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

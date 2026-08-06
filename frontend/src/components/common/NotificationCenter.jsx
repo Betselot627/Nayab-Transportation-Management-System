@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { Bell, Check, X, ShieldAlert, Wrench, CalendarPlus, Trash2, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { notificationService } from "../../services/notificationService";
+import { useAuth } from "../../hooks/useAuth";
 
 const NotificationCenter = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
@@ -87,6 +89,7 @@ const NotificationCenter = () => {
           type: n.type,
           time: formatTime(n.createdAt),
           read: n.read,
+          relatedEntity: n.relatedEntity,
         }));
         setNotifications(mapped);
       }
@@ -99,6 +102,10 @@ const NotificationCenter = () => {
 
   useEffect(() => {
     fetchNotifications();
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -159,10 +166,21 @@ const NotificationCenter = () => {
     const type = n.type?.toLowerCase();
     const title = n.title?.toLowerCase();
     
+    // Direct link to shipment/trip details based on role
+    if (type === "trip" || type === "shipment" || title.includes("shipment") || title.includes("trip")) {
+      const entityId = n.relatedEntity?.entityId || n.id;
+      if (user?.role === "driver") {
+        navigate(`/driver/trip-details/${entityId}`);
+      } else if (user?.role === "customer") {
+        navigate(`/customer/shipment-details/${entityId}`);
+      } else {
+        navigate("/admin/shipments");
+      }
+      return;
+    }
+
     if (type === "vehicle_registration") {
       navigate("/admin/vehicles");
-    } else if (type === "shipment") {
-      navigate("/admin/shipments");
     } else {
       if (title.includes("customer")) {
         navigate("/admin/customers");
@@ -190,7 +208,7 @@ const NotificationCenter = () => {
       case "driver_expiry":
         return <ShieldAlert className="w-5 h-5 text-red-500" />;
       case "maintenance_due":
-        return <Wrench className="w-5 h-5 text-amber-500" />;
+        return <Wrench className="w-5 h-5 text-amber-505" />;
       case "booking_created":
         return <CalendarPlus className="w-5 h-5 text-green-500" />;
       case "booking_cancelled":
@@ -215,9 +233,9 @@ const NotificationCenter = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-xl shadow-2xl overflow-hidden z-50 animate-slide-down">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-55 dark:bg-gray-900 border-b border-gray-150 dark:border-gray-800">
-            <h3 className="text-sm font-semibold text-gray-800 dark:text-white">
+        <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-xl shadow-2xl overflow-hidden z-50 animate-slide-down">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-900 border-b border-gray-250 dark:border-gray-800">
+            <h3 className="text-sm font-semibold text-gray-850 dark:text-white">
               Notifications
             </h3>
             {unreadCount > 0 && (
@@ -238,7 +256,7 @@ const NotificationCenter = () => {
                   key={n.id}
                   onClick={() => handleNotificationClick(n)}
                   className={`flex gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer transition-colors duration-150 relative group ${
-                    !n.read ? "bg-blue-50/20 dark:bg-blue-950/5" : ""
+                    !n.read ? "bg-blue-50/20 dark:bg-blue-900/5" : ""
                   }`}
                 >
                   <div className="mt-0.5">{getIcon(n.type)}</div>
@@ -249,7 +267,7 @@ const NotificationCenter = () => {
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
                       {n.message}
                     </p>
-                    <span className="text-[10px] text-gray-400 mt-1.5 block">
+                    <span className="text-[10px] text-gray-450 mt-1.5 block">
                       {n.time}
                     </span>
                   </div>

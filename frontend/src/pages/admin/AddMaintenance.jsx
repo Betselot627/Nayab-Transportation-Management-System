@@ -136,7 +136,7 @@ const AddMaintenance = () => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Core fields */}
-        <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
           <h2 className="text-md font-bold text-gray-800 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-3">
             Maintenance Service Sheet
           </h2>
@@ -288,7 +288,7 @@ const AddMaintenance = () => {
         </div>
 
         {/* Media & Docs Upload Panels */}
-        <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
           <h2 className="text-md font-bold text-gray-800 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-3">
             Invoice & Service Documentation
           </h2>
@@ -301,7 +301,7 @@ const AddMaintenance = () => {
               </label>
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl p-6 text-center hover:border-blue-500 dark:hover:border-blue-450 transition-colors bg-gray-50/50 dark:bg-gray-900/10">
                 {invoiceFile ? (
-                  <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-xl">
+                  <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-xl">
                     <div className="min-w-0 flex-1 pr-3 text-left">
                       <p className="text-xs font-semibold text-gray-800 dark:text-white truncate">
                         {invoiceFile.name}
@@ -362,7 +362,7 @@ const AddMaintenance = () => {
                   {documents.map((doc, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-xl"
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-xl"
                     >
                       <div className="min-w-0 flex-1 pr-3 text-left">
                         <p className="text-xs font-semibold text-gray-800 dark:text-white truncate">
@@ -396,7 +396,7 @@ const AddMaintenance = () => {
           <button
             type="button"
             onClick={() => navigate("/admin/maintenance")}
-            className="flex-1 py-3 border border-gray-350 dark:border-gray-700 rounded-xl font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-850 transition-colors"
+            className="flex-1 py-3 border border-gray-400 dark:border-gray-700 rounded-xl font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             Cancel
           </button>

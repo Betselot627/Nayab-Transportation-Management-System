@@ -1,6 +1,5 @@
-
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Search,
   Plus,
@@ -12,286 +11,304 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { vehicleService } from "../../services/vehicleService";
+import Loading from "../../components/common/Loading";
+import toast from "react-hot-toast";
 
 const VehicleManagement = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [vehicles, setVehicles] = useState([]);
+  const [totalVehicles, setTotalVehicles] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const [vehicles] = useState([
-    {
-      id: 1,
-      rollNumber: "V001",
-      name: "Toyota Hiace",
-      registrationNumber: "AA-12345-ET",
-      model: "2022",
-      vehicleGroup: "Van",
-      activeStatus: "Active",
-    },
-    {
-      id: 2,
-      rollNumber: "V002",
-      name: "Isuzu Truck",
-      registrationNumber: "AA-67890-ET",
-      model: "2021",
-      vehicleGroup: "Truck",
-      activeStatus: "Active",
-    },
-    {
-      id: 3,
-      rollNumber: "V003",
-      name: "Hino 500",
-      registrationNumber: "AA-11223-ET",
-      model: "2023",
-      vehicleGroup: "Truck",
-      activeStatus: "Active",
-    },
-    {
-      id: 4,
-      rollNumber: "V004",
-      name: "Mercedes Sprinter",
-      registrationNumber: "AA-44556-ET",
-      model: "2022",
-      vehicleGroup: "Van",
-      activeStatus: "Maintenance",
-    },
-    {
-      id: 5,
-      rollNumber: "V005",
-      name: "Mitsubishi Canter",
-      registrationNumber: "AA-78901-ET",
-      model: "2020",
-      vehicleGroup: "Pickup",
-      activeStatus: "Active",
-    },
-    {
-      id: 6,
-      rollNumber: "V006",
-      name: "Ford Transit",
-      registrationNumber: "AA-33445-ET",
-      model: "2023",
-      vehicleGroup: "Van",
-      activeStatus: "Active",
-    },
-    {
-      id: 7,
-      rollNumber: "V007",
-      name: "Hyundai HD72",
-      registrationNumber: "AA-55667-ET",
-      model: "2021",
-      vehicleGroup: "Truck",
-      activeStatus: "Inactive",
-    },
-    {
-      id: 8,
-      rollNumber: "V008",
-      name: "Nissan Urvan",
-      registrationNumber: "AA-88990-ET",
-      model: "2022",
-      vehicleGroup: "Van",
-      activeStatus: "Active",
-    },
-  ]);
+  useEffect(() => {
+    fetchVehicles();
+  }, [currentPage, filterStatus, searchTerm]);
+
+  const fetchVehicles = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+
+      if (filterStatus !== "all") {
+        params.status = filterStatus;
+      }
+
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+
+      const response = await vehicleService.getAllVehicles(params);
+      setVehicles(response.data || []);
+      setTotalVehicles(response.total || 0);
+      setTotalPages(response.pages || 1);
+    } catch (error) {
+      console.error("Error fetching vehicles:", error);
+      toast.error("Failed to load vehicles");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this vehicle?")) {
+      try {
+        await vehicleService.deleteVehicle(id);
+        toast.success("Vehicle deleted successfully");
+        fetchVehicles();
+      } catch (error) {
+        console.error("Error deleting vehicle:", error);
+        toast.error(
+          error.response?.data?.message || "Failed to delete vehicle",
+        );
+      }
+    }
+  };
+
+  const handleView = (id) => {
+    navigate(`/admin/vehicles/${id}`);
+  };
+
+  const handleEdit = (id) => {
+    navigate(`/admin/vehicles/edit/${id}`);
+  };
 
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "active":
+      case "available":
         return "bg-green-100 text-green-800";
       case "maintenance":
         return "bg-yellow-100 text-yellow-800";
       case "inactive":
+      case "in_use":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getApprovalColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case "approved":
+        return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "rejected":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
 
-  const filteredVehicles = vehicles.filter((vehicle) => {
-    const matchesSearch =
-      vehicle.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicle.registrationNumber
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      vehicle.rollNumber.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesFilter =
-      filterStatus === "all" ||
-      vehicle.activeStatus.toLowerCase() === filterStatus.toLowerCase();
-
-    return matchesSearch && matchesFilter;
-  });
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredVehicles.slice(
-    indexOfFirstItem,
-    indexOfLastItem,
-  );
-  const totalPages = Math.ceil(filteredVehicles.length / itemsPerPage);
-
   const handleExportCSV = () => {
-    const csvContent = [
-      [
-        "Roll Number",
-        "Vehicle Name",
-        "Registration Number",
-        "Model",
-        "Vehicle Group",
-        "Status",
-      ],
-      ...vehicles.map((v) => [
-        v.rollNumber,
-        v.name,
-        v.registrationNumber,
-        v.model,
-        v.vehicleGroup,
-        v.activeStatus,
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
+    try {
+      const csvContent = [
+        [
+          "Plate Number",
+          "Model",
+          "Manufacturer",
+          "Type",
+          "Status",
+          "Approval Status",
+        ],
+        ...vehicles.map((v) => [
+          v.plateNumber,
+          v.model,
+          v.manufacturer,
+          v.type,
+          v.status,
+          v.approvalStatus,
+        ]),
+      ]
+        .map((row) => row.join(","))
+        .join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "vehicles.csv";
-    a.click();
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `vehicles_${new Date().toISOString().split("T")[0]}.csv`;
+      a.click();
+      toast.success("CSV exported successfully");
+    } catch (error) {
+      console.error("Error exporting CSV:", error);
+      toast.error("Failed to export CSV");
+    }
   };
 
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
+  if (loading && currentPage === 1) {
+    return <Loading />;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Vehicle Management</h1>
-        <p className="text-gray-600 mt-1">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+          Vehicle Management
+        </h1>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
           Manage your fleet vehicles and assignments
         </p>
       </div>
 
       {/* Filters and Actions */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-6 transition-colors duration-300">
         <div className="flex flex-col lg:flex-row gap-4 justify-between">
           {/* Search */}
           <div className="flex-1 max-w-md">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search vehicles..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onChange={handleSearch}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors duration-300"
               />
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             {/* Filter Dropdown */}
-            <div className="relative">
+            <div className="relative flex-1 sm:flex-initial min-w-[150px]">
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="appearance-none px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full appearance-none px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
               >
                 <option value="all">All Status</option>
-                <option value="active">Active</option>
+                <option value="available">Available</option>
+                <option value="in_use">In Use</option>
                 <option value="maintenance">Maintenance</option>
                 <option value="inactive">Inactive</option>
               </select>
-              <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+              <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
             </div>
 
-            {/* Export Buttons */}
+            {/* Export Button */}
             <button
               onClick={handleExportCSV}
-              className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 whitespace-nowrap transition-colors duration-300"
             >
               <Download className="w-4 h-4" />
-              Export CSV
+              <span className="hidden sm:inline">Export CSV</span>
             </button>
 
             {/* Add Vehicle Button */}
             <Link
               to="/admin/vehicles/add"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2"
+              className="px-4 sm:px-6 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-600 flex items-center gap-2 whitespace-nowrap transition-colors duration-300"
             >
               <Plus className="w-5 h-5" />
-              Add Vehicle
+              <span className="hidden sm:inline">Add Vehicle</span>
+              <span className="sm:hidden">Add</span>
             </Link>
           </div>
         </div>
       </div>
 
       {/* Vehicle Table */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-colors duration-300">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
               <tr>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700">
-                  Roll Number
+                <th className="text-left py-3 sm:py-4 px-3 sm:px-6 font-semibold text-gray-700 dark:text-gray-300 text-xs sm:text-sm">
+                  Plate Number
                 </th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700">
-                  Vehicle Name
-                </th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700">
-                  Registration Number
-                </th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700">
+                <th className="text-left py-3 sm:py-4 px-3 sm:px-6 font-semibold text-gray-700 dark:text-gray-300 text-xs sm:text-sm hidden md:table-cell">
                   Model
                 </th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700">
-                  Vehicle Group
+                <th className="text-left py-3 sm:py-4 px-3 sm:px-6 font-semibold text-gray-700 dark:text-gray-300 text-xs sm:text-sm hidden lg:table-cell">
+                  Type
                 </th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700">
-                  Active Status
+                <th className="text-left py-3 sm:py-4 px-3 sm:px-6 font-semibold text-gray-700 dark:text-gray-300 text-xs sm:text-sm">
+                  Status
                 </th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700">
+                <th className="text-left py-3 sm:py-4 px-3 sm:px-6 font-semibold text-gray-700 dark:text-gray-300 text-xs sm:text-sm hidden sm:table-cell">
+                  Approval
+                </th>
+                <th className="text-left py-3 sm:py-4 px-3 sm:px-6 font-semibold text-gray-700 dark:text-gray-300 text-xs sm:text-sm">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody>
-              {currentItems.length > 0 ? (
-                currentItems.map((vehicle) => (
+              {vehicles.length > 0 ? (
+                vehicles.map((vehicle) => (
                   <tr
-                    key={vehicle.id}
-                    className="border-b border-gray-100 hover:bg-gray-50"
+                    key={vehicle._id}
+                    className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
                   >
-                    <td className="py-4 px-6 text-gray-900 font-medium">
-                      {vehicle.rollNumber}
+                    <td className="py-3 sm:py-4 px-3 sm:px-6 text-gray-900 dark:text-white font-medium text-xs sm:text-sm">
+                      {vehicle.plateNumber}
                     </td>
-                    <td className="py-4 px-6 text-gray-900">{vehicle.name}</td>
-                    <td className="py-4 px-6 text-gray-600">
-                      {vehicle.registrationNumber}
+                    <td className="py-3 sm:py-4 px-3 sm:px-6 text-gray-600 dark:text-gray-400 text-xs sm:text-sm hidden md:table-cell">
+                      {vehicle.manufacturer} {vehicle.model}
                     </td>
-                    <td className="py-4 px-6 text-gray-600">{vehicle.model}</td>
-                    <td className="py-4 px-6">
-                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
-                        {vehicle.vehicleGroup}
+                    <td className="py-3 sm:py-4 px-3 sm:px-6 text-xs sm:text-sm hidden lg:table-cell">
+                      <span className="px-2 sm:px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs font-semibold capitalize">
+                        {vehicle.type}
                       </span>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-3 sm:py-4 px-3 sm:px-6">
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                          vehicle.activeStatus,
+                        className={`px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold capitalize ${getStatusColor(
+                          vehicle.status,
                         )}`}
                       >
-                        {vehicle.activeStatus}
+                        {vehicle.status}
                       </span>
                     </td>
-                    <td className="py-4 px-6">
-                      <div className="flex gap-2">
-                        <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                          <Eye className="w-4 h-4" />
+                    <td className="py-3 sm:py-4 px-3 sm:px-6 hidden sm:table-cell">
+                      <span
+                        className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold capitalize ${getApprovalColor(
+                          vehicle.approvalStatus,
+                        )}`}
+                      >
+                        {vehicle.approvalStatus}
+                      </span>
+                    </td>
+                    <td className="py-3 sm:py-4 px-3 sm:px-6">
+                      <div className="flex gap-1 sm:gap-2">
+                        <button
+                          onClick={() => handleView(vehicle._id)}
+                          className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="View"
+                        >
+                          <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
-                        <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors">
-                          <Edit2 className="w-4 h-4" />
+                        <button
+                          onClick={() => handleEdit(vehicle._id)}
+                          className="p-1.5 sm:p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
-                        <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                          <Trash2 className="w-4 h-4" />
+                        <button
+                          onClick={() => handleDelete(vehicle._id)}
+                          className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                       </div>
                     </td>
@@ -299,8 +316,10 @@ const VehicleManagement = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="py-12 text-center text-gray-500">
-                    No vehicles found
+                  <td colSpan="6" className="py-12 text-center text-gray-500">
+                    {searchTerm
+                      ? "No vehicles found matching your search"
+                      : "No vehicles registered yet"}
                   </td>
                 </tr>
               )}
@@ -309,46 +328,52 @@ const VehicleManagement = () => {
         </div>
 
         {/* Pagination */}
-        {filteredVehicles.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-            <p className="text-sm text-gray-600">
-              Showing {indexOfFirstItem + 1} to{" "}
-              {Math.min(indexOfLastItem, filteredVehicles.length)} of{" "}
-              {filteredVehicles.length} vehicles
+        {vehicles.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-700 gap-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+              {Math.min(currentPage * itemsPerPage, totalVehicles)} of{" "}
+              {totalVehicles} vehicles
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors duration-200"
               >
-                <ChevronLeft className="w-4 h-4" />
-                Previous
+                <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Previous</span>
               </button>
-              <div className="flex gap-1">
-                {[...Array(totalPages)].map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentPage(idx + 1)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                      currentPage === idx + 1
-                        ? "bg-blue-600 text-white"
-                        : "border border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    {idx + 1}
-                  </button>
-                ))}
+              <div className="hidden sm:flex gap-1">
+                {[...Array(Math.min(totalPages, 5))].map((_, idx) => {
+                  const pageNum = idx + 1;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 ${
+                        currentPage === pageNum
+                          ? "bg-blue-600 dark:bg-blue-500 text-white"
+                          : "border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
               </div>
+              <span className="sm:hidden px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                {currentPage} / {totalPages}
+              </span>
               <button
                 onClick={() =>
                   setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                 }
                 disabled={currentPage === totalPages}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors duration-200"
               >
-                Next
-                <ChevronRight className="w-4 h-4" />
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
             </div>
           </div>

@@ -199,7 +199,7 @@ const AddVehicle = () => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Vehicle Details */}
-        <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
           <h2 className="text-md font-bold text-gray-800 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-3">
             Vehicle Specification Form
           </h2>
@@ -363,7 +363,7 @@ const AddVehicle = () => {
         {/* Dynamic New Group Modal */}
         {showAddGroup && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 animate-slide-down">
+            <div className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 animate-slide-down">
               <h3 className="text-md font-bold text-gray-900 dark:text-white">Create New Group</h3>
               <input
                 type="text"
@@ -386,7 +386,7 @@ const AddVehicle = () => {
                     setShowAddGroup(false);
                     setNewGroup("");
                   }}
-                  className="flex-1 py-2 border border-gray-350 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="flex-1 py-2 border border-gray-400 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   Cancel
                 </button>
@@ -396,7 +396,7 @@ const AddVehicle = () => {
         )}
 
         {/* Upload Panel */}
-        <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
           <h2 className="text-md font-bold text-gray-800 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-3">
             Media & Documentation Attachment
           </h2>
@@ -470,7 +470,7 @@ const AddVehicle = () => {
                   {documents.map((doc, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-xl"
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-xl"
                     >
                       <div className="min-w-0 flex-1 pr-3">
                         <p className="text-xs font-semibold text-gray-800 dark:text-white truncate">
@@ -504,7 +504,7 @@ const AddVehicle = () => {
           <button
             type="button"
             onClick={() => navigate("/admin/vehicles")}
-            className="flex-1 py-3 border border-gray-350 dark:border-gray-700 rounded-xl font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="flex-1 py-3 border border-gray-400 dark:border-gray-700 rounded-xl font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             Cancel
           </button>

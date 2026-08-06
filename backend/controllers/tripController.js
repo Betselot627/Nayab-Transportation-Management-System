@@ -64,19 +64,117 @@ const getAllTrips = async (req, res) => {
  */
 const getMyTrips = async (req, res) => {
   try {
-    const driver = await Driver.findOne({ userId: req.user._id });
+    let driver = await Driver.findOne({ userId: req.user._id });
 
     if (!driver) {
-      return res.status(404).json({
-        success: false,
-        message: "Driver profile not found",
+      driver = await Driver.create({
+        userId: req.user._id,
+        fullName: req.user.name,
+        licenseNumber: `PENDING-${req.user._id.toString().substring(18)}`,
+        licenseExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        experience: 0,
       });
     }
 
     const trips = await Trip.find({ driverId: driver._id })
-      .populate("shipmentId")
-      .populate("vehicleId", "plateNumber model type")
+      .populate({
+        path: "shipmentId",
+        populate: {
+          path: "customerId",
+          populate: {
+            path: "userId",
+            select: "name email phone profileImage"
+          }
+        }
+      })
+      .populate("vehicleId", "plateNumber model type color capacity")
       .sort({ createdAt: -1 });
+
+    // Generate upcoming reminders dynamically
+    try {
+      const Notification = require("../models/Notification");
+      const now = new Date();
+
+      for (const trip of trips) {
+        if (trip.status === "completed" || trip.status === "cancelled") continue;
+        const shipment = trip.shipmentId;
+        if (!shipment || !shipment.scheduledPickupDate) continue;
+
+        const pickupDate = new Date(shipment.scheduledPickupDate);
+        const diffHours = (pickupDate - now) / (1000 * 60 * 60);
+
+        // 1. Check if 24 hours approaching reminder is needed
+        if (diffHours > 0 && diffHours <= 24) {
+          const exists = await Notification.findOne({
+            userId: req.user._id,
+            title: "Upcoming Shipment Reminder",
+            "relatedEntity.entityId": trip._id,
+          });
+
+          if (!exists) {
+            await Notification.create({
+              userId: req.user._id,
+              title: "Upcoming Shipment Reminder",
+              message: `Trip ${trip.tripNumber} starts in less than 24 hours (scheduled for ${pickupDate.toLocaleDateString()}).`,
+              type: "trip",
+              priority: "medium",
+              relatedEntity: {
+                entityType: "trip",
+                entityId: trip._id,
+              },
+            });
+          }
+        }
+
+        // 2. Check if same-day reminder is needed
+        if (pickupDate.toDateString() === now.toDateString()) {
+          const exists = await Notification.findOne({
+            userId: req.user._id,
+            title: "Shipment Scheduled Today",
+            "relatedEntity.entityId": trip._id,
+          });
+
+          if (!exists) {
+            await Notification.create({
+              userId: req.user._id,
+              title: "Shipment Scheduled Today",
+              message: `Trip ${trip.tripNumber} is scheduled for today! Scheduled pickup: ${pickupDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
+              type: "trip",
+              priority: "high",
+              relatedEntity: {
+                entityType: "trip",
+                entityId: trip._id,
+              },
+            });
+          }
+        }
+
+        // 3. Check if pickup approaching reminder is needed (within 2 hours)
+        if (diffHours > 0 && diffHours <= 2) {
+          const exists = await Notification.findOne({
+            userId: req.user._id,
+            title: "Pickup Time Approaching",
+            "relatedEntity.entityId": trip._id,
+          });
+
+          if (!exists) {
+            await Notification.create({
+              userId: req.user._id,
+              title: "Pickup Time Approaching",
+              message: `🚨 Pickup time for Trip ${trip.tripNumber} starts in less than 2 hours!`,
+              type: "trip",
+              priority: "high",
+              relatedEntity: {
+                entityType: "trip",
+                entityId: trip._id,
+              },
+            });
+          }
+        }
+      }
+    } catch (reminderErr) {
+      console.error("Failed to generate dynamic trip reminders:", reminderErr);
+    }
 
     res.status(200).json({
       success: true,
@@ -100,8 +198,23 @@ const getMyTrips = async (req, res) => {
 const getTripById = async (req, res) => {
   try {
     const trip = await Trip.findById(req.params.id)
-      .populate("shipmentId")
-      .populate("driverId")
+      .populate({
+        path: "shipmentId",
+        populate: {
+          path: "customerId",
+          populate: {
+            path: "userId",
+            select: "name email phone profileImage"
+          }
+        }
+      })
+      .populate({
+        path: "driverId",
+        populate: {
+          path: "userId",
+          select: "name email phone profileImage"
+        }
+      })
       .populate("vehicleId");
 
     if (!trip) {
@@ -146,7 +259,7 @@ const updateTripStatus = async (req, res) => {
     trip.status = status;
 
     // Update timestamps
-    if (status === "in_progress" && !trip.startTime) {
+    if (["on_the_way", "arrived_at_pickup", "picked_up", "in_transit"].includes(status) && !trip.startTime) {
       trip.startTime = new Date();
     }
     if (status === "completed" && !trip.endTime) {
@@ -165,11 +278,11 @@ const updateTripStatus = async (req, res) => {
     // Update driver status
     const driver = await Driver.findById(trip.driverId);
     if (driver) {
-      if (status === "in_progress") {
-        driver.status = "on_trip";
-      } else if (status === "completed") {
+      if (status === "completed") {
         driver.status = "available";
-        driver.completedTrips += 1;
+        driver.completedTrips = (driver.completedTrips || 0) + 1;
+      } else {
+        driver.status = "on_trip";
       }
       await driver.save();
     }
@@ -177,11 +290,10 @@ const updateTripStatus = async (req, res) => {
     // Update vehicle status
     const vehicle = await Vehicle.findById(trip.vehicleId);
     if (vehicle) {
-      if (status === "in_progress") {
-        vehicle.status = "in_use";
-      } else if (status === "completed") {
+      if (status === "completed") {
         vehicle.status = "available";
-        vehicle.currentDriver = null;
+      } else {
+        vehicle.status = "in_use";
       }
       await vehicle.save();
     }
@@ -189,10 +301,53 @@ const updateTripStatus = async (req, res) => {
     // Update shipment status
     const shipment = await Shipment.findById(trip.shipmentId);
     if (shipment) {
-      if (status === "in_progress") {
+      if (["pending", "on_the_way", "arrived_at_pickup"].includes(status)) {
+        shipment.status = "assigned";
+      } else if (status === "picked_up") {
+        shipment.status = "picked_up";
+      } else if (["in_transit", "arrived_at_destination"].includes(status)) {
         shipment.status = "in_transit";
+      } else if (status === "completed") {
+        shipment.status = "delivered";
       }
+      shipment.statusHistory.push({
+        status: shipment.status,
+        updatedBy: req.user._id,
+        remarks: remarks || `Trip status updated to "${status.replace(/_/g, " ")}" by driver.`,
+      });
       await shipment.save();
+
+      // Notify Customer & Driver on status change
+      try {
+        const customer = await Customer.findById(shipment.customerId);
+        if (customer && customer.userId) {
+          await Notification.create({
+            userId: customer.userId,
+            title: "Shipment Progress Update",
+            message: `Your shipment ${shipment.shipmentNumber} is now "${shipment.status.replace("_", " ")}" (${status.replace(/_/g, " ")}).`,
+            type: "shipment",
+            relatedEntity: {
+              entityType: "shipment",
+              entityId: shipment._id,
+            },
+          });
+        }
+
+        if (driver && driver.userId) {
+          await Notification.create({
+            userId: driver.userId,
+            title: "Trip Status Updated",
+            message: `Your assigned trip status has transitioned to "${status.replace(/_/g, " ")}"!`,
+            type: "trip",
+            relatedEntity: {
+              entityType: "shipment",
+              entityId: shipment._id,
+            },
+          });
+        }
+      } catch (notifErr) {
+        console.error("Failed to trigger status change notifications:", notifErr);
+      }
     }
 
     res.status(200).json({

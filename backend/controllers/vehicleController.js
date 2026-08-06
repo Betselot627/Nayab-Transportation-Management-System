@@ -37,10 +37,17 @@ const getAllVehicles = async (req, res) => {
 
     // For drivers, show only their own vehicles
     if (req.user.role === "driver") {
-      const driver = await Driver.findOne({ userId: req.user._id });
-      if (driver) {
-        query.registeredBy = driver._id;
+      let driver = await Driver.findOne({ userId: req.user._id });
+      if (!driver) {
+        driver = await Driver.create({
+          userId: req.user._id,
+          fullName: req.user.name,
+          licenseNumber: `PENDING-${req.user._id.toString().substring(18)}`,
+          licenseExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          experience: 0,
+        });
       }
+      query.registeredBy = driver._id;
     }
 
     if (status) query.status = status;
@@ -65,6 +72,13 @@ const getAllVehicles = async (req, res) => {
       .populate("currentDriver", "fullName phone")
       .populate("registeredBy", "fullName licenseNumber")
       .populate("approvedBy", "name email")
+      .populate({
+        path: "assignedCustomer",
+        populate: {
+          path: "userId",
+          select: "name email phone profileImage"
+        }
+      })
       .limit(parseInt(limit))
       .skip(skip)
       .sort({ createdAt: -1 });

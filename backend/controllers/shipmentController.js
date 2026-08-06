@@ -90,9 +90,29 @@ const getAllShipments = async (req, res) => {
     // Role-based filtering
     if (req.user.role === "customer") {
       const customer = await Customer.findOne({ userId: req.user._id });
+      if (!customer) {
+        return res.status(200).json({
+          success: true,
+          count: 0,
+          total: 0,
+          pages: 0,
+          currentPage: parseInt(page),
+          data: [],
+        });
+      }
       query.customerId = customer._id;
     } else if (req.user.role === "driver") {
       const driver = await Driver.findOne({ userId: req.user._id });
+      if (!driver) {
+        return res.status(200).json({
+          success: true,
+          count: 0,
+          total: 0,
+          pages: 0,
+          currentPage: parseInt(page),
+          data: [],
+        });
+      }
       query.driverId = driver._id;
     }
 
@@ -135,9 +155,21 @@ const getAllShipments = async (req, res) => {
 const getShipmentById = async (req, res) => {
   try {
     const shipment = await Shipment.findById(req.params.id)
-      .populate("customerId")
+      .populate({
+        path: "customerId",
+        populate: {
+          path: "userId",
+          select: "name email phone profileImage"
+        }
+      })
       .populate("vehicleId")
-      .populate("driverId");
+      .populate({
+        path: "driverId",
+        populate: {
+          path: "userId",
+          select: "name email phone profileImage"
+        }
+      });
 
     if (!shipment) {
       return res.status(404).json({
@@ -166,17 +198,16 @@ const getShipmentById = async (req, res) => {
  */
 const assignShipment = async (req, res) => {
   try {
-    const { driverId } = req.body;
+    const { driverId, vehicleId } = req.body;
 
-    if (!driverId) {
+    if (!driverId || !vehicleId) {
       return res.status(400).json({
         success: false,
-        message: "Driver ID is required",
+        message: "Both Driver ID and Vehicle ID are required for manual assignment.",
       });
     }
 
     const shipment = await Shipment.findById(req.params.id);
-
     if (!shipment) {
       return res.status(404).json({
         success: false,
@@ -184,7 +215,7 @@ const assignShipment = async (req, res) => {
       });
     }
 
-    // Verify driver exists
+    // Verify driver exists and is available
     const driver = await Driver.findById(driverId);
     if (!driver) {
       return res.status(404).json({
@@ -192,145 +223,124 @@ const assignShipment = async (req, res) => {
         message: "Driver not found",
       });
     }
-
-    // Find driver's approved and available vehicles
-    const Vehicle = require("../models/Vehicle");
-    const driverVehicles = await Vehicle.find({
-      registeredBy: driverId,
-      approvalStatus: "approved",
-      status: "available",
-    }).sort({ "capacity.weight": 1 });
-
-    if (driverVehicles.length === 0) {
+    if (driver.status !== "available") {
       return res.status(400).json({
         success: false,
-        message: "Driver has no approved and available vehicles",
+        message: `Driver ${driver.fullName} is currently not available (Status: ${driver.status})`,
       });
     }
 
-    // Smart vehicle selection based on cargo type
-    const cargoType = shipment.cargoDetails?.type?.toLowerCase() || "";
+    // Verify vehicle exists, is approved, and available
+    const Vehicle = require("../models/Vehicle");
+    const vehicle = await Vehicle.findById(vehicleId);
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: "Vehicle not found",
+      });
+    }
+    if (vehicle.status !== "available" || vehicle.approvalStatus !== "approved") {
+      return res.status(400).json({
+        success: false,
+        message: `Vehicle ${vehicle.plateNumber} is not approved or available (Status: ${vehicle.status}, Approval: ${vehicle.approvalStatus})`,
+      });
+    }
+
+    // Verify vehicle capacity meets shipment cargo size requirements
     const cargoWeight = shipment.cargoDetails?.weight || 0;
     const cargoUnit = shipment.cargoDetails?.unit || "kg";
+    const cargoWeightKg = cargoUnit === "ton" ? cargoWeight * 1005 : cargoWeight;
 
-    let selectedVehicle = null;
+    const vehicleCap = vehicle.capacity?.weight || 0;
+    const vehicleUnit = vehicle.capacity?.unit || "kg";
+    const vehicleCapKg = vehicleUnit === "ton" ? vehicleCap * 1000 : vehicleCap;
 
-    // Convert cargo weight to kg for comparison
-    const cargoWeightKg =
-      cargoUnit === "ton" ? cargoWeight * 1000 : cargoWeight;
-
-    // Filter vehicles by type recommendation
-    let recommendedVehicles = driverVehicles;
-
-    if (
-      cargoType.includes("document") ||
-      cargoType.includes("envelope") ||
-      cargoType.includes("letter")
-    ) {
-      recommendedVehicles = driverVehicles.filter((v) =>
-        ["pickup", "van"].includes(v.type),
-      );
-    } else if (
-      cargoType.includes("furniture") ||
-      cargoType.includes("heavy") ||
-      cargoType.includes("machinery")
-    ) {
-      recommendedVehicles = driverVehicles.filter((v) =>
-        ["truck", "trailer"].includes(v.type),
-      );
-    } else if (
-      cargoType.includes("fragile") ||
-      cargoType.includes("electronics")
-    ) {
-      recommendedVehicles = driverVehicles.filter((v) =>
-        ["van", "pickup"].includes(v.type),
-      );
-    } else if (
-      cargoType.includes("bulk") ||
-      cargoType.includes("construction")
-    ) {
-      recommendedVehicles = driverVehicles.filter((v) =>
-        ["truck", "trailer"].includes(v.type),
-      );
+    if (vehicleCapKg < cargoWeightKg) {
+      return res.status(400).json({
+        success: false,
+        message: `Vehicle ${vehicle.plateNumber} capacity (${vehicleCap} ${vehicleUnit}) is insufficient for cargo weight (${cargoWeight} ${cargoUnit})`,
+      });
     }
 
-    // If no type match, use all driver vehicles
-    if (recommendedVehicles.length === 0) {
-      recommendedVehicles = driverVehicles;
-    }
-
-    // Find vehicle with sufficient capacity
-    for (const vehicle of recommendedVehicles) {
-      const vehicleCapacityKg =
-        vehicle.capacity.unit === "ton"
-          ? vehicle.capacity.weight * 1000
-          : vehicle.capacity.weight;
-
-      if (vehicleCapacityKg >= cargoWeightKg) {
-        selectedVehicle = vehicle;
-        break;
-      }
-    }
-
-    // If no vehicle with sufficient capacity, use the largest available
-    if (!selectedVehicle) {
-      selectedVehicle = recommendedVehicles[recommendedVehicles.length - 1];
+    // Verify driver-vehicle relationship (either registered by driver or is a fleet vehicle)
+    if (vehicle.registeredBy && String(vehicle.registeredBy) !== String(driver._id)) {
+      return res.status(400).json({
+        success: false,
+        message: `Vehicle ${vehicle.plateNumber} is registered to another driver and cannot be manually assigned to ${driver.fullName}`,
+      });
     }
 
     // Update shipment
     shipment.driverId = driverId;
-    shipment.vehicleId = selectedVehicle._id;
+    shipment.vehicleId = vehicle._id;
     shipment.status = "assigned";
 
     shipment.statusHistory.push({
       status: "assigned",
       updatedBy: req.user._id,
-      remarks: `Driver and vehicle (${selectedVehicle.plateNumber}) auto-assigned`,
+      remarks: `Driver and vehicle (${vehicle.plateNumber}) manually assigned`,
     });
 
     await shipment.save();
 
     // Update vehicle status
-    selectedVehicle.status = "in_use";
-    selectedVehicle.assignedCustomer = shipment.customerId;
-    selectedVehicle.assignedItemType = shipment.cargoDetails?.type;
-    selectedVehicle.assignedAt = new Date();
-    await selectedVehicle.save();
+    vehicle.status = "in_use";
+    vehicle.assignedCustomer = shipment.customerId;
+    vehicle.assignedItemType = shipment.cargoDetails?.type;
+    vehicle.assignedAt = new Date();
+    await vehicle.save();
 
     // Update driver status
     driver.status = "on_trip";
+    driver.lastAssignedAt = new Date();
+    driver.totalTrips = (driver.totalTrips || 0) + 1;
     await driver.save();
 
     // Create trip
     const trip = await Trip.create({
       shipmentId: shipment._id,
       driverId,
-      vehicleId: selectedVehicle._id,
+      vehicleId: vehicle._id,
     });
 
     // Create notification for driver
     await Notification.create({
       userId: driver.userId,
       title: "New Trip Assigned",
-      message: `You have been assigned to shipment ${shipment.shipmentNumber} with vehicle ${selectedVehicle.plateNumber}`,
+      message: `You have been assigned to shipment ${shipment.shipmentNumber} with vehicle ${vehicle.plateNumber}`,
       type: "trip",
       relatedEntity: {
-        entityType: "shipment",
-        entityId: shipment._id,
+        entityType: "trip",
+        entityId: trip._id,
       },
     });
 
+    // Create notification for customer
+    const customer = await Customer.findById(shipment.customerId);
+    if (customer && customer.userId) {
+      await Notification.create({
+        userId: customer.userId,
+        title: "Shipment Assigned & Dispatched",
+        message: `Your booking ${shipment.shipmentNumber} has been assigned to driver ${driver.fullName} with vehicle ${vehicle.plateNumber}. You can now track it live!`,
+        type: "shipment",
+        relatedEntity: {
+          entityType: "shipment",
+          entityId: shipment._id,
+        },
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: "Shipment assigned successfully",
+      message: "Shipment manually assigned successfully",
       data: {
         shipment,
         trip,
         selectedVehicle: {
-          _id: selectedVehicle._id,
-          plateNumber: selectedVehicle.plateNumber,
-          type: selectedVehicle.type,
-          model: selectedVehicle.model,
+          _id: vehicle._id,
+          plateNumber: vehicle.plateNumber,
+          type: vehicle.type,
+          model: vehicle.model,
         },
       },
     });
@@ -380,9 +390,53 @@ const updateShipmentStatus = async (req, res) => {
 
     await shipment.save();
 
+    // Notify Customer when status changes
+    try {
+      const customer = await Customer.findById(shipment.customerId);
+      if (customer && customer.userId) {
+        await Notification.create({
+          userId: customer.userId,
+          title: "Shipment Status Updated",
+          message: `Your booking ${shipment.shipmentNumber || shipment._id} status has been updated to "${status.replace("_", " ")}".`,
+          type: "shipment",
+          priority: "medium",
+          relatedEntity: {
+            entityType: "shipment",
+            entityId: shipment._id,
+          },
+        });
+      }
+    } catch (notifErr) {
+      console.error("Failed to notify customer on status update:", notifErr);
+    }
+
+    // Notify Driver when status changes
+    try {
+      if (shipment.driverId) {
+        const Driver = require("../models/Driver");
+        const driver = await Driver.findById(shipment.driverId);
+        if (driver && driver.userId) {
+          const Notification = require("../models/Notification");
+          await Notification.create({
+            userId: driver.userId,
+            title: "Shipment Details Updated",
+            message: `Shipment ${shipment.shipmentNumber || shipment._id} status has been updated to "${status.replace("_", " ")}".`,
+            type: "trip",
+            priority: "medium",
+            relatedEntity: {
+              entityType: "shipment",
+              entityId: shipment._id,
+            },
+          });
+        }
+      }
+    } catch (driverNotifErr) {
+      console.error("Failed to notify driver on status update:", driverNotifErr);
+    }
+
     res.status(200).json({
       success: true,
-      message: "Shipment status updated",
+      message: "Shipment status updated successfully",
       data: shipment,
     });
   } catch (error) {
@@ -504,8 +558,10 @@ const approveShipment = async (req, res) => {
       });
     }
 
-    // Find all available drivers
-    const drivers = await Driver.find({ status: "available" }).populate("userId");
+    // Find all available drivers sorted by longest waiting first (fair queue)
+    const drivers = await Driver.find({ status: "available" })
+      .populate("userId")
+      .sort({ lastAssignedAt: 1, createdAt: 1 });
     
     let selectedDriver = null;
     let selectedVehicle = null;
@@ -580,6 +636,8 @@ const approveShipment = async (req, res) => {
 
     // Update driver status
     selectedDriver.status = "on_trip";
+    selectedDriver.lastAssignedAt = new Date();
+    selectedDriver.totalTrips = (selectedDriver.totalTrips || 0) + 1;
     await selectedDriver.save();
 
     // Create the active trip
@@ -591,17 +649,17 @@ const approveShipment = async (req, res) => {
 
     // Notify Driver
     if (selectedDriver.userId) {
-      await Notification.create({
-        userId: selectedDriver.userId._id,
-        title: "New Trip Assigned",
-        message: `You have been assigned to shipment ${shipment.shipmentNumber} with vehicle ${selectedVehicle.plateNumber}.`,
-        type: "trip",
-        relatedEntity: {
-          entityType: "shipment",
-          entityId: shipment._id,
-        },
-      });
-    }
+       await Notification.create({
+         userId: selectedDriver.userId._id || selectedDriver.userId,
+         title: "New Trip Assigned",
+         message: `You have been assigned to shipment ${shipment.shipmentNumber} with vehicle ${selectedVehicle.plateNumber}.`,
+         type: "trip",
+         relatedEntity: {
+           entityType: "trip",
+           entityId: trip._id,
+         },
+       });
+     }
 
     // Notify Customer
     const customer = await Customer.findById(shipment.customerId);

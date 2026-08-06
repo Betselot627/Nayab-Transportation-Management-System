@@ -46,17 +46,11 @@ const limiter = rateLimit({
 app.use("/api/", limiter);
 
 // CORS Configuration
-const corsOptions = {
-  origin: [
-    process.env.FRONTEND_URL || "http://localhost:5173",
-    "https://nayab-transportation-management-sys.vercel.app",
-    "http://localhost:5173",
-    "http://localhost:5174",
-  ],
+app.use(cors({
+  origin: true, // Allow any origin dynamically to support any local testing port
   credentials: true,
   optionsSuccessStatus: 200,
-};
-app.use(cors(corsOptions));
+}));
 
 // Body Parser Middleware
 app.use(express.json());

@@ -142,6 +142,7 @@ const updateMyProfile = async (req, res) => {
     }
 
     if (name) user.name = name;
+    if (req.body.profileImage) user.profileImage = req.body.profileImage;
     if (email) {
       const emailExists = await User.findOne({ email, _id: { $ne: req.user._id } });
       if (emailExists) {

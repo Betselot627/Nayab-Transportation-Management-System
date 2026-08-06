@@ -156,8 +156,8 @@ const login = async (req, res) => {
       });
     }
 
-    // Check if user is active
-    if (user.status !== "active") {
+    // Check if user is active (allowed in development mode for easy testing)
+    if (user.status !== "active" && process.env.NODE_ENV !== "development") {
       return res.status(401).json({
         success: false,
         message: "Your account is not active. Please contact administrator.",

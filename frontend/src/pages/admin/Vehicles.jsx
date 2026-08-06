@@ -4,15 +4,19 @@ import { vehicleService } from "../../services/vehicleService";
 import {
   Search,
   Plus,
-  Edit2,
   Trash2,
-  Eye,
+  X,
   Download,
   Filter,
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
   FileText,
+  Truck,
+  User,
+  Calendar,
+  ExternalLink,
+  Loader,
 } from "lucide-react";
 import Badge from "../../components/common/Badge";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
@@ -35,6 +39,10 @@ const Vehicles = () => {
   // Deletion Dialog State
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+
+  // Detail Modal State
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Mock Vehicles Fallback Database
   const mockVehicles = [
@@ -99,10 +107,10 @@ const Vehicles = () => {
         await vehicleService.deleteVehicle(deleteId);
       }
       setVehicles(vehicles.filter((v) => v.id !== deleteId));
-      toast.success("Vehicle deleted successfully");
+      toast.success("Vehicle removed from records");
     } catch (err) {
       setVehicles(vehicles.filter((v) => v.id !== deleteId));
-      toast.success("Vehicle deleted successfully (Simulated)");
+      toast.success("Vehicle removed successfully (Simulated)");
     }
   };
 
@@ -133,25 +141,71 @@ const Vehicles = () => {
     }
   };
 
-  const handleApproveVehicle = async (id) => {
+  const handleApproveVehicle = async (id, e) => {
+    if (e) e.stopPropagation();
     try {
       await vehicleService.approveVehicle(id);
       toast.success("Vehicle approved successfully");
       fetchVehicles();
+      if (selectedVehicle && selectedVehicle._id === id) {
+        setSelectedVehicle(prev => ({ ...prev, approvalStatus: "approved" }));
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to approve vehicle");
     }
   };
 
-  const handleRejectVehicle = async (id) => {
+  const handleRejectVehicle = async (id, e) => {
+    if (e) e.stopPropagation();
     const reason = window.prompt("Please enter the reason for rejecting this vehicle:");
     if (reason === null) return; // cancelled
     try {
       await vehicleService.rejectVehicle(id, reason);
       toast.success("Vehicle registration rejected");
       fetchVehicles();
+      if (selectedVehicle && selectedVehicle._id === id) {
+        setSelectedVehicle(prev => ({ ...prev, approvalStatus: "rejected" }));
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to reject vehicle");
+    }
+  };
+
+  // Clicking on vehicle name loads full details
+  const handleVehicleClick = async (id) => {
+    if (typeof id === "number" || String(id).length < 10) {
+      const mock = mockVehicles.find(v => v.id === id);
+      setSelectedVehicle({
+        _id: id,
+        plateNumber: mock.registrationNumber,
+        manufacturer: mock.name.split(" ")[0],
+        model: mock.name.split(" ").slice(1).join(" "),
+        type: mock.vehicleGroup.toLowerCase(),
+        year: parseInt(mock.model),
+        color: "White",
+        status: mock.activeStatus === "Running" ? "available" : "maintenance",
+        approvalStatus: "approved",
+        createdAt: new Date(),
+        capacity: { weight: 5, unit: "ton" },
+        insurance: { company: "EFU General", policyNumber: "POL-7712", expiryDate: new Date() },
+        registration: { number: "REG-9912", expiryDate: new Date() }
+      });
+      return;
+    }
+
+    try {
+      setLoadingDetails(true);
+      const res = await vehicleService.getVehicleById(id);
+      if (res && res.data) {
+        setSelectedVehicle(res.data);
+      } else {
+        toast.error("Failed to load vehicle details");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to fetch vehicle information");
+    } finally {
+      setLoadingDetails(false);
     }
   };
 
@@ -174,7 +228,6 @@ const Vehicles = () => {
       let valA = a[sortField];
       let valB = b[sortField];
 
-      // Safe numeric conversion if needed
       if (sortField === "model") {
         valA = parseInt(valA);
         valB = parseInt(valB);
@@ -267,7 +320,17 @@ const Vehicles = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Loading Overlay */}
+      {loadingDetails && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center backdrop-blur-xs">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-xl flex items-center gap-3">
+            <Loader className="w-6 h-6 text-blue-600 animate-spin" />
+            <span className="text-sm font-semibold">Retrieving vehicle folder...</span>
+          </div>
+        </div>
+      )}
+
       {/* Confirm Deletion */}
       <ConfirmDialog
         isOpen={confirmDeleteOpen}
@@ -276,6 +339,263 @@ const Vehicles = () => {
         title="Delete Vehicle"
         message="Are you sure you want to remove this vehicle from NTMS fleet records?"
       />
+
+      {/* Detail Overlay Modal */}
+      {selectedVehicle && (
+        <div className="fixed inset-0 bg-black/55 backdrop-blur-xs z-40 flex justify-end transition-opacity duration-300">
+          <div className="w-full max-w-2xl bg-white dark:bg-gray-900 h-full shadow-2xl flex flex-col p-6 overflow-y-auto animate-slide-in relative">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b pb-4 border-gray-250 dark:border-gray-800">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {selectedVehicle.manufacturer} {selectedVehicle.model}
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-400">
+                    {selectedVehicle.type}
+                  </span>
+                </div>
+                <p className="text-sm font-mono text-gray-500 dark:text-gray-400">
+                  Plate: {selectedVehicle.plateNumber} | Color: {selectedVehicle.color || "N/A"}
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedVehicle(null)}
+                className="p-1.5 hover:bg-gray-105 dark:hover:bg-gray-900 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 py-6 space-y-8">
+              
+              {/* Badges Panel */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl flex items-center justify-between border border-gray-250 dark:border-gray-800">
+                  <span className="text-xs font-bold text-gray-500">Fleet Status</span>
+                  <Badge variant={selectedVehicle.status === "available" ? "success" : selectedVehicle.status === "maintenance" ? "error" : "warning"}>
+                    {selectedVehicle.status}
+                  </Badge>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl flex items-center justify-between border border-gray-250 dark:border-gray-800">
+                  <span className="text-xs font-bold text-gray-500">Registry Status</span>
+                  <Badge variant={getApprovalBadgeVariant(selectedVehicle.approvalStatus)}>
+                    {selectedVehicle.approvalStatus}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Photos Gallery */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <Truck className="w-4.5 h-4.5 text-blue-500" /> Vehicle Photos
+                </h3>
+                {selectedVehicle.images && selectedVehicle.images.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {selectedVehicle.images.map((img, idx) => (
+                      <div key={idx} className="h-28 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-50 flex items-center justify-center group relative">
+                        <img src={img} alt="Vehicle photo" className="w-full h-full object-cover" />
+                        <a 
+                          href={img} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <ExternalLink className="w-5 h-5 text-white" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 italic">No photos uploaded for this vehicle.</p>
+                )}
+              </div>
+
+              {/* Complete Specifications */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Technical Details</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border border-gray-250 dark:border-gray-800 rounded-2xl p-4 bg-gray-50/20 dark:bg-gray-900/10">
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Year</span>
+                    <p className="text-sm font-semibold">{selectedVehicle.year}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Fuel Type</span>
+                    <p className="text-sm font-semibold capitalize">{selectedVehicle.fuelType || "N/A"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Capacity</span>
+                    <p className="text-sm font-semibold">{selectedVehicle.capacity?.weight} {selectedVehicle.capacity?.unit}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Insurance Company</span>
+                    <p className="text-xs font-semibold">{selectedVehicle.insurance?.company || "N/A"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Policy Number</span>
+                    <p className="text-xs font-semibold font-mono">{selectedVehicle.insurance?.policyNumber || "N/A"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Insurance Expiry</span>
+                    <p className="text-xs font-semibold">
+                      {selectedVehicle.insurance?.expiryDate ? new Date(selectedVehicle.insurance.expiryDate).toLocaleDateString() : "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Owner / Driver Info */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <User className="w-4.5 h-4.5 text-blue-500" /> Owner / Assigned Driver
+                </h3>
+                {selectedVehicle.currentDriver || selectedVehicle.registeredBy ? (
+                  <div className="border border-gray-250 dark:border-gray-800 rounded-2xl p-4 space-y-3 bg-gray-50/20 dark:bg-gray-900/10">
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="font-bold text-gray-400">Driver Name:</span>
+                        <p className="font-semibold text-gray-800 dark:text-gray-200">
+                          {selectedVehicle.currentDriver?.fullName || selectedVehicle.registeredBy?.fullName}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-bold text-gray-400">License Number:</span>
+                        <p className="font-semibold font-mono">
+                          {selectedVehicle.currentDriver?.licenseNumber || selectedVehicle.registeredBy?.licenseNumber}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-bold text-gray-400">Experience:</span>
+                        <p className="font-semibold">
+                          {selectedVehicle.currentDriver?.experience !== undefined ? `${selectedVehicle.currentDriver.experience} years` : "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-bold text-gray-400">Contact Phone:</span>
+                        <p className="font-semibold">
+                          {selectedVehicle.currentDriver?.userId?.phone || selectedVehicle.registeredBy?.userId?.phone || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 italic">No owner or driver associated (Fleet Vehicle).</p>
+                )}
+              </div>
+
+              {/* Uploaded Documents */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <FileText className="w-4.5 h-4.5 text-blue-500" /> Uploaded Documents
+                </h3>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {/* Registration Document */}
+                  {selectedVehicle.registration?.document && (
+                    <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-3 flex flex-col items-center justify-between text-center bg-gray-50/50">
+                      <div className="w-full h-16 rounded overflow-hidden mb-2 bg-gray-100 flex items-center justify-center">
+                        <img src={selectedVehicle.registration.document} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="text-[10px] font-bold block mb-1">Registration Card</span>
+                      <a href={selectedVehicle.registration.document} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5">
+                        Open File <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Insurance Document */}
+                  {selectedVehicle.insurance?.document && (
+                    <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-3 flex flex-col items-center justify-between text-center bg-gray-50/50">
+                      <div className="w-full h-16 rounded overflow-hidden mb-2 bg-gray-100 flex items-center justify-center">
+                        <img src={selectedVehicle.insurance.document} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="text-[10px] font-bold block mb-1">Insurance Policy</span>
+                      <a href={selectedVehicle.insurance.document} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5">
+                        Open File <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Inspection Document */}
+                  {selectedVehicle.inspectionDocument && (
+                    <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-3 flex flex-col items-center justify-between text-center bg-gray-50/50">
+                      <div className="w-full h-16 rounded overflow-hidden mb-2 bg-gray-100 flex items-center justify-center">
+                        <img src={selectedVehicle.inspectionDocument} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="text-[10px] font-bold block mb-1">Fitness Certificate</span>
+                      <a href={selectedVehicle.inspectionDocument} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5">
+                        Open File <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Supporting Document */}
+                  {selectedVehicle.supportingDocuments && selectedVehicle.supportingDocuments.length > 0 && selectedVehicle.supportingDocuments[0] && (
+                    <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-3 flex flex-col items-center justify-between text-center bg-gray-50/50">
+                      <div className="w-full h-16 rounded overflow-hidden mb-2 bg-gray-100 flex items-center justify-center">
+                        <img src={selectedVehicle.supportingDocuments[0]} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="text-[10px] font-bold block mb-1">Supporting Doc</span>
+                      <a href={selectedVehicle.supportingDocuments[0]} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5">
+                        Open File <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {!selectedVehicle.registration?.document && !selectedVehicle.insurance?.document && !selectedVehicle.inspectionDocument && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 italic">No formal verification papers uploaded.</p>
+                )}
+              </div>
+
+              {/* Additional details */}
+              <div className="space-y-2 border-t pt-4 border-gray-250 dark:border-gray-800 text-xs text-gray-500">
+                <div className="flex justify-between">
+                  <span>Registered date:</span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">
+                    {selectedVehicle.createdAt ? new Date(selectedVehicle.createdAt).toLocaleDateString() : "N/A"}
+                  </span>
+                </div>
+                {selectedVehicle.notes && (
+                  <div className="space-y-1.5 mt-2">
+                    <span className="font-bold">Additional comments:</span>
+                    <p className="p-3 bg-gray-50 dark:bg-gray-900 border rounded-xl text-xs italic">{selectedVehicle.notes}</p>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Modal Actions */}
+            <div className="border-t pt-4 border-gray-250 dark:border-gray-800 flex justify-end items-center gap-3">
+              {selectedVehicle.approvalStatus === "pending" && (
+                <>
+                  <button
+                    onClick={() => handleApproveVehicle(selectedVehicle._id)}
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm"
+                  >
+                    Approve Vehicle
+                  </button>
+                  <button
+                    onClick={() => handleRejectVehicle(selectedVehicle._id)}
+                    className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm"
+                  >
+                    Reject Vehicle
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setSelectedVehicle(null)}
+                className="px-5 py-2.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 font-semibold rounded-xl text-xs transition-all"
+              >
+                Close View
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Header and Add Trigger */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -295,7 +615,7 @@ const Vehicles = () => {
       </div>
 
       {/* Searching & Filter Dropdowns */}
-      <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
           
           {/* Searching */}
@@ -373,11 +693,11 @@ const Vehicles = () => {
       </div>
 
       {/* Vehicle Data Table */}
-      <div className="bg-white dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50/75 dark:bg-gray-900/50 border-b border-gray-150 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase select-none">
+              <tr className="bg-gray-50/75 dark:bg-gray-900/50 border-b border-gray-250 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase select-none">
                 <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("rollNumber")}>
                   <div className="flex items-center gap-1">
                     Roll # <ArrowUpDown className="w-3.5 h-3.5" />
@@ -416,26 +736,31 @@ const Vehicles = () => {
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150 dark:divide-gray-800 text-sm">
+            <tbody className="divide-y divide-gray-250 dark:divide-gray-800 text-sm">
               {currentVehicles.length > 0 ? (
                 currentVehicles.map((vehicle) => (
                   <tr key={vehicle.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors">
                     <td className="py-4 px-6 font-semibold text-gray-900 dark:text-white">
                       {vehicle.rollNumber}
                     </td>
-                    <td className="py-4 px-6 text-gray-800 dark:text-gray-250">
-                      {vehicle.name}
+                    <td className="py-4 px-6 text-gray-800 dark:text-gray-300">
+                      <button
+                        onClick={() => handleVehicleClick(vehicle.id)}
+                        className="text-blue-600 dark:text-blue-400 hover:underline font-semibold text-left transition-colors"
+                      >
+                        {vehicle.name}
+                      </button>
                     </td>
                     <td className="py-4 px-6 font-mono text-gray-500 dark:text-gray-400">
                       {vehicle.registrationNumber}
                     </td>
-                    <td className="py-4 px-6 text-gray-600 dark:text-gray-350">
+                    <td className="py-4 px-6 text-gray-600 dark:text-gray-400">
                       {vehicle.model}
                     </td>
                     <td className="py-4 px-6 text-gray-600 dark:text-gray-300">
                       <Badge variant="purple">{vehicle.vehicleGroup}</Badge>
                     </td>
-                     <td className="py-4 px-6">
+                    <td className="py-4 px-6">
                       <Badge variant={getBadgeVariant(vehicle.activeStatus)}>
                         {vehicle.activeStatus}
                       </Badge>
@@ -450,13 +775,13 @@ const Vehicles = () => {
                         {vehicle.approvalStatus === "pending" && (
                           <div className="flex gap-1.5 mr-2">
                             <button
-                              onClick={() => handleApproveVehicle(vehicle.id)}
+                              onClick={(e) => handleApproveVehicle(vehicle.id, e)}
                               className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
                             >
                               Approve
                             </button>
                             <button
-                              onClick={() => handleRejectVehicle(vehicle.id)}
+                              onClick={(e) => handleRejectVehicle(vehicle.id, e)}
                               className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
                             >
                               Reject
@@ -470,27 +795,13 @@ const Vehicles = () => {
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => navigate(`/admin/vehicles/edit/${vehicle.id}`)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <Link
-                          to={`/admin/vehicles/edit/${vehicle.id}`}
-                          className="p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                          title="View"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Link>
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="py-12 text-center text-gray-400">
+                  <td colSpan="8" className="py-12 text-center text-gray-400">
                     No vehicles found matching search.
                   </td>
                 </tr>
@@ -501,7 +812,7 @@ const Vehicles = () => {
 
         {/* Pagination bar */}
         {filteredVehicles.length > itemsPerPage && (
-          <div className="p-4 bg-gray-50/50 dark:bg-gray-900/10 border-t border-gray-150 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+          <div className="p-4 bg-gray-50/50 dark:bg-gray-900/10 border-t border-gray-250 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>
               Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredVehicles.length)} of {filteredVehicles.length} vehicles
             </span>
@@ -509,7 +820,7 @@ const Vehicles = () => {
               <button
                 onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 disabled:opacity-50 transition-colors flex items-center gap-1"
+                className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-855 disabled:opacity-50 transition-colors flex items-center gap-1"
               >
                 <ChevronLeft className="w-3.5 h-3.5" /> Previous
               </button>
@@ -520,7 +831,7 @@ const Vehicles = () => {
                   className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
                     currentPage === idx + 1
                       ? "bg-blue-600 text-white"
-                      : "border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-850"
+                      : "border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-855"
                   }`}
                 >
                   {idx + 1}
@@ -529,7 +840,7 @@ const Vehicles = () => {
               <button
                 onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 disabled:opacity-50 transition-colors flex items-center gap-1"
+                className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-855 disabled:opacity-50 transition-colors flex items-center gap-1"
               >
                 Next <ChevronRight className="w-3.5 h-3.5" />
               </button>

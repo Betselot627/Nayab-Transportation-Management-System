@@ -28,7 +28,7 @@ const ConfirmDialog = ({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-md w-full border border-gray-200 dark:border-gray-800 overflow-hidden transform transition-all duration-300 scale-100">
-        <div className="flex justify-between items-start p-4 border-b border-gray-150 dark:border-gray-800">
+        <div className="flex justify-between items-start p-4 border-b border-gray-250 dark:border-gray-800">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${iconColors[variant]}`}>
               <AlertTriangle className="w-5 h-5" />
@@ -46,13 +46,13 @@ const ConfirmDialog = ({
         </div>
         
         <div className="p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-350">{message}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{message}</p>
         </div>
 
-        <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-850 border-t border-gray-150 dark:border-gray-800">
+        <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-250 dark:border-gray-800">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-350 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+            className="px-4 py-2 border border-gray-400 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
           >
             {cancelLabel}
           </button>
