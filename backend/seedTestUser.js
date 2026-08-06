@@ -18,7 +18,9 @@ const seedUsers = async () => {
   try {
     await connectDB();
 
-    // Check if users already exist
+    // Clean existing test users to reset passwords
+    await User.deleteMany({ email: { $in: ["admin@ntms.com", "customer@ntms.com", "driver@ntms.com"] } });
+
     const existingAdmin = await User.findOne({ email: "admin@ntms.com" });
     const existingCustomer = await User.findOne({ email: "customer@ntms.com" });
     const existingDriver = await User.findOne({ email: "driver@ntms.com" });

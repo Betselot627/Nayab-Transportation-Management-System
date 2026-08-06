@@ -26,7 +26,7 @@ const TripDetails = () => {
   const fetchTripDetails = async () => {
     try {
       const data = await tripService.getTripById(id);
-      setTrip(data);
+      setTrip(data.data);
     } catch (error) {
       toast.error("Failed to load trip details");
     } finally {
@@ -200,7 +200,7 @@ const TripDetails = () => {
           </div>
         </div>
 
-        {trip.vehicle && (
+        {trip.vehicleId && (
           <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
             <h3 className="text-xl font-bold text-slate-900 mb-4">
               Vehicle Information
@@ -209,18 +209,18 @@ const TripDetails = () => {
               <InfoItem
                 icon={<Truck className="w-5 h-5 text-blue-500" />}
                 label="Registration Number"
-                value={trip.vehicle.registrationNumber}
+                value={trip.vehicleId.plateNumber}
               />
               <InfoItem
                 icon={<Package className="w-5 h-5 text-amber-500" />}
                 label="Type"
-                value={trip.vehicle.type}
+                value={trip.vehicleId.type}
               />
             </div>
           </div>
         )}
 
-        {trip.shipment && (
+        {trip.shipmentId && (
           <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
             <h3 className="text-xl font-bold text-slate-900 mb-4">
               Shipment Information
@@ -229,12 +229,12 @@ const TripDetails = () => {
               <InfoItem
                 icon={<Package className="w-5 h-5 text-blue-500" />}
                 label="Tracking Number"
-                value={trip.shipment.trackingNumber}
+                value={trip.shipmentId.shipmentNumber}
               />
               <InfoItem
                 icon={<Package className="w-5 h-5 text-amber-500" />}
                 label="Weight"
-                value={`${trip.shipment.cargoWeight || "N/A"} kg`}
+                value={`${trip.shipmentId.cargoDetails?.weight || "N/A"} ${trip.shipmentId.cargoDetails?.unit || "kg"}`}
               />
             </div>
           </div>

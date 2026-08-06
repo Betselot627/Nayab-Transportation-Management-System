@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { driverService } from "../../services/driverService";
+import api from "../../services/api";
 import {
   Search,
   Plus,
@@ -116,6 +117,7 @@ const Drivers = () => {
       if (res && res.data && res.data.length > 0) {
         const mapped = res.data.map((d, idx) => ({
           id: d._id,
+          userId: d.userId?._id || null,
           rollNumber: `D${String(idx + 1).padStart(3, "0")}`,
           photo: d.photoUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150",
           fullName: d.fullName,
@@ -124,6 +126,7 @@ const Drivers = () => {
           licenseExpiryDate: d.licenseExpiry?.split("T")[0] || "2028-12-31",
           dateJoined: d.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
           status: d.status === "available" ? "Available" : d.status === "on_trip" ? "On Trip" : d.status === "suspended" ? "Suspended" : "Off Duty",
+          userStatus: d.userId?.status || "active",
           documentUrl: d.licenseDocumentUrl || "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400",
         }));
         setDrivers(mapped);
@@ -159,6 +162,17 @@ const Drivers = () => {
     } catch (err) {
       setDrivers(drivers.filter((d) => d.id !== deleteId));
       toast.success("Driver profile removed successfully! (Simulated)");
+    }
+  };
+
+  const handleApproveDriver = async (userId) => {
+    try {
+      await api.put(`/users/${userId}/status`, { status: "active" });
+      toast.success("Driver account approved successfully!");
+      fetchDrivers();
+    } catch (err) {
+      console.error("Failed to approve driver:", err);
+      toast.error(err.response?.data?.message || "Failed to approve driver");
     }
   };
 
@@ -391,8 +405,8 @@ const Drivers = () => {
                       {driver.dateJoined}
                     </td>
                     <td className="py-4 px-6">
-                      <Badge variant={getBadgeVariant(driver.status)}>
-                        {driver.status}
+                      <Badge variant={driver.userStatus === "inactive" ? "error" : getBadgeVariant(driver.status)}>
+                        {driver.userStatus === "inactive" ? "Pending Approval" : driver.status}
                       </Badge>
                     </td>
                     <td className="py-4 px-6">
@@ -404,7 +418,16 @@ const Drivers = () => {
                       </button>
                     </td>
                     <td className="py-4 px-6 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end items-center gap-2">
+                        {driver.userStatus === "inactive" && driver.userId && (
+                          <button
+                            onClick={() => handleApproveDriver(driver.userId)}
+                            className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors flex items-center"
+                            title="Approve Driver"
+                          >
+                            Approve
+                          </button>
+                        )}
                         <button
                           onClick={() => triggerDelete(driver.id)}
                           className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors"

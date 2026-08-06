@@ -34,7 +34,9 @@ const AddCustomer = () => {
           fullName: c.userId?.name || "",
           mobileNumber: c.userId?.phone || "",
           email: c.userId?.email || "",
-          address: c.address || "",
+          address: c.address && typeof c.address === "object"
+            ? [c.address.street, c.address.city, c.address.country].filter(Boolean).join(", ")
+            : (c.address || ""),
           gender: c.gender || "Male",
           company: c.companyName || "",
           status: c.userId?.status === "active" ? "Active" : "Inactive",

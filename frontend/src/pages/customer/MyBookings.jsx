@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { shipmentService } from "../../services/shipmentService";
 import {
   Package,
@@ -55,10 +55,9 @@ const MyBookings = () => {
 
 
   const filteredShipments = shipments.filter((shipment) => {
-    const matchesSearch =
-      shipment.trackingNumber
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase());
+    const matchesSearch = (shipment.shipmentNumber || "")
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
 
     const matchesFilter =
       filterStatus === "all" ||
@@ -208,9 +207,7 @@ const MyBookings = () => {
 
 
                     <span className="text-sm font-mono text-slate-500">
-
-                      #{s.trackingNumber}
-
+                      #{s.shipmentNumber}
                     </span>
 
 
@@ -347,7 +344,7 @@ const MyBookings = () => {
 
                 <p className="text-slate-500 mt-1">
 
-                  #{selectedShipment.trackingNumber}
+                  #{selectedShipment.shipmentNumber}
 
                 </p>
 

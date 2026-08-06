@@ -1,60 +1,117 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Bell, Check, X, ShieldAlert, Wrench, CalendarPlus, Trash2, RotateCcw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { notificationService } from "../../services/notificationService";
 
 const NotificationCenter = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const [notifications, setNotifications] = useState([]);
 
-  // Initialize notifications from localStorage or fallback
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem("ntms_notifications");
-    if (saved) return JSON.parse(saved);
-    return [
-      {
-        id: "n1",
-        title: "Driver License Expiry",
-        message: "Driver Abebe Kebede's license DL-908123 expires in 5 days.",
-        type: "driver_expiry",
-        time: "2 hours ago",
-        read: false,
-      },
-      {
-        id: "n2",
-        title: "Vehicle Maintenance Due",
-        message: "Toyota Hiace (AA-12345-ET) is due for service this week.",
-        type: "maintenance_due",
-        time: "5 hours ago",
-        read: false,
-      },
-      {
-        id: "n3",
-        title: "Booking Created",
-        message: "Trip B001 (Addis Ababa → Adama) booked successfully.",
-        type: "booking_created",
-        time: "1 day ago",
-        read: true,
-      },
-      {
-        id: "n4",
-        title: "Booking Cancelled",
-        message: "Trip B004 (Mekelle → Addis Ababa) has been cancelled.",
-        type: "booking_cancelled",
-        time: "2 days ago",
-        read: false,
-      },
-      {
-        id: "n5",
-        title: "Vehicle Returned",
-        message: "Isuzu Truck (AA-67890-ET) returned to Adama Hub.",
-        type: "vehicle_returned",
-        time: "3 days ago",
-        read: true,
-      },
-    ];
-  });
+  const getMockFallbackNotifications = () => [
+    {
+      id: "n1",
+      title: "Driver License Expiry",
+      message: "Driver Abebe Kebede's license DL-908123 expires in 5 days.",
+      type: "driver_expiry",
+      time: "2 hours ago",
+      read: false,
+    },
+    {
+      id: "n2",
+      title: "Vehicle Maintenance Due",
+      message: "Toyota Hiace (AA-12345-ET) is due for service this week.",
+      type: "maintenance_due",
+      time: "5 hours ago",
+      read: false,
+    },
+    {
+      id: "n3",
+      title: "Booking Created",
+      message: "Trip B001 (Addis Ababa → Adama) booked successfully.",
+      type: "booking_created",
+      time: "1 day ago",
+      read: true,
+    },
+    {
+      id: "n4",
+      title: "Booking Cancelled",
+      message: "Trip B004 (Mekelle → Addis Ababa) has been cancelled.",
+      type: "booking_cancelled",
+      time: "2 days ago",
+      read: false,
+    },
+    {
+      id: "n5",
+      title: "Vehicle Returned",
+      message: "Isuzu Truck (AA-67890-ET) returned to Adama Hub.",
+      type: "vehicle_returned",
+      time: "3 days ago",
+      read: true,
+    },
+  ];
+
+  const formatTime = (dateStr) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    
+    if (isNaN(date.getTime())) return dateStr || "Recent";
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return date.toLocaleDateString();
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token || token.startsWith("mock-")) {
+        const saved = localStorage.getItem("ntms_notifications");
+        if (saved) {
+          setNotifications(JSON.parse(saved));
+        } else {
+          setNotifications(getMockFallbackNotifications());
+        }
+        return;
+      }
+      const response = await notificationService.getMyNotifications();
+      if (response && response.data) {
+        const mapped = response.data.map((n) => ({
+          id: n._id,
+          title: n.title,
+          message: n.message,
+          type: n.type,
+          time: formatTime(n.createdAt),
+          read: n.read,
+        }));
+        setNotifications(mapped);
+      }
+    } catch (err) {
+      console.warn("Notification API failed, using fallback:", err);
+      const saved = localStorage.getItem("ntms_notifications");
+      if (saved) setNotifications(JSON.parse(saved));
+    }
+  };
 
   useEffect(() => {
-    localStorage.setItem("ntms_notifications", JSON.stringify(notifications));
+    fetchNotifications();
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotifications();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token || token.startsWith("mock-")) {
+      localStorage.setItem("ntms_notifications", JSON.stringify(notifications));
+    }
   }, [notifications]);
 
   useEffect(() => {
@@ -69,18 +126,62 @@ const NotificationCenter = () => {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (token && !token.startsWith("mock-")) {
+        await notificationService.markAllAsRead();
+      }
+    } catch (err) {
+      console.error(err);
+    }
     setNotifications(notifications.map((n) => ({ ...n, read: true })));
   };
 
-  const markAsRead = (id) => {
+  const markAsRead = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (token && !token.startsWith("mock-")) {
+        await notificationService.markAsRead(id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
     setNotifications(
       notifications.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
   };
 
-  const deleteNotification = (id, e) => {
+  const handleNotificationClick = async (n) => {
+    await markAsRead(n.id);
+    setIsOpen(false);
+    
+    const type = n.type?.toLowerCase();
+    const title = n.title?.toLowerCase();
+    
+    if (type === "vehicle_registration") {
+      navigate("/admin/vehicles");
+    } else if (type === "shipment") {
+      navigate("/admin/shipments");
+    } else {
+      if (title.includes("customer")) {
+        navigate("/admin/customers");
+      } else if (title.includes("driver")) {
+        navigate("/admin/drivers");
+      }
+    }
+  };
+
+  const deleteNotification = async (id, e) => {
     e.stopPropagation();
+    try {
+      const token = localStorage.getItem("token");
+      if (token && !token.startsWith("mock-")) {
+        await notificationService.deleteNotification(id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
     setNotifications(notifications.filter((n) => n.id !== id));
   };
 
@@ -135,7 +236,7 @@ const NotificationCenter = () => {
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  onClick={() => markAsRead(n.id)}
+                  onClick={() => handleNotificationClick(n)}
                   className={`flex gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer transition-colors duration-150 relative group ${
                     !n.read ? "bg-blue-50/20 dark:bg-blue-950/5" : ""
                   }`}

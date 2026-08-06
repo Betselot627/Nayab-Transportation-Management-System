@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
+import { AuthContext } from "../../context/AuthContext";
+import axios from "axios";
 import {
   User,
   Lock,
@@ -14,6 +16,7 @@ import {
 import toast from "react-hot-toast";
 
 const Settings = () => {
+  const { user, setUser } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState("profile"); // 'profile' | 'security' | 'appearance' | 'notifications'
   
   // Theme state loaded from local storage
@@ -24,10 +27,20 @@ const Settings = () => {
 
   // Profile fields state
   const [profile, setProfile] = useState({
-    name: "Admin User",
-    email: "admin@ntms.com",
-    phone: "+251911223344",
+    name: user?.name || "Admin User",
+    email: user?.email || "admin@ntms.com",
+    phone: user?.phone || "+251911223344",
   });
+
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+      });
+    }
+  }, [user]);
 
   const [profilePic, setProfilePic] = useState({
     preview: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150",
@@ -87,19 +100,52 @@ const Settings = () => {
     }
   };
 
-  const saveProfile = (e) => {
+  const saveProfile = async (e) => {
     e.preventDefault();
-    toast.success("Profile information updated successfully!");
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL}/users/${user._id}`,
+        {
+          name: profile.name,
+          phone: profile.phone,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.data && response.data.success) {
+        setUser({
+          ...user,
+          name: profile.name,
+          phone: profile.phone,
+        });
+        toast.success("Profile information updated successfully!");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update profile");
+    }
   };
 
-  const updatePassword = (e) => {
+  const updatePassword = async (e) => {
     e.preventDefault();
     if (security.newPassword !== security.confirmPassword) {
       toast.error("New passwords do not match!");
       return;
     }
-    toast.success("Security password changed successfully!");
-    setSecurity({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/auth/update-password`,
+        {
+          currentPassword: security.oldPassword,
+          newPassword: security.newPassword,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Security password changed successfully!");
+      setSecurity({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to change password");
+    }
   };
 
   const savePreferences = () => {

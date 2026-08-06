@@ -19,7 +19,7 @@ const vehicleSchema = new mongoose.Schema(
     registeredBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Driver",
-      required: [true, "Driver registration is required"],
+      default: null,
     },
     approvalStatus: {
       type: String,

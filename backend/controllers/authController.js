@@ -4,6 +4,7 @@ const Driver = require("../models/Driver");
 const Vehicle = require("../models/Vehicle");
 const Shipment = require("../models/Shipment");
 const Trip = require("../models/Trip");
+const Notification = require("../models/Notification");
 const generateToken = require("../utils/generateToken");
 
 /**
@@ -50,13 +51,16 @@ const register = async (req, res) => {
       });
     }
 
-    // Create user
+    const assignedRole = role || "customer";
+
+    // Create user with inactive status if they are driver/customer (needs approval)
     const user = await User.create({
       name,
       email,
       password,
       phone,
-      role: role || "customer",
+      role: assignedRole,
+      status: (assignedRole === "customer" || assignedRole === "driver") ? "inactive" : "active",
     });
 
     // Create role-specific profile
@@ -65,6 +69,32 @@ const register = async (req, res) => {
         userId: user._id,
         companyName: req.body.companyName || null,
       });
+    } else if (user.role === "driver") {
+      await Driver.create({
+        userId: user._id,
+        fullName: user.name,
+        licenseNumber: `PENDING-${user._id.toString().substring(18)}`,
+        licenseExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year default
+        experience: 0,
+      });
+    }
+
+    // Create notifications for admins
+    if (user.role === "customer" || user.role === "driver") {
+      const admins = await User.find({ role: "admin" });
+      for (const admin of admins) {
+        await Notification.create({
+          userId: admin._id,
+          title: `New ${user.role === "customer" ? "Customer" : "Driver"} Registration`,
+          message: `${user.name} has registered as a ${user.role} and is awaiting approval.`,
+          type: "system",
+          priority: "high",
+          relatedEntity: {
+            entityType: "user",
+            entityId: user._id,
+          },
+        });
+      }
     }
 
     // Generate token

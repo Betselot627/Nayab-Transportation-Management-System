@@ -102,7 +102,7 @@ const Profile = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `${import.meta.env.VITE_API_URL}/users/change-password`,
+        `${import.meta.env.VITE_API_URL}/auth/update-password`,
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,

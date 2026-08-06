@@ -26,7 +26,7 @@ const getAllDrivers = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const drivers = await Driver.find(query)
-      .populate("userId", "name email phone")
+      .populate("userId", "name email phone status")
       .limit(parseInt(limit))
       .skip(skip)
       .sort({ createdAt: -1 });

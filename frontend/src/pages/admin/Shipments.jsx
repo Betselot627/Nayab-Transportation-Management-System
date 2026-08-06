@@ -110,8 +110,8 @@ const Shipments = () => {
   };
 
   const filteredShipments = shipments.filter((shipment) => {
-    const matchesSearch = shipment.shipmentNumber
-      ?.toLowerCase()
+    const matchesSearch = (shipment.shipmentNumber || "")
+      .toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchesFilter =
       filterStatus === "all" || shipment.status === filterStatus;

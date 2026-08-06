@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { customerService } from "../../services/customerService";
+import api from "../../services/api";
 import {
   Search,
   Plus,
@@ -53,11 +54,14 @@ const CustomerManagement = () => {
       if (res && res.data && res.data.length > 0) {
         const mapped = res.data.map((c, idx) => ({
           id: c._id,
+          userId: c.userId?._id || null,
           rollNumber: `C${String(idx + 1).padStart(3, "0")}`,
           name: c.companyName || c.userId?.name || "Customer",
           mobile: c.userId?.phone || "+251900000000",
           email: c.userId?.email || "customer@ntms.com",
-          address: c.address || "Addis Ababa",
+          address: c.address && typeof c.address === "object"
+            ? [c.address.street, c.address.city, c.address.country].filter(Boolean).join(", ")
+            : (c.address || "Addis Ababa"),
           status: c.userId?.status === "active" ? "Active" : "Inactive",
         }));
         setCustomers(mapped);
@@ -93,6 +97,17 @@ const CustomerManagement = () => {
     } catch (err) {
       setCustomers(customers.filter((c) => c.id !== deleteId));
       toast.success("Customer profile deleted successfully (Simulated)");
+    }
+  };
+
+  const handleApproveCustomer = async (userId) => {
+    try {
+      await api.put(`/users/${userId}/status`, { status: "active" });
+      toast.success("Customer account approved successfully!");
+      fetchCustomers();
+    } catch (err) {
+      console.error("Failed to approve customer:", err);
+      toast.error(err.response?.data?.message || "Failed to approve customer");
     }
   };
 
@@ -258,7 +273,16 @@ const CustomerManagement = () => {
                       </Badge>
                     </td>
                     <td className="py-4 px-6 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end items-center gap-2">
+                        {customer.status === "Inactive" && customer.userId && (
+                          <button
+                            onClick={() => handleApproveCustomer(customer.userId)}
+                            className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors flex items-center"
+                            title="Approve Customer"
+                          >
+                            Approve
+                          </button>
+                        )}
                         <button
                           onClick={() => triggerDelete(customer.id)}
                           className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors"

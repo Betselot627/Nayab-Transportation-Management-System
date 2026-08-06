@@ -233,6 +233,12 @@ const getCustomerShipments = async (req, res) => {
  */
 const updateCustomer = async (req, res) => {
   try {
+    if (req.body.address && typeof req.body.address === "string") {
+      req.body.address = {
+        street: req.body.address,
+      };
+    }
+
     const customer = await Customer.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import MainLayout from "./layouts/MainLayout";
@@ -7,161 +8,168 @@ import DriverLayout from "./layouts/DriverLayout";
 import CustomerLayout from "./layouts/CustomerLayout";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
-
-import Home from "./pages/public/Home";
-import About from "./pages/public/About";
-import Contact from "./pages/public/Contact";
-import Login from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
-import ForgotPassword from "./pages/auth/ForgotPassword";
-
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import Users from "./pages/admin/Users";
-import Vehicles from "./pages/admin/Vehicles";
-import AddVehicle from "./pages/admin/AddVehicle";
-import Drivers from "./pages/admin/Drivers";
-import AddDriver from "./pages/admin/AddDriver";
-import Shipments from "./pages/admin/Shipments";
-import CustomerManagement from "./pages/admin/CustomerManagement";
-import AddCustomer from "./pages/admin/AddCustomer";
-import BookingManagement from "./pages/admin/BookingManagement";
-import AddBooking from "./pages/admin/AddBooking";
-import MaintenanceManagement from "./pages/admin/MaintenanceManagement";
-import AddMaintenance from "./pages/admin/AddMaintenance";
-import VehicleAvailability from "./pages/admin/VehicleAvailability";
-import LiveTracking from "./pages/admin/LiveTracking";
-import TrackingHistory from "./pages/admin/TrackingHistory";
-import Payments from "./pages/admin/Payments";
-import Reports from "./pages/admin/Reports";
-import Settings from "./pages/admin/Settings";
-
-import DispatcherDashboard from "./pages/dispatcher/DispatcherDashboard";
-import Bookings from "./pages/dispatcher/Bookings";
-import AssignVehicle from "./pages/dispatcher/AssignVehicle";
-import AssignDriver from "./pages/dispatcher/AssignDriver";
-import TrackTrips from "./pages/dispatcher/TrackTrips";
-
-import DriverDashboard from "./pages/driver/DriverDashboard";
-import MyTrips from "./pages/driver/MyTrips";
-import TripDetails from "./pages/driver/TripDetails";
-import UpdateStatus from "./pages/driver/UpdateStatus";
-import RegisterVehicle from "./pages/driver/RegisterVehicle";
-import DriverProfile from "./pages/driver/Profile";
-import MyVehicles from "./pages/driver/MyVehicles";
-
-import CustomerDashboard from "./pages/customer/CustomerDashboard";
-import BookShipment from "./pages/customer/BookShipment";
-import MyBookings from "./pages/customer/MyBookings";
-import TrackShipment from "./pages/customer/TrackShipment";
-import Profile from "./pages/customer/Profile";
-
+import Loading from "./components/common/Loading";
 import ScrollToTop from "./components/common/ScrollToTop";
+
+// Public Pages
+const Home = lazy(() => import("./pages/public/Home"));
+const About = lazy(() => import("./pages/public/About"));
+const Contact = lazy(() => import("./pages/public/Contact"));
+const Login = lazy(() => import("./pages/auth/Login"));
+const Register = lazy(() => import("./pages/auth/Register"));
+const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
+
+// Admin Pages
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const Users = lazy(() => import("./pages/admin/Users"));
+const Vehicles = lazy(() => import("./pages/admin/Vehicles"));
+const AddVehicle = lazy(() => import("./pages/admin/AddVehicle"));
+const Drivers = lazy(() => import("./pages/admin/Drivers"));
+const AddDriver = lazy(() => import("./pages/admin/AddDriver"));
+const Shipments = lazy(() => import("./pages/admin/Shipments"));
+const CustomerManagement = lazy(() => import("./pages/admin/CustomerManagement"));
+const AddCustomer = lazy(() => import("./pages/admin/AddCustomer"));
+const BookingManagement = lazy(() => import("./pages/admin/BookingManagement"));
+const AddBooking = lazy(() => import("./pages/admin/AddBooking"));
+const MaintenanceManagement = lazy(() => import("./pages/admin/MaintenanceManagement"));
+const AddMaintenance = lazy(() => import("./pages/admin/AddMaintenance"));
+const VehicleAvailability = lazy(() => import("./pages/admin/VehicleAvailability"));
+const LiveTracking = lazy(() => import("./pages/admin/LiveTracking"));
+const TrackingHistory = lazy(() => import("./pages/admin/TrackingHistory"));
+const Payments = lazy(() => import("./pages/admin/Payments"));
+const Reports = lazy(() => import("./pages/admin/Reports"));
+const Settings = lazy(() => import("./pages/admin/Settings"));
+
+// Dispatcher Pages
+const DispatcherDashboard = lazy(() => import("./pages/dispatcher/DispatcherDashboard"));
+const Bookings = lazy(() => import("./pages/dispatcher/Bookings"));
+const AssignVehicle = lazy(() => import("./pages/dispatcher/AssignVehicle"));
+const AssignDriver = lazy(() => import("./pages/dispatcher/AssignDriver"));
+const TrackTrips = lazy(() => import("./pages/dispatcher/TrackTrips"));
+
+// Driver Pages
+const DriverDashboard = lazy(() => import("./pages/driver/DriverDashboard"));
+const MyTrips = lazy(() => import("./pages/driver/MyTrips"));
+const TripDetails = lazy(() => import("./pages/driver/TripDetails"));
+const UpdateStatus = lazy(() => import("./pages/driver/UpdateStatus"));
+const RegisterVehicle = lazy(() => import("./pages/driver/RegisterVehicle"));
+const DriverProfile = lazy(() => import("./pages/driver/Profile"));
+const MyVehicles = lazy(() => import("./pages/driver/MyVehicles"));
+
+// Customer Pages
+const CustomerDashboard = lazy(() => import("./pages/customer/CustomerDashboard"));
+const BookShipment = lazy(() => import("./pages/customer/BookShipment"));
+const MyBookings = lazy(() => import("./pages/customer/MyBookings"));
+const TrackShipment = lazy(() => import("./pages/customer/TrackShipment"));
+const Profile = lazy(() => import("./pages/customer/Profile"));
 
 function App() {
   return (
     <Router>
       <ScrollToTop />
       <AuthProvider>
-        <Routes>
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-          </Route>
+        <Suspense fallback={<Loading />}>
+          <Routes>
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+            </Route>
 
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <RoleRoute allowedRoles={["admin"]}>
-                  <AdminLayout />
-                </RoleRoute>
-              </ProtectedRoute>
-            }
-          >
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="users" element={<Users />} />
-            <Route path="vehicles" element={<Vehicles />} />
-            <Route path="vehicles/add" element={<AddVehicle />} />
-            <Route path="vehicles/edit/:id" element={<AddVehicle />} />
-            <Route path="drivers" element={<Drivers />} />
-            <Route path="drivers/add" element={<AddDriver />} />
-            <Route path="drivers/edit/:id" element={<AddDriver />} />
-            <Route path="customers" element={<CustomerManagement />} />
-            <Route path="customers/add" element={<AddCustomer />} />
-            <Route path="customers/edit/:id" element={<AddCustomer />} />
-            <Route path="bookings" element={<BookingManagement />} />
-            <Route path="bookings/add" element={<AddBooking />} />
-            <Route path="bookings/edit/:id" element={<AddBooking />} />
-            <Route path="maintenance" element={<MaintenanceManagement />} />
-            <Route path="maintenance/add" element={<AddMaintenance />} />
-            <Route path="maintenance/edit/:id" element={<AddMaintenance />} />
-            <Route path="calendar" element={<VehicleAvailability />} />
-            <Route path="tracking/live" element={<LiveTracking />} />
-            <Route path="tracking/history" element={<TrackingHistory />} />
-            <Route path="payments" element={<Payments />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="shipments" element={<Shipments />} />
-          </Route>
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <RoleRoute allowedRoles={["admin"]}>
+                    <AdminLayout />
+                  </RoleRoute>
+                </ProtectedRoute>
+              }
+            >
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="users" element={<Users />} />
+              <Route path="vehicles" element={<Vehicles />} />
+              <Route path="vehicles/add" element={<AddVehicle />} />
+              <Route path="vehicles/edit/:id" element={<AddVehicle />} />
+              <Route path="drivers" element={<Drivers />} />
+              <Route path="drivers/add" element={<AddDriver />} />
+              <Route path="drivers/edit/:id" element={<AddDriver />} />
+              <Route path="customers" element={<CustomerManagement />} />
+              <Route path="customers/add" element={<AddCustomer />} />
+              <Route path="customers/edit/:id" element={<AddCustomer />} />
+              <Route path="bookings" element={<BookingManagement />} />
+              <Route path="bookings/add" element={<AddBooking />} />
+              <Route path="bookings/edit/:id" element={<AddBooking />} />
+              <Route path="maintenance" element={<MaintenanceManagement />} />
+              <Route path="maintenance/add" element={<AddMaintenance />} />
+              <Route path="maintenance/edit/:id" element={<AddMaintenance />} />
+              <Route path="calendar" element={<VehicleAvailability />} />
+              <Route path="tracking/live" element={<LiveTracking />} />
+              <Route path="tracking/history" element={<TrackingHistory />} />
+              <Route path="payments" element={<Payments />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="shipments" element={<Shipments />} />
+            </Route>
 
-          <Route
-            path="/dispatcher"
-            element={
-              <ProtectedRoute>
-                <RoleRoute allowedRoles={["dispatcher"]}>
-                  <DispatcherLayout />
-                </RoleRoute>
-              </ProtectedRoute>
-            }
-          >
-            <Route path="dashboard" element={<DispatcherDashboard />} />
-            <Route path="bookings" element={<Bookings />} />
-            <Route path="assign-vehicle" element={<AssignVehicle />} />
-            <Route path="assign-driver" element={<AssignDriver />} />
-            <Route path="track-trips" element={<TrackTrips />} />
-          </Route>
+            <Route
+              path="/dispatcher"
+              element={
+                <ProtectedRoute>
+                  <RoleRoute allowedRoles={["dispatcher"]}>
+                    <DispatcherLayout />
+                  </RoleRoute>
+                </ProtectedRoute>
+              }
+            >
+              <Route path="dashboard" element={<DispatcherDashboard />} />
+              <Route path="bookings" element={<Bookings />} />
+              <Route path="assign-vehicle" element={<AssignVehicle />} />
+              <Route path="assign-driver" element={<AssignDriver />} />
+              <Route path="track-trips" element={<TrackTrips />} />
+            </Route>
 
-          <Route
-            path="/driver"
-            element={
-              <ProtectedRoute>
-                <RoleRoute allowedRoles={["driver"]}>
-                  <DriverLayout />
-                </RoleRoute>
-              </ProtectedRoute>
-            }
-          >
-            <Route path="dashboard" element={<DriverDashboard />} />
-            <Route path="my-trips" element={<MyTrips />} />
-            <Route path="my-vehicles" element={<MyVehicles />} />
-            <Route path="register-vehicle" element={<RegisterVehicle />} />
-            <Route path="trip-details/:id" element={<TripDetails />} />
-            <Route path="update-status/:id" element={<UpdateStatus />} />
-            <Route path="profile" element={<DriverProfile />} />
-          </Route>
+            <Route
+              path="/driver"
+              element={
+                <ProtectedRoute>
+                  <RoleRoute allowedRoles={["driver"]}>
+                    <DriverLayout />
+                  </RoleRoute>
+                </ProtectedRoute>
+              }
+            >
+              <Route path="dashboard" element={<DriverDashboard />} />
+              <Route path="my-trips" element={<MyTrips />} />
+              <Route path="my-vehicles" element={<MyVehicles />} />
+              <Route path="register-vehicle" element={<RegisterVehicle />} />
+              <Route path="trip-details/:id" element={<TripDetails />} />
+              <Route path="update-status/:id" element={<UpdateStatus />} />
+              <Route path="profile" element={<DriverProfile />} />
+            </Route>
 
-          <Route
-            path="/customer"
-            element={
-              <ProtectedRoute>
-                <RoleRoute allowedRoles={["customer"]}>
-                  <CustomerLayout />
-                </RoleRoute>
-              </ProtectedRoute>
-            }
-          >
-            <Route path="dashboard" element={<CustomerDashboard />} />
-            <Route path="book-shipment" element={<BookShipment />} />
-            <Route path="my-bookings" element={<MyBookings />} />
-            <Route path="track-shipment" element={<TrackShipment />} />
-            <Route path="profile" element={<Profile />} />
-          </Route>
-        </Routes>
+            <Route
+              path="/customer"
+              element={
+                <ProtectedRoute>
+                  <RoleRoute allowedRoles={["customer"]}>
+                    <CustomerLayout />
+                  </RoleRoute>
+                </ProtectedRoute>
+              }
+            >
+              <Route path="dashboard" element={<CustomerDashboard />} />
+              <Route path="book-shipment" element={<BookShipment />} />
+              <Route path="my-bookings" element={<MyBookings />} />
+              <Route path="track-shipment" element={<TrackShipment />} />
+              <Route path="profile" element={<Profile />} />
+            </Route>
+          </Routes>
+        </Suspense>
       </AuthProvider>
     </Router>
   );

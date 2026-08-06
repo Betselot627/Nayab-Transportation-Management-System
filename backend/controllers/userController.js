@@ -225,11 +225,7 @@ const updateUserStatus = async (req, res) => {
       });
     }
 
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true, runValidators: true },
-    ).select("-password");
+    const user = await User.findById(req.params.id);
 
     if (!user) {
       return res.status(404).json({
@@ -238,10 +234,34 @@ const updateUserStatus = async (req, res) => {
       });
     }
 
+    const oldStatus = user.status;
+    user.status = status;
+    await user.save();
+
+    // Automatically notify user if approved (inactive -> active)
+    if (status === "active" && oldStatus !== "active") {
+      const Notification = require("../models/Notification");
+      await Notification.create({
+        userId: user._id,
+        title: "Account Approved",
+        message: `Your registration request has been approved by the administrator. You can now log in and access all features of the application.`,
+        type: "system",
+        priority: "high",
+        relatedEntity: {
+          entityType: "user",
+          entityId: user._id,
+        },
+      });
+    }
+
+    // Hide password before returning
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
     res.status(200).json({
       success: true,
       message: "User status updated successfully",
-      data: user,
+      data: userResponse,
     });
   } catch (error) {
     console.error("Update Status Error:", error);

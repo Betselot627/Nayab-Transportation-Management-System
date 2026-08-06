@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../services/api";
 import {
   Users as UsersIcon,
   Plus,
@@ -25,10 +25,7 @@ const Users = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5001/api/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get("/users");
       setUsers(response.data.data || []);
       toast.success("Users loaded successfully");
     } catch (err) {
@@ -42,10 +39,7 @@ const Users = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
-        const token = localStorage.getItem("token");
-        await axios.delete(`http://localhost:5001/api/users/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await api.delete(`/users/${id}`);
         toast.success("User deleted successfully");
         fetchUsers();
       } catch (err) {
