@@ -15,7 +15,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import api from "../../services/api";
 
 const Settings = () => {
@@ -151,6 +151,7 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <Toaster position="top-right" />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
@@ -474,7 +475,12 @@ const Settings = () => {
                       </div>
                     </div>
                     <button
-                      onClick={toggleTheme}
+                      onClick={() => {
+                        console.log("Toggle button clicked!");
+                        console.log("Current theme:", theme);
+                        console.log("Is dark:", isDark);
+                        toggleTheme();
+                      }}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
                     >
                       Switch to {isDark ? "Light" : "Dark"} Mode

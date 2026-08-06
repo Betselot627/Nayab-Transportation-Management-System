@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { Toaster } from "react-hot-toast";
 import MainLayout from "./layouts/MainLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import DispatcherLayout from "./layouts/DispatcherLayout";
@@ -10,6 +11,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
 import Loading from "./components/common/Loading";
 import ScrollToTop from "./components/common/ScrollToTop";
+import TestDarkMode from "./pages/TestDarkMode";
 
 // Public Pages
 const Home = lazy(() => import("./pages/public/Home"));
@@ -27,13 +29,19 @@ const AddVehicle = lazy(() => import("./pages/admin/AddVehicle"));
 const Drivers = lazy(() => import("./pages/admin/Drivers"));
 const AddDriver = lazy(() => import("./pages/admin/AddDriver"));
 const Shipments = lazy(() => import("./pages/admin/Shipments"));
-const CustomerManagement = lazy(() => import("./pages/admin/CustomerManagement"));
+const CustomerManagement = lazy(
+  () => import("./pages/admin/CustomerManagement"),
+);
 const AddCustomer = lazy(() => import("./pages/admin/AddCustomer"));
 const BookingManagement = lazy(() => import("./pages/admin/BookingManagement"));
 const AddBooking = lazy(() => import("./pages/admin/AddBooking"));
-const MaintenanceManagement = lazy(() => import("./pages/admin/MaintenanceManagement"));
+const MaintenanceManagement = lazy(
+  () => import("./pages/admin/MaintenanceManagement"),
+);
 const AddMaintenance = lazy(() => import("./pages/admin/AddMaintenance"));
-const VehicleAvailability = lazy(() => import("./pages/admin/VehicleAvailability"));
+const VehicleAvailability = lazy(
+  () => import("./pages/admin/VehicleAvailability"),
+);
 const LiveTracking = lazy(() => import("./pages/admin/LiveTracking"));
 const TrackingHistory = lazy(() => import("./pages/admin/TrackingHistory"));
 const Payments = lazy(() => import("./pages/admin/Payments"));
@@ -41,7 +49,9 @@ const Reports = lazy(() => import("./pages/admin/Reports"));
 const Settings = lazy(() => import("./pages/admin/Settings"));
 
 // Dispatcher Pages
-const DispatcherDashboard = lazy(() => import("./pages/dispatcher/DispatcherDashboard"));
+const DispatcherDashboard = lazy(
+  () => import("./pages/dispatcher/DispatcherDashboard"),
+);
 const Bookings = lazy(() => import("./pages/dispatcher/Bookings"));
 const AssignVehicle = lazy(() => import("./pages/dispatcher/AssignVehicle"));
 const AssignDriver = lazy(() => import("./pages/dispatcher/AssignDriver"));
@@ -57,7 +67,9 @@ const DriverProfile = lazy(() => import("./pages/driver/Profile"));
 const MyVehicles = lazy(() => import("./pages/driver/MyVehicles"));
 
 // Customer Pages
-const CustomerDashboard = lazy(() => import("./pages/customer/CustomerDashboard"));
+const CustomerDashboard = lazy(
+  () => import("./pages/customer/CustomerDashboard"),
+);
 const BookShipment = lazy(() => import("./pages/customer/BookShipment"));
 const MyBookings = lazy(() => import("./pages/customer/MyBookings"));
 const TrackShipment = lazy(() => import("./pages/customer/TrackShipment"));
@@ -68,6 +80,7 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
+      <Toaster position="top-right" />
       <AuthProvider>
         <Suspense fallback={<Loading />}>
           <Routes>
@@ -80,6 +93,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/test-dark-mode" element={<TestDarkMode />} />
 
             <Route
               path="/admin"
@@ -168,7 +182,10 @@ function App() {
               <Route path="my-bookings" element={<MyBookings />} />
               <Route path="track-shipment" element={<TrackShipment />} />
               <Route path="profile" element={<Profile />} />
-              <Route path="shipment-details/:id" element={<ShipmentDetails />} />
+              <Route
+                path="shipment-details/:id"
+                element={<ShipmentDetails />}
+              />
             </Route>
           </Routes>
         </Suspense>

@@ -20,14 +20,22 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     // Apply theme to document
     const root = document.documentElement;
+    console.log("Theme changed to:", theme);
+    console.log("Root element:", root);
+
     if (theme === "dark") {
       root.classList.add("dark");
+      console.log("Added dark class");
     } else {
       root.classList.remove("dark");
+      console.log("Removed dark class");
     }
+
+    console.log("Current classes:", root.className);
 
     // Save to localStorage
     localStorage.setItem("theme", theme);
+    console.log("Saved to localStorage:", theme);
   }, [theme]);
 
   const toggleTheme = () => {
