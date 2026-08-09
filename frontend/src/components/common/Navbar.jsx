@@ -23,7 +23,7 @@ const Navbar = () => {
           to="/"
           className="flex items-center gap-2 text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight hover:opacity-90 transition"
         >
-          <div className="bg-blue-600 text-white p-1.5 rounded-lg shadow-sm">
+          <div className="bg-blue-950 text-white p-1.5 rounded-lg shadow-sm">
             <Truck className="w-5 h-5" />
           </div>
           <span>
@@ -39,7 +39,7 @@ const Navbar = () => {
               to={link.path}
               className={`text-sm font-medium transition-colors ${
                 isActive(link.path)
-                  ? "text-blue-600 dark:text-blue-400 font-semibold"
+                  ? "text-blue-950 dark:text-blue-400 font-semibold"
                   : "text-slate-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white"
               }`}
             >
@@ -61,7 +61,7 @@ const Navbar = () => {
 
           <Link
             to="/register"
-            className="text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl shadow-sm hover:shadow active:scale-95 transition duration-200"
+            className="text-sm font-medium bg-blue-950 hover:bg-black text-white px-4 py-2 rounded-xl shadow-sm hover:shadow active:scale-95 transition duration-200"
           >
             Get Started
           </Link>
