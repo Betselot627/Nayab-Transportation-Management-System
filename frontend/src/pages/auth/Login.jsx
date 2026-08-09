@@ -13,6 +13,7 @@ import {
   Loader,
   AlertCircle,
 } from "lucide-react";
+import ThemeToggle from "../../components/common/ThemeToggle";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -79,8 +80,19 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4 transition-colors duration-300">
-      <div className="w-full max-w-md">
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-100 to-blue-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4 py-8 transition-colors duration-300">
+      {/* Top Bar with Home link & Theme Toggle */}
+      <div className="absolute top-4 left-4 right-4 flex justify-between items-center max-w-4xl mx-auto">
+        <Link
+          to="/"
+          className="text-xs sm:text-sm font-medium text-slate-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white transition flex items-center gap-1.5"
+        >
+          &larr; Back to Home
+        </Link>
+        <ThemeToggle compact />
+      </div>
+
+      <div className="w-full max-w-md pt-6 sm:pt-0">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center bg-blue-600 dark:bg-blue-500 p-4 rounded-2xl shadow-lg">

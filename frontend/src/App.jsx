@@ -20,6 +20,11 @@ const Contact = lazy(() => import("./pages/public/Contact"));
 const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
+const NotFound = lazy(() => import("./pages/public/NotFound"));
+
+// Payment Flow Pages (Chapa Callback & Verification)
+const PaymentSuccess = lazy(() => import("./pages/payment/PaymentSuccess"));
+const PaymentFailed = lazy(() => import("./pages/payment/PaymentFailed"));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -60,11 +65,11 @@ const TrackTrips = lazy(() => import("./pages/dispatcher/TrackTrips"));
 // Driver Pages
 const DriverDashboard = lazy(() => import("./pages/driver/DriverDashboard"));
 const MyTrips = lazy(() => import("./pages/driver/MyTrips"));
+const MyVehicles = lazy(() => import("./pages/driver/MyVehicles"));
+const RegisterVehicle = lazy(() => import("./pages/driver/RegisterVehicle"));
 const TripDetails = lazy(() => import("./pages/driver/TripDetails"));
 const UpdateStatus = lazy(() => import("./pages/driver/UpdateStatus"));
-const RegisterVehicle = lazy(() => import("./pages/driver/RegisterVehicle"));
 const DriverProfile = lazy(() => import("./pages/driver/Profile"));
-const MyVehicles = lazy(() => import("./pages/driver/MyVehicles"));
 
 // Customer Pages
 const CustomerDashboard = lazy(
@@ -72,6 +77,7 @@ const CustomerDashboard = lazy(
 );
 const BookShipment = lazy(() => import("./pages/customer/BookShipment"));
 const MyBookings = lazy(() => import("./pages/customer/MyBookings"));
+const PaymentHistory = lazy(() => import("./pages/customer/PaymentHistory"));
 const TrackShipment = lazy(() => import("./pages/customer/TrackShipment"));
 const Profile = lazy(() => import("./pages/customer/Profile"));
 const ShipmentDetails = lazy(() => import("./pages/customer/ShipmentDetails"));
@@ -94,6 +100,10 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/test-dark-mode" element={<TestDarkMode />} />
+
+            {/* Payment Return & Verification Routes */}
+            <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/payment/failed" element={<PaymentFailed />} />
 
             <Route
               path="/admin"
@@ -180,6 +190,7 @@ function App() {
               <Route path="dashboard" element={<CustomerDashboard />} />
               <Route path="book-shipment" element={<BookShipment />} />
               <Route path="my-bookings" element={<MyBookings />} />
+              <Route path="payments" element={<PaymentHistory />} />
               <Route path="track-shipment" element={<TrackShipment />} />
               <Route path="profile" element={<Profile />} />
               <Route
@@ -187,6 +198,9 @@ function App() {
                 element={<ShipmentDetails />}
               />
             </Route>
+
+            {/* 404 Catch-All Route */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </AuthProvider>

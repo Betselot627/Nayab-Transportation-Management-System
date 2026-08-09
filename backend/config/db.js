@@ -9,13 +9,8 @@ const mongoose = require("mongoose");
  * - Logs connection status
  */
 const connectDB = async () => {
+  // Pre-register all models to prevent MissingSchemaError on population
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
-
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    console.log(`📊 Database: ${conn.connection.name}`);
-
-    // Pre-register all models to prevent MissingSchemaError on population
     require("../models/User");
     require("../models/Customer");
     require("../models/Driver");
@@ -25,9 +20,30 @@ const connectDB = async () => {
     require("../models/Maintenance");
     require("../models/Payment");
     require("../models/Notification");
+  } catch (schemaErr) {
+    console.error("Model registration note:", schemaErr.message);
+  }
+
+  mongoose.connection.on("disconnected", () => {
+    console.warn("⚠️ MongoDB disconnected. Attempting to reconnect...");
+  });
+
+  mongoose.connection.on("reconnected", () => {
+    console.log("✅ MongoDB reconnected successfully");
+  });
+
+  mongoose.connection.on("error", (err) => {
+    console.error("⚠️ MongoDB connection event error:", err.message);
+  });
+
+  try {
+    const conn = await mongoose.connect(process.env.MONGO_URI);
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`📊 Database: ${conn.connection.name}`);
   } catch (error) {
-    console.error(`❌ MongoDB Connection Error: ${error.message}`);
-    process.exit(1);
+    console.error(`⚠️ Initial MongoDB Connection Error: ${error.message}`);
+    console.log("Will retry connecting in 5 seconds...");
+    setTimeout(connectDB, 5000);
   }
 };
 

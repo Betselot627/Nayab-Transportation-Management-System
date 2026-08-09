@@ -1,1 +1,182 @@
 @import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+@variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #f8fafc;
+    color: #0f172a;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  html.dark body {
+    background-color: #030712;
+    color: #f9fafb;
+  }
+
+  /* Universal Dark Mode fallback mappings for full system consistency */
+  html.dark .bg-white {
+    background-color: #0b0f19 !important;
+    color: #f9fafb;
+  }
+
+  html.dark .bg-slate-50,
+  html.dark .bg-gray-50 {
+    background-color: #030712 !important;
+  }
+
+  html.dark .bg-slate-100,
+  html.dark .bg-gray-100 {
+    background-color: #111827 !important;
+    color: #f3f4f6;
+  }
+
+  html.dark .border-slate-100,
+  html.dark .border-slate-200,
+  html.dark .border-gray-100,
+  html.dark .border-gray-200,
+  html.dark .border-gray-250,
+  html.dark .border-gray-300 {
+    border-color: #1f2937 !important;
+  }
+
+  html.dark .text-slate-900,
+  html.dark .text-slate-950,
+  html.dark .text-gray-900,
+  html.dark .text-gray-800 {
+    color: #f9fafb !important;
+  }
+
+  html.dark .text-slate-700,
+  html.dark .text-gray-700,
+  html.dark .text-slate-600,
+  html.dark .text-gray-600 {
+    color: #d1d5db !important;
+  }
+
+  html.dark .text-slate-500,
+  html.dark .text-gray-500 {
+    color: #9ca3af !important;
+  }
+
+  /* High contrast badge and tag rules for dark mode */
+  html.dark .bg-purple-100,
+  html.dark .bg-purple-50 {
+    background-color: rgba(168, 85, 247, 0.15) !important;
+    border-color: rgba(168, 85, 247, 0.3) !important;
+  }
+  html.dark .text-purple-800,
+  html.dark .text-purple-900,
+  html.dark .text-purple-700 {
+    color: #c084fc !important;
+  }
+
+  html.dark .bg-blue-100,
+  html.dark .bg-blue-50 {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+  }
+  html.dark .text-blue-800,
+  html.dark .text-blue-900,
+  html.dark .text-blue-700 {
+    color: #60a5fa !important;
+  }
+
+  html.dark .bg-green-100,
+  html.dark .bg-green-50,
+  html.dark .bg-emerald-100 {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+  }
+  html.dark .text-green-800,
+  html.dark .text-green-900,
+  html.dark .text-green-700,
+  html.dark .text-emerald-800,
+  html.dark .text-emerald-900,
+  html.dark .text-emerald-700 {
+    color: #34d399 !important;
+  }
+
+  html.dark .bg-yellow-100,
+  html.dark .bg-yellow-50,
+  html.dark .bg-amber-100,
+  html.dark .bg-amber-50 {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    border-color: rgba(245, 158, 11, 0.3) !important;
+  }
+  html.dark .text-yellow-800,
+  html.dark .text-yellow-900,
+  html.dark .text-yellow-700,
+  html.dark .text-amber-800,
+  html.dark .text-amber-900,
+  html.dark .text-amber-700 {
+    color: #fbbf24 !important;
+  }
+
+  html.dark .bg-red-100,
+  html.dark .bg-red-50,
+  html.dark .bg-rose-100,
+  html.dark .bg-rose-50 {
+    background-color: rgba(244, 63, 94, 0.15) !important;
+    border-color: rgba(244, 63, 94, 0.3) !important;
+  }
+  html.dark .text-red-800,
+  html.dark .text-red-900,
+  html.dark .text-red-700,
+  html.dark .text-rose-800,
+  html.dark .text-rose-900,
+  html.dark .text-rose-700 {
+    color: #fb7185 !important;
+  }
+
+  html.dark .bg-orange-100,
+  html.dark .bg-orange-50 {
+    background-color: rgba(249, 115, 22, 0.15) !important;
+    border-color: rgba(249, 115, 22, 0.3) !important;
+  }
+  html.dark .text-orange-800,
+  html.dark .text-orange-900,
+  html.dark .text-orange-700 {
+    color: #fb923c !important;
+  }
+
+  html.dark .bg-teal-100,
+  html.dark .bg-teal-50 {
+    background-color: rgba(20, 184, 166, 0.15) !important;
+    border-color: rgba(20, 184, 166, 0.3) !important;
+  }
+  html.dark .text-teal-800,
+  html.dark .text-teal-900,
+  html.dark .text-teal-700 {
+    color: #2dd4bf !important;
+  }
+
+  html.dark input:not([type="checkbox"]):not([type="radio"]),
+  html.dark select,
+  html.dark textarea {
+    background-color: #111827 !important;
+    border-color: #374151 !important;
+    color: #f9fafb !important;
+  }
+
+  html.dark input::placeholder,
+  html.dark textarea::placeholder {
+    color: #6b7280 !important;
+  }
+
+  html.dark table th {
+    background-color: #0b0f19 !important;
+    color: #9ca3af !important;
+  }
+
+  html.dark table td {
+    color: #e5e7eb !important;
+    border-color: #1f2937 !important;
+  }
+}

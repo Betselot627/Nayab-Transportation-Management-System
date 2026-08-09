@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { shipmentService } from "../../services/shipmentService";
 import { driverService } from "../../services/driverService";
 import { vehicleService } from "../../services/vehicleService";
+import { paymentService } from "../../services/paymentService";
 import {
   Package,
   Search,
@@ -12,6 +13,8 @@ import {
   User,
   X,
   Check,
+  DollarSign,
+  CreditCard,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
@@ -26,6 +29,12 @@ const Shipments = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [assignData, setAssignData] = useState({ driverId: "", vehicleId: "" });
+
+  // Price Confirmation Modal State
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [priceShipment, setPriceShipment] = useState(null);
+  const [priceInput, setPriceInput] = useState("");
+  const [savingPrice, setSavingPrice] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -102,361 +111,453 @@ const Shipments = () => {
     }
   };
 
-  const handleStatusUpdate = async (id, status) => {
+  const handleConfirmPrice = async () => {
+    const numericPrice = parseFloat(priceInput);
+    if (!numericPrice || numericPrice <= 0) {
+      toast.error("Please enter a valid positive price amount in ETB");
+      return;
+    }
+
     try {
-      setLoading(true);
-      await shipmentService.updateShipmentStatus(id, { status });
-      toast.success(`Shipment status updated to "${status}"`);
+      setSavingPrice(true);
+      await paymentService.confirmFinalPrice(priceShipment._id, numericPrice);
+      toast.success("Final price confirmed! Customer has been notified to pay.");
+      setShowPriceModal(false);
+      setPriceShipment(null);
+      setPriceInput("");
       await fetchData();
     } catch (err) {
-      toast.error("Failed to update status");
       console.error(err);
+      toast.error(err.response?.data?.message || "Failed to confirm price");
     } finally {
-      setLoading(false);
+      setSavingPrice(false);
     }
   };
 
   const getStatusColor = (status) => {
     const colors = {
-      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      approved: "bg-blue-100 text-blue-800 border-blue-200",
-      assigned: "bg-indigo-100 text-indigo-800 border-indigo-200",
-      picked_up: "bg-purple-100 text-purple-800 border-purple-200",
-      in_transit: "bg-sky-100 text-sky-800 border-sky-200",
-      delivered: "bg-emerald-100 text-emerald-800 border-emerald-200",
-      completed: "bg-slate-100 text-slate-800 border-slate-200",
-      cancelled: "bg-rose-100 text-rose-800 border-rose-200",
+      pending: "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
+      approved: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20",
+      assigned: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
+      picked_up: "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/20",
+      in_transit: "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/20",
+      delivered: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+      completed: "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20",
+      cancelled: "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/20",
     };
-    return colors[status] || "bg-gray-105 text-gray-800 border-gray-200";
+    return colors[status] || "bg-gray-500/15 text-gray-600 dark:text-gray-400 border-gray-500/20";
+  };
+
+  const getPaymentStatusBadge = (status) => {
+    const s = (status || "UNPAID").toUpperCase();
+    if (s === "PAID") return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+    if (s === "PENDING") return "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20";
+    if (s === "FAILED") return "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/20";
+    return "bg-slate-500/15 text-slate-500 dark:text-slate-400 border-slate-500/20";
   };
 
   const filteredShipments = shipments.filter((shipment) => {
-    const matchesSearch = (shipment.shipmentNumber || "")
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesFilter =
-      filterStatus === "all" || shipment.status === filterStatus;
+    const matchesSearch =
+      (shipment.shipmentNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (shipment.pickupLocation?.city || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (shipment.destination?.city || "").toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesFilter = filterStatus === "all" || shipment.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
-  // Dynamically filter suitable vehicles based on selectedShipment cargo weight & selected driver association
-  const getFilteredVehicles = () => {
-    if (!selectedShipment) return [];
-
+  const getCompatibleVehicles = () => {
+    if (!selectedShipment) return vehicles;
     const cargoWeight = selectedShipment.cargoDetails?.weight || 0;
     const cargoUnit = selectedShipment.cargoDetails?.unit || "kg";
     const cargoWeightKg = cargoUnit === "ton" ? cargoWeight * 1000 : cargoWeight;
 
-    return vehicles.filter((vehicle) => {
-      // 1. Availability check (must be available and approved)
-      if (vehicle.status !== "available" || vehicle.approvalStatus !== "approved") {
-        return false;
-      }
-
-      // 2. Capacity requirement check
-      const vehicleCap = vehicle.capacity?.weight || 0;
-      const vehicleUnit = vehicle.capacity?.unit || "kg";
-      const vehicleCapKg = vehicleUnit === "ton" ? vehicleCap * 1000 : vehicleCap;
-      if (vehicleCapKg < cargoWeightKg) {
-        return false;
-      }
-
-      // 3. Driver association check (only show driver's own vehicles OR fleet vehicles with no owner)
-      if (assignData.driverId) {
-        const vehicleOwnerId = vehicle.registeredBy?._id || vehicle.registeredBy;
-        if (vehicleOwnerId && String(vehicleOwnerId) !== String(assignData.driverId)) {
-          return false;
-        }
-      }
-
-      return true;
+    return vehicles.filter(v => {
+      const cap = v.capacity?.weight || 0;
+      const unit = v.capacity?.unit || "kg";
+      const capKg = unit === "ton" ? cap * 1000 : cap;
+      return capKg >= cargoWeightKg && v.approvalStatus === "approved" && v.status === "available";
     });
   };
 
-  const formatWaitingSince = (driver) => {
-    if (!driver.lastAssignedAt) {
-      return "Never assigned (High Priority)";
-    }
-    const date = new Date(driver.lastAssignedAt);
-    return `Waiting since: ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-  };
-
-  if (loading && shipments.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <Loader className="animate-spin h-8 w-8 text-blue-600" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 p-6 space-y-6">
+    <div className="space-y-6 p-1 max-w-7xl mx-auto">
       <Toaster position="top-right" />
 
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-          <Package className="h-8 w-8 text-blue-600" />
-          Shipment Management
-        </h1>
-        <p className="mt-2 text-gray-600 text-sm">Assign crew and track status history of shipment bookings.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Shipment Management
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium mt-0.5">
+            Review bookings, confirm final transportation pricing in ETB, and dispatch fleet crews.
+          </p>
+        </div>
       </div>
 
       {/* Search & Status Filters */}
-      <div className="bg-white rounded-2xl shadow-sm border p-5 flex flex-col md:flex-row gap-4 items-stretch justify-between">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-stretch justify-between transition-colors">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search by shipment number..."
+            placeholder="Search by tracking number, origin, or destination..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 text-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-slate-900 dark:text-white placeholder-slate-400"
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto">
-          {["all", "pending", "approved", "assigned", "in_transit", "delivered"].map(
-            (status) => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold capitalize whitespace-nowrap border transition-all ${
-                  filterStatus === status
-                    ? "bg-blue-600 border-blue-600 text-white shadow"
-                    : "bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                {status.replace("_", " ")}
-              </button>
-            ),
-          )}
+
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+          {["all", "pending", "approved", "assigned", "in_transit", "delivered", "completed"].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilterStatus(status)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition capitalize cursor-pointer shrink-0 ${
+                filterStatus === status
+                  ? "bg-purple-600 text-white shadow-sm shadow-purple-500/20"
+                  : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700"
+              }`}
+            >
+              {status === "all" ? "All Shipments" : status.replace("_", " ")}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Shipments Table */}
-      <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden transition-colors">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-left">
-            <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead className="bg-slate-50 dark:bg-slate-800/60 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
               <tr>
-                <th className="px-6 py-4">Shipment Details</th>
-                <th className="px-6 py-4">Route</th>
-                <th className="px-6 py-4">Cargo Info</th>
-                <th className="px-6 py-4">Assigned Crew</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="py-3.5 px-5">Shipment #</th>
+                <th className="py-3.5 px-5">Route</th>
+                <th className="py-3.5 px-5">Cargo</th>
+                <th className="py-3.5 px-5">Pricing (ETB)</th>
+                <th className="py-3.5 px-5">Payment</th>
+                <th className="py-3.5 px-5">Delivery Crew</th>
+                <th className="py-3.5 px-5">Status</th>
+                <th className="py-3.5 px-5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 text-sm">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredShipments.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-16 text-gray-500">
-                    <Package className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+                  <td colSpan="8" className="text-center py-16 text-slate-500 dark:text-slate-400">
+                    <Package className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-700 mb-3" />
                     No shipments found matching the criteria.
                   </td>
                 </tr>
               ) : (
-                filteredShipments.map((shipment) => (
-                  <tr key={shipment._id} className="hover:bg-gray-50/50 transition">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900 font-mono text-sm">
-                        {shipment.shipmentNumber || "UNASSIGNED"}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        {new Date(shipment.createdAt).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 font-semibold text-gray-700">
-                        <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
-                        <span>
-                          {shipment.pickupLocation?.city} → {shipment.destination?.city}
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-500 ml-5 truncate max-w-xs" title={shipment.pickupLocation?.address}>
-                        {shipment.pickupLocation?.address}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-gray-800 text-xs">
-                        {shipment.cargoDetails?.type}
-                      </div>
-                      <div className="text-xs text-gray-400 font-semibold mt-0.5">
-                        {shipment.cargoDetails?.weight} {shipment.cargoDetails?.unit}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {shipment.driverId ? (
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1 font-semibold text-gray-800 text-xs">
-                            <User className="w-3.5 h-3.5 text-gray-400" />
-                            <span>{shipment.driverId.fullName || "Assigned Driver"}</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-xs text-gray-400">
-                            <Truck className="w-3.5 h-3.5 text-gray-500" />
-                            <span>{shipment.vehicleId?.plateNumber || "No Vehicle"}</span>
-                          </div>
+                filteredShipments.map((shipment) => {
+                  const finalPrice = shipment.finalPrice || shipment.pricing?.totalAmount || 0;
+                  const estPrice = shipment.pricing?.baseAmount || 0;
+
+                  return (
+                    <tr key={shipment._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                      <td className="px-5 py-4">
+                        <div className="font-bold text-slate-900 dark:text-white font-mono">
+                          {shipment.shipmentNumber || "UNASSIGNED"}
                         </div>
-                      ) : (
-                        <span className="text-xs text-gray-400 italic">Not Assigned</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-block px-2.5 py-1 text-xs font-bold rounded-full border capitalize ${getStatusColor(shipment.status)}`}
-                      >
-                        {shipment.status.replace("_", " ")}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex gap-2 justify-end">
-                        {(shipment.status === "pending" || shipment.status === "approved") && (
+                        <div className="text-[10px] text-slate-400 mt-0.5">
+                          {new Date(shipment.createdAt).toLocaleDateString()}
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
+                          <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <span>
+                            {shipment.pickupLocation?.city} → {shipment.destination?.city}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200">
+                          {shipment.cargoDetails?.type}
+                        </div>
+                        <div className="text-slate-400 text-[11px]">
+                          {shipment.cargoDetails?.weight} {shipment.cargoDetails?.unit}
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        {finalPrice > 0 ? (
+                          <div>
+                            <span className="font-extrabold text-slate-900 dark:text-white font-mono text-sm">
+                              {Number(finalPrice).toLocaleString()} ETB
+                            </span>
+                            <span className="block text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                              Confirmed
+                            </span>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="text-slate-400 font-mono">
+                              Est: {Number(estPrice).toLocaleString()} ETB
+                            </span>
+                            <span className="block text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+                              Unconfirmed
+                            </span>
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span
+                          className={`inline-flex px-2.5 py-1 text-[11px] font-extrabold rounded-full border capitalize ${getPaymentStatusBadge(
+                            shipment.paymentStatus
+                          )}`}
+                        >
+                          {shipment.paymentStatus || "UNPAID"}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        {shipment.driverId ? (
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
+                              <User className="w-3.5 h-3.5 text-slate-400" />
+                              <span>{shipment.driverId.fullName || "Driver"}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                              <Truck className="w-3.5 h-3.5 text-slate-500" />
+                              <span>{shipment.vehicleId?.plateNumber || "Vehicle"}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                            Unassigned
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span
+                          className={`inline-flex px-2.5 py-1 text-[11px] font-bold rounded-full border capitalize ${getStatusColor(
+                            shipment.status
+                          )}`}
+                        >
+                          {shipment.status.replace("_", " ")}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Confirm Price Action */}
                           <button
                             onClick={() => {
-                              setSelectedShipment(shipment);
-                              setAssignData({ driverId: "", vehicleId: "" });
-                              setShowAssignModal(true);
+                              setPriceShipment(shipment);
+                              setPriceInput(String(finalPrice || estPrice || ""));
+                              setShowPriceModal(true);
                             }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs"
+                            className="px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-xl font-bold border border-emerald-200 dark:border-emerald-800/40 transition cursor-pointer text-xs flex items-center gap-1"
+                            title="Set / Confirm Final Price (ETB)"
                           >
-                            Assign Shipment
+                            <DollarSign className="w-3.5 h-3.5" />
+                            <span>{finalPrice > 0 ? "Edit Price" : "Set Price"}</span>
                           </button>
-                        )}
-                        {shipment.status === "delivered" && (
-                          <button
-                            onClick={() =>
-                              handleStatusUpdate(shipment._id, "completed")
-                            }
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition shadow-xs"
-                          >
-                            Complete Route
-                          </button>
-                        )}
-                        {shipment.status !== "pending" && shipment.status !== "approved" && shipment.status !== "delivered" && (
-                          <span className="text-xs font-semibold text-gray-400">In Progress</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+
+                          {/* Assign Driver Action */}
+                          {(!shipment.driverId || shipment.status === "pending" || shipment.status === "approved") && (
+                            <button
+                              onClick={() => {
+                                setSelectedShipment(shipment);
+                                setAssignData({ driverId: "", vehicleId: "" });
+                                setShowAssignModal(true);
+                              }}
+                              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
+                            >
+                              Assign
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Manual Assignment Modal */}
-      {showAssignModal && selectedShipment && (
-        <div className="fixed inset-0 bg-black/55 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      {/* Set / Confirm Final Price Modal */}
+      {showPriceModal && priceShipment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-gray-250"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5"
           >
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-250">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  Assign Shipment
-                </h2>
-                <p className="text-xs text-gray-500 font-semibold mt-0.5">
-                  Tracking #: {selectedShipment.shipmentNumber}
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  Confirm Transportation Price
+                </h3>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">
+                  Shipment: {priceShipment.shipmentNumber}
                 </p>
               </div>
-              <button 
-                onClick={() => setShowAssignModal(false)}
-                className="p-1 hover:bg-gray-100 rounded-lg transition"
+              <button
+                onClick={() => setShowPriceModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                <X className="h-6 w-6 text-gray-400" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Shipment details reminder */}
-            <div className="bg-blue-50/50 border border-blue-150 p-3.5 rounded-xl text-xs space-y-1.5 mb-5 text-blue-900">
-              <div className="flex justify-between">
-                <span className="font-bold">Cargo Type:</span>
-                <span>{selectedShipment.cargoDetails?.type}</span>
+            <div className="space-y-3 text-xs">
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Route:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                    {priceShipment.pickupLocation?.city} → {priceShipment.destination?.city}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Cargo:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                    {priceShipment.cargoDetails?.type} ({priceShipment.cargoDetails?.weight} {priceShipment.cargoDetails?.unit})
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Estimated Price:</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                    {Number(priceShipment.pricing?.baseAmount || 0).toLocaleString()} ETB
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="font-bold">Required Capacity:</span>
-                <span className="font-semibold text-blue-950">
-                  {selectedShipment.cargoDetails?.weight} {selectedShipment.cargoDetails?.unit}
-                </span>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                  <span>Confirmed Final Price (ETB)</span>
+                  <span className="text-[10px] text-purple-600 dark:text-purple-400">Chapa Checkout Amount</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">
+                    ETB
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="any"
+                    value={priceInput}
+                    onChange={(e) => setPriceInput(e.target.value)}
+                    placeholder="Enter final price in ETB (e.g. 50000)"
+                    className="w-full pl-14 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-mono font-extrabold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    autoFocus
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Setting this price will notify the customer with a <strong>PAY NOW</strong> button for Chapa payment.
+                </p>
               </div>
             </div>
 
-            <div className="space-y-4">
-              {/* Driver Selection */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                onClick={() => setShowPriceModal(false)}
+                className="px-4 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold rounded-xl transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmPrice}
+                disabled={savingPrice}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {savingPrice ? (
+                  <Loader className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Confirm Price & Notify Customer</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Manual Crew Assignment Modal */}
+      {showAssignModal && selectedShipment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
-                  Step 1: Select Driver (Fair Queue Sorted)
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Assign Driver & Vehicle</h3>
+                <p className="text-xs text-slate-400 font-mono">Shipment: {selectedShipment.shipmentNumber}</p>
+              </div>
+              <button
+                onClick={() => setShowAssignModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Driver Select */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Select Available Driver
                 </label>
                 <select
                   value={assignData.driverId}
-                  onChange={(e) =>
-                    setAssignData({ driverId: e.target.value, vehicleId: "" })
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-800 transition"
+                  onChange={(e) => setAssignData({ ...assignData, driverId: e.target.value })}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500/20 focus:outline-none"
                 >
-                  <option value="">-- Choose Longest Waiting Driver --</option>
-                  {drivers.length === 0 ? (
-                    <option disabled>No drivers available</option>
-                  ) : (
-                    drivers.map((driver, idx) => (
-                      <option key={driver._id} value={driver._id}>
-                        {idx + 1}. {driver.fullName} ({formatWaitingSince(driver)})
-                      </option>
-                    ))
-                  )}
+                  <option value="">-- Choose Available Driver --</option>
+                  {drivers.map((d) => (
+                    <option key={d._id} value={d._id}>
+                      {d.fullName || d.user?.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              {/* Vehicle Selection */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
-                  Step 2: Choose Eligible Vehicle
+              {/* Vehicle Select */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Select Approved Vehicle
                 </label>
                 <select
                   value={assignData.vehicleId}
-                  disabled={!assignData.driverId}
-                  onChange={(e) =>
-                    setAssignData({ ...assignData, vehicleId: e.target.value })
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-800 disabled:bg-gray-50 disabled:cursor-not-allowed transition"
+                  onChange={(e) => setAssignData({ ...assignData, vehicleId: e.target.value })}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500/20 focus:outline-none"
                 >
-                  <option value="">-- Choose Suitable Vehicle --</option>
-                  {getFilteredVehicles().map((vehicle) => {
-                    const ownerName = vehicle.registeredBy?.fullName || "Company Fleet Vehicle";
-                    return (
-                      <option key={vehicle._id} value={vehicle._id}>
-                        {vehicle.plateNumber} - {vehicle.manufacturer} {vehicle.model} ({vehicle.capacity?.weight} {vehicle.capacity?.unit} cap) - {ownerName}
-                      </option>
-                    );
-                  })}
+                  <option value="">-- Choose Compatible Vehicle --</option>
+                  {getCompatibleVehicles().map((v) => (
+                    <option key={v._id} value={v._id}>
+                      {v.plateNumber} ({v.type}) - Cap: {v.capacity?.weight} {v.capacity?.unit}
+                    </option>
+                  ))}
                 </select>
-                {assignData.driverId && getFilteredVehicles().length === 0 && (
-                  <p className="text-[11px] font-bold text-red-500 mt-2">
-                    ⚠ No suitable approved available vehicles meet the cargo capacity or belong to this driver.
-                  </p>
-                )}
               </div>
+            </div>
 
-              <div className="pt-4 border-t border-gray-250 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAssignModal(false)}
-                  className="flex-1 px-5 py-3 border text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAssign}
-                  disabled={!assignData.driverId || !assignData.vehicleId}
-                  className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition disabled:opacity-50 text-xs"
-                >
-                  <Check className="h-4 w-4" />
-                  Assign Shipment
-                </button>
-              </div>
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                onClick={() => setShowAssignModal(false)}
+                className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold rounded-xl transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssign}
+                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow transition"
+              >
+                Confirm Assignment
+              </button>
             </div>
           </motion.div>
         </div>

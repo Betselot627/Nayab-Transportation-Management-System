@@ -9,6 +9,7 @@ const {
   deleteShipment,
   getShipmentStats,
   approveShipment,
+  confirmFinalPrice,
 } = require("../controllers/shipmentController");
 const { protect } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/roleMiddleware");
@@ -20,7 +21,7 @@ const { authorize } = require("../middleware/roleMiddleware");
  *
  * Access Control:
  * - Customer: Create, view own shipments
- * - Dispatcher/Admin: View all, assign, update status
+ * - Dispatcher/Admin: View all, assign, update status, confirm final price
  * - Driver: View assigned shipments
  */
 
@@ -40,6 +41,7 @@ router
 
 router.put("/:id/assign", authorize("admin", "dispatcher"), assignShipment);
 router.put("/:id/approve", authorize("admin"), approveShipment);
+router.put("/:id/confirm-price", authorize("admin", "dispatcher"), confirmFinalPrice);
 router.patch("/:id/status", updateShipmentStatus);
 
 module.exports = router;

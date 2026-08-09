@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { shipmentService } from "../../services/shipmentService";
+import { paymentService } from "../../services/paymentService";
 import {
   MapPin,
   Calendar,
@@ -14,8 +15,14 @@ import {
   TrendingUp,
   Mail,
   ShieldCheck,
+  Navigation,
+  CreditCard,
+  FileText,
+  Loader,
+  CheckCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import ReceiptModal from "../../components/payment/ReceiptModal";
 import toast, { Toaster } from "react-hot-toast";
 
 const ShipmentDetails = () => {
@@ -23,6 +30,9 @@ const ShipmentDetails = () => {
   const navigate = useNavigate();
   const [shipment, setShipment] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [initializingPayment, setInitializingPayment] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   // Set up 5-second polling interval
   useEffect(() => {
@@ -49,245 +59,287 @@ const ShipmentDetails = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: "bg-yellow-100 text-yellow-800 border-yellow-255",
-      approved: "bg-blue-100 text-blue-800 border-blue-255",
-      assigned: "bg-indigo-100 text-indigo-800 border-indigo-255",
-      picked_up: "bg-purple-100 text-purple-800 border-purple-200",
-      in_transit: "bg-sky-100 text-sky-800 border-sky-255",
-      delivered: "bg-green-100 text-green-800 border-green-255",
-      completed: "bg-slate-100 text-slate-800 border-slate-255",
-      cancelled: "bg-red-105 text-red-800 border-red-255",
-    };
-    return colors[status] || "bg-slate-100 text-slate-800 border-slate-255";
+  const handlePayNow = async () => {
+    try {
+      setInitializingPayment(true);
+      const res = await paymentService.initializePayment(shipment._id);
+      if (res && res.checkoutUrl) {
+        toast.success("Redirecting to Chapa checkout...");
+        window.location.href = res.checkoutUrl;
+      } else {
+        toast.error("Failed to retrieve checkout URL");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || "Failed to initialize payment");
+    } finally {
+      setInitializingPayment(false);
+    }
   };
 
-  if (loading) {
+  const handleOpenReceipt = async () => {
+    try {
+      const res = await paymentService.getReceipt(shipment._id);
+      if (res && res.data) {
+        setSelectedReceipt(res.data);
+        setIsReceiptOpen(true);
+      } else {
+        toast.error("Receipt data not found");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load receipt");
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const colors = {
+      pending: "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
+      approved: "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/20",
+      assigned: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
+      picked_up: "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/20",
+      in_transit: "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/20",
+      delivered: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+      completed: "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20",
+      cancelled: "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/20",
+    };
+    return colors[status] || "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20";
+  };
+
+  const getPaymentStatusBadge = (status) => {
+    const s = (status || "UNPAID").toUpperCase();
+    if (s === "PAID") {
+      return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+    }
+    if (s === "PENDING") {
+      return "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20";
+    }
+    if (s === "FAILED") {
+      return "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/20";
+    }
+    return "bg-slate-500/15 text-slate-500 dark:text-slate-400 border-slate-500/20";
+  };
+
+  if (loading && !shipment) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <div className="w-10 h-10 border-2 border-t-transparent border-purple-700 rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-10 h-10 border-2 border-t-transparent border-purple-600 rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!shipment) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 space-y-4">
-        <p className="text-slate-500 text-lg">Shipment details could not be found.</p>
+      <div className="text-center py-16 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6">
+        <Package className="mx-auto h-12 w-12 text-slate-400 mb-3" />
+        <h3 className="text-base font-bold text-slate-900 dark:text-white">Shipment Not Found</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Unable to locate the specified shipment.</p>
         <button
           onClick={() => navigate("/customer/my-bookings")}
-          className="px-5 py-2.5 bg-purple-700 hover:bg-purple-700 text-white rounded-xl font-bold transition text-xs shadow-md"
+          className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold"
         >
-          Go Back to Bookings
+          Back to Bookings
         </button>
       </div>
     );
   }
 
-  const driver = shipment.driverId;
-  const vehicle = shipment.vehicleId;
+  const finalPrice = shipment.finalPrice || shipment.pricing?.totalAmount || 0;
+  const estimatedPrice = shipment.pricing?.baseAmount || 0;
+  const isPaid = (shipment.paymentStatus || "").toUpperCase() === "PAID";
+  const canPay = !isPaid && finalPrice > 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 p-1 max-w-4xl mx-auto">
       <Toaster position="top-right" />
+      <ReceiptModal
+        isOpen={isReceiptOpen}
+        onClose={() => setIsReceiptOpen(false)}
+        receipt={selectedReceipt}
+      />
 
-      {/* Back navigation */}
-      <button
-        onClick={() => navigate("/customer/my-bookings")}
-        className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600 transition"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Bookings
-      </button>
-
-      {/* Title block */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Shipment Details</h1>
-          <p className="text-slate-500 mt-1 font-mono text-xs">Tracking #: {shipment.shipmentNumber || "Pending generation"}</p>
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white font-mono">
+              {shipment.shipmentNumber}
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Detailed Booking Overview</p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className={`px-4 py-1.5 rounded-full text-xs font-bold border capitalize ${getStatusColor(shipment.status)}`}>
-            {shipment.status.replace(/_/g, " ")}
+        <div className="flex items-center gap-2">
+          <span className={`px-3 py-1 rounded-full text-xs font-bold border capitalize ${getStatusBadge(shipment.status)}`}>
+            {shipment.status.replace("_", " ")}
           </span>
-          {(shipment.status === "assigned" || shipment.status === "picked_up" || shipment.status === "in_transit") && (
-            <Link
-              to={`/customer/track-shipment?id=${shipment._id}`}
-              className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-md transition-all shadow-purple-550/20"
-            >
-              <TrendingUp className="w-4 h-4" />
-              Track Live Map
-            </Link>
-          )}
+          <Link
+            to={`/customer/track-shipment?id=${shipment._id}`}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition shadow-sm"
+          >
+            Live Tracking
+          </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Side details */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Route Section */}
-          <div className="bg-white rounded-2xl border border-gray-250 p-6 shadow-sm space-y-5">
-            <h3 className="text-sm font-bold text-slate-900 border-b pb-3">Route & Location Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Pickup Point</p>
-                <div className="flex gap-2.5">
-                  <MapPin className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold text-slate-800 text-sm">{shipment.pickupLocation?.city}</p>
-                    <p className="text-xs text-slate-550 mt-1">{shipment.pickupLocation?.address}</p>
-                    {shipment.pickupLocation?.contactPerson && (
-                      <div className="mt-2 text-xs bg-slate-50 p-2 rounded-lg border text-slate-600 space-y-0.5">
-                        <p className="font-semibold text-slate-700">Contact: {shipment.pickupLocation.contactPerson.name}</p>
-                        <p>{shipment.pickupLocation.contactPerson.phone}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+      {/* Main Details Grid */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-8 shadow-sm space-y-6 transition-colors">
+        {/* Route Card */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="p-1.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                <MapPin className="w-4 h-4" />
               </div>
-
-              <div className="space-y-3">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Destination Point</p>
-                <div className="flex gap-2.5">
-                  <MapPin className="w-5 h-5 text-red-550 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold text-slate-800 text-sm">{shipment.destination?.city}</p>
-                    <p className="text-xs text-slate-555 mt-1">{shipment.destination?.address}</p>
-                    {shipment.destination?.contactPerson && (
-                      <div className="mt-2 text-xs bg-slate-50 p-2 rounded-lg border text-slate-600 space-y-0.5">
-                        <p className="font-semibold text-slate-700">Contact: {shipment.destination.contactPerson.name}</p>
-                        <p>{shipment.destination.contactPerson.phone}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <span className="text-xs font-bold uppercase text-slate-400">Pickup Details</span>
             </div>
+            <p className="font-bold text-slate-900 dark:text-white text-sm">{shipment.pickupLocation?.city}</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{shipment.pickupLocation?.address}</p>
           </div>
 
-          {/* Cargo Section */}
-          <div className="bg-white rounded-2xl border border-gray-250 p-6 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 border-b pb-3">Cargo Specifications</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-xs text-slate-400 font-bold uppercase">Cargo Type</p>
-                <p className="font-bold text-slate-800 text-sm mt-0.5">{shipment.cargoDetails?.type || "N/A"}</p>
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="p-1.5 bg-purple-500/15 text-purple-600 dark:text-purple-400 rounded-lg">
+                <MapPin className="w-4 h-4" />
               </div>
-              <div>
-                <p className="text-xs text-slate-400 font-bold uppercase">Weight</p>
-                <p className="font-bold text-slate-800 text-sm mt-0.5">
-                  {shipment.cargoDetails?.weight} {shipment.cargoDetails?.unit}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-bold uppercase">Quantity</p>
-                <p className="font-bold text-slate-800 text-sm mt-0.5">{shipment.cargoDetails?.quantity || 1}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-bold uppercase">Total Bill</p>
-                <p className="font-extrabold text-purple-700 text-sm mt-0.5">
-                  {shipment.pricing?.totalAmount?.toLocaleString()} {shipment.pricing?.currency || "PKR"}
-                </p>
-              </div>
+              <span className="text-xs font-bold uppercase text-slate-400">Destination</span>
             </div>
-
-            {shipment.notes && (
-              <div className="bg-slate-50 p-4 border rounded-xl mt-4">
-                <p className="text-xs font-bold text-slate-400 uppercase">Special Instructions</p>
-                <p className="text-xs italic text-slate-600 mt-1">{shipment.notes}</p>
-              </div>
-            )}
+            <p className="font-bold text-slate-900 dark:text-white text-sm">{shipment.destination?.city}</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{shipment.destination?.address}</p>
           </div>
         </div>
 
-        {/* Right Side details: Assigned Crew */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-gray-250 p-6 shadow-sm space-y-6">
-            <h3 className="text-sm font-bold text-slate-900 border-b pb-3">Assigned Delivery Crew</h3>
+        {/* Financial & Payment Card */}
+        <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-3">
+            Payment & Pricing Summary
+          </h3>
+          <div className="bg-gradient-to-br from-purple-950/20 via-slate-900 to-slate-950 border border-purple-900/40 rounded-2xl p-5 sm:p-6 text-white space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400">Estimated Price</span>
+                <p className="text-sm font-semibold font-mono text-slate-300 mt-0.5">
+                  {estimatedPrice > 0 ? `${Number(estimatedPrice).toLocaleString()} ETB` : "N/A"}
+                </p>
+              </div>
 
-            {driver ? (
-              <div className="space-y-5">
-                {/* Driver card */}
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full overflow-hidden border bg-purple-100 flex items-center justify-center shrink-0">
-                    {driver.userId?.profileImage ? (
-                      <img src={driver.userId.profileImage} alt={driver.fullName} className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="w-6 h-6 text-purple-700" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400 font-bold uppercase">Assigned Driver</p>
-                    <p className="font-bold text-slate-900 text-sm mt-0.5">{driver.fullName}</p>
-                    <div className="flex items-center gap-1.5 text-slate-550 text-xs mt-1">
-                      <Phone className="w-3.5 h-3.5 shrink-0 text-purple-700" />
-                      <span>{driver.userId?.phone || driver.phone || "No phone registered"}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-slate-550 text-xs mt-1">
-                      <Mail className="w-3.5 h-3.5 shrink-0 text-purple-700" />
-                      <span>{driver.userId?.email || "No email registered"}</span>
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-purple-400">Confirmed Final Price</span>
+                <p className="text-xl font-extrabold font-mono text-white mt-0.5">
+                  {finalPrice > 0 ? `${Number(finalPrice).toLocaleString()} ETB` : "Pending Confirmation"}
+                </p>
+              </div>
 
-                {/* License Details */}
-                {driver.licenseNumber && (
-                  <div className="flex items-center gap-1.5 bg-slate-50 border p-2 rounded-lg text-xs text-slate-600">
-                    <ShieldCheck className="w-4 h-4 text-purple-600" />
-                    <span>DL: {driver.licenseNumber}</span>
-                  </div>
-                )}
-
-                {/* Vehicle card */}
-                {vehicle ? (
-                  <div className="border-t pt-4 space-y-3">
-                    <p className="text-xs text-slate-400 font-bold uppercase">Assigned Vehicle</p>
-                    <div className="flex gap-3 bg-slate-50 p-3 rounded-xl border">
-                      <Truck className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
-                      <div className="text-xs space-y-1 text-slate-600">
-                        <p className="font-bold text-slate-800">{vehicle.manufacturer} {vehicle.model}</p>
-                        <p>Plate #: <span className="font-semibold text-slate-800">{vehicle.plateNumber}</span></p>
-                        <p className="capitalize">Type: {vehicle.type}</p>
-                        <p className="capitalize">Color: {vehicle.color || "N/A"}</p>
-                        <p>Capacity: {vehicle.capacity?.weight} {vehicle.capacity?.unit}</p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400 italic border-t pt-4">No vehicle details loaded.</p>
-                )}
-
-                {/* Estimated Delivery Dates */}
-                <div className="border-t pt-4 space-y-3">
-                  <p className="text-xs text-slate-400 font-bold uppercase">Estimated Timing</p>
-                  <div className="text-xs space-y-2 text-slate-600 font-medium">
-                    <div className="flex justify-between">
-                      <span>Scheduled Pickup:</span>
-                      <span className="font-semibold text-slate-800">
-                        {new Date(shipment.scheduledPickupDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                    {shipment.estimatedDeliveryDate && (
-                      <div className="flex justify-between">
-                        <span>Estimated Delivery:</span>
-                        <span className="font-semibold text-slate-800">
-                          {new Date(shipment.estimatedDeliveryDate).toLocaleDateString()}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400">Payment Status</span>
+                <div className="mt-1">
+                  <span
+                    className={`inline-flex px-3 py-1 text-xs font-extrabold rounded-full border capitalize ${getPaymentStatusBadge(
+                      shipment.paymentStatus
+                    )}`}
+                  >
+                    {shipment.paymentStatus || "UNPAID"}
+                  </span>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-10 text-gray-400">
-                <Truck className="mx-auto w-10 h-10 text-gray-300 mb-2" />
-                <p className="text-xs font-semibold">Your shipment is pending approval and crew assignment.</p>
-              </div>
-            )}
+            </div>
+
+            {/* Action Bar inside Payment Box */}
+            <div className="border-t border-slate-800 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p className="text-xs text-slate-400">
+                {isPaid
+                  ? "This shipment has been paid in full via Chapa."
+                  : canPay
+                  ? "Final price confirmed. Click Pay Now to proceed to Chapa secure checkout."
+                  : "Awaiting final transportation price approval from Dispatcher/Admin."}
+              </p>
+
+              {canPay && (
+                <button
+                  onClick={handlePayNow}
+                  disabled={initializingPayment}
+                  className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 cursor-pointer disabled:opacity-50"
+                >
+                  {initializingPayment ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4" />
+                      <span>PAY NOW ({Number(finalPrice).toLocaleString()} ETB)</span>
+                    </>
+                  )}
+                </button>
+              )}
+
+              {isPaid && (
+                <button
+                  onClick={handleOpenReceipt}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-purple-900/60 hover:bg-purple-800 text-purple-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border border-purple-700/50 cursor-pointer"
+                >
+                  <FileText className="w-4 h-4" />
+                  View Payment Receipt
+                </button>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Cargo Details */}
+        <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-3">Cargo Information</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-800/30 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Type</p>
+              <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white mt-0.5">{shipment.cargoDetails?.type}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Weight</p>
+              <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
+                {shipment.cargoDetails?.weight} {shipment.cargoDetails?.unit}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Quantity</p>
+              <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white mt-0.5">{shipment.cargoDetails?.quantity || 1} units</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Total Amount</p>
+              <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
+                {Number(finalPrice || estimatedPrice || 0).toLocaleString()} ETB
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Assigned Crew */}
+        {shipment.driverId && (
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-3">Assigned Crew</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">{shipment.driverId.fullName}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{shipment.driverId.userId?.phone || shipment.driverId.phone || "No phone"}</p>
+                </div>
+              </div>
+
+              {shipment.vehicleId && (
+                <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                  Vehicle: <span className="font-bold text-slate-900 dark:text-white">{shipment.vehicleId.plateNumber}</span> ({shipment.vehicleId.manufacturer} {shipment.vehicleId.model})
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

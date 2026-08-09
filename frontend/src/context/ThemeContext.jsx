@@ -12,34 +12,39 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // Get saved theme from localStorage or default to light
-    const savedTheme = localStorage.getItem("theme");
-    return savedTheme || "light";
+    try {
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme) return savedTheme;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+    } catch {
+      return "light";
+    }
   });
 
   useEffect(() => {
-    // Apply theme to document
     const root = document.documentElement;
-    console.log("Theme changed to:", theme);
-    console.log("Root element:", root);
 
     if (theme === "dark") {
       root.classList.add("dark");
-      console.log("Added dark class");
+      root.setAttribute("data-theme", "dark");
+      root.style.colorScheme = "dark";
     } else {
       root.classList.remove("dark");
-      console.log("Removed dark class");
+      root.setAttribute("data-theme", "light");
+      root.style.colorScheme = "light";
     }
 
-    console.log("Current classes:", root.className);
-
-    // Save to localStorage
-    localStorage.setItem("theme", theme);
-    console.log("Saved to localStorage:", theme);
+    try {
+      localStorage.setItem("theme", theme);
+    } catch (e) {
+      console.warn("Could not save theme to localStorage:", e);
+    }
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
   const setLightTheme = () => setTheme("light");

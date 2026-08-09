@@ -7,10 +7,11 @@ const mongoose = require("mongoose");
  * - Created by customers
  * - Managed by dispatchers
  * - Executed by drivers
+ * - Paid via Chapa Payment Gateway
  *
  * Workflow:
  * 1. pending - Customer creates shipment
- * 2. approved - Admin/Dispatcher approves
+ * 2. approved - Admin/Dispatcher approves & confirms final price
  * 3. assigned - Driver and vehicle assigned
  * 4. picked_up - Driver picks up cargo
  * 5. in_transit - Cargo being delivered
@@ -28,7 +29,7 @@ const shipmentSchema = new mongoose.Schema(
     shipmentNumber: {
       type: String,
       unique: true,
-      sparse: true, // Allow temporarily null until pre-save hook generates it
+      sparse: true,
     },
     pickupLocation: {
       address: {
@@ -116,6 +117,12 @@ const shipmentSchema = new mongoose.Schema(
       ],
       default: "pending",
     },
+    paymentStatus: {
+      type: String,
+      enum: ["UNPAID", "PENDING", "PAID", "FAILED"],
+      default: "UNPAID",
+      index: true,
+    },
     pricing: {
       baseAmount: {
         type: Number,
@@ -131,8 +138,19 @@ const shipmentSchema = new mongoose.Schema(
       },
       currency: {
         type: String,
-        default: "PKR",
+        default: "ETB",
       },
+    },
+    finalPrice: {
+      type: Number,
+      default: 0,
+    },
+    priceConfirmedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    priceConfirmedAt: {
+      type: Date,
     },
     scheduledPickupDate: {
       type: Date,
@@ -181,23 +199,33 @@ const shipmentSchema = new mongoose.Schema(
   },
 );
 
-// Pre-save middleware to generate shipment number
+// Pre-save middleware to generate shipment number and sync finalPrice
 shipmentSchema.pre("save", async function () {
   if (!this.shipmentNumber) {
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
-    const timestamp = Date.now();
+    const timestamp = Date.now().toString().slice(-6);
     const random = Math.floor(Math.random() * 1000)
       .toString()
       .padStart(3, "0");
     this.shipmentNumber = `SHP-${year}${month}-${timestamp}${random}`;
   }
+
+  // Ensure finalPrice is initialized from totalAmount if totalAmount > 0 and finalPrice was 0
+  if (!this.finalPrice && this.pricing?.totalAmount) {
+    this.finalPrice = this.pricing.totalAmount;
+  }
+  if (!this.pricing.totalAmount && this.finalPrice) {
+    this.pricing.totalAmount = this.finalPrice;
+  }
+  this.pricing.currency = "ETB";
 });
 
 // Indexes
 shipmentSchema.index({ customerId: 1 });
 shipmentSchema.index({ status: 1 });
+shipmentSchema.index({ paymentStatus: 1 });
 shipmentSchema.index({ shipmentNumber: 1 });
 shipmentSchema.index({ createdAt: -1 });
 

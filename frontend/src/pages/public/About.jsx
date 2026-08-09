@@ -3,7 +3,7 @@ import { Truck, Users, Award, Globe, Target, TrendingUp } from "lucide-react";
 
 const About = () => {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-gray-950 text-slate-900 dark:text-gray-100 transition-colors duration-200">
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-20">
         <div className="container mx-auto px-6">
@@ -19,19 +19,19 @@ const About = () => {
       </section>
 
       {/* Mission Section */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-white dark:bg-gray-900 border-b border-slate-200/60 dark:border-gray-800 transition-colors">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl font-bold text-slate-900 mb-6">
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-6">
                 Our Mission
               </h2>
-              <p className="text-lg text-slate-600 leading-relaxed mb-4">
+              <p className="text-lg text-slate-600 dark:text-gray-300 leading-relaxed mb-4">
                 At Nayab Transportation Management System, we're committed to
                 revolutionizing the logistics industry through cutting-edge
                 technology and innovative solutions.
               </p>
-              <p className="text-lg text-slate-600 leading-relaxed">
+              <p className="text-lg text-slate-600 dark:text-gray-300 leading-relaxed">
                 We believe that efficient transportation management should be
                 accessible to businesses of all sizes, which is why we've built
                 a platform that combines powerful features with intuitive
@@ -61,13 +61,13 @@ const About = () => {
       </section>
 
       {/* Values Section */}
-      <section className="py-16 bg-slate-50">
+      <section className="py-16 bg-slate-50 dark:bg-gray-950 transition-colors">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
               Our Core Values
             </h2>
-            <p className="text-lg text-slate-600">
+            <p className="text-lg text-slate-600 dark:text-gray-400">
               The principles that guide everything we do
             </p>
           </div>
@@ -92,13 +92,13 @@ const About = () => {
       </section>
 
       {/* Team Section */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-white dark:bg-gray-900 border-t border-slate-200/60 dark:border-gray-800 transition-colors">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
               Why Choose Us
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            <p className="text-lg text-slate-600 dark:text-gray-400 max-w-2xl mx-auto">
               With years of experience in logistics and technology, we
               understand the challenges you face and have built solutions to
               overcome them.
@@ -139,21 +139,21 @@ const StatsCard = ({ icon, value, label }) => (
 );
 
 const ValueCard = ({ icon, title, description }) => (
-  <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition">
+  <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-sm border border-slate-200/80 dark:border-gray-700 hover:shadow-md transition">
     <div className="flex justify-center text-amber-500 mb-4">
       {React.cloneElement(icon, { className: "w-12 h-12" })}
     </div>
-    <h3 className="text-xl font-bold text-slate-900 text-center mb-3">
+    <h3 className="text-xl font-bold text-slate-900 dark:text-white text-center mb-3">
       {title}
     </h3>
-    <p className="text-slate-600 text-center leading-relaxed">{description}</p>
+    <p className="text-slate-600 dark:text-gray-300 text-center leading-relaxed">{description}</p>
   </div>
 );
 
 const FeatureCard = ({ title, description }) => (
-  <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-    <h4 className="text-lg font-semibold text-slate-900 mb-2">{title}</h4>
-    <p className="text-slate-600 text-sm">{description}</p>
+  <div className="bg-slate-50 dark:bg-gray-800 p-6 rounded-xl border border-slate-200/80 dark:border-gray-700">
+    <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">{title}</h4>
+    <p className="text-slate-600 dark:text-gray-400 text-sm">{description}</p>
   </div>
 );
 

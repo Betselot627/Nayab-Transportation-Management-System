@@ -1,35 +1,38 @@
 const mongoose = require("mongoose");
 
 /**
- * Payment Model
+ * Payment Model - NTMS
  *
- * Purpose: Financial transaction management
+ * Purpose: Financial transaction management with Chapa Payment Gateway
  * - Track shipment payments
- * - Multiple payment methods
- * - Payment status tracking
- *
- * Methods:
- * - cash: Cash on delivery/pickup
- * - bank_transfer: Direct bank transfer
- * - cheque: Cheque payment
- * - online: Online payment gateway
- * - credit: Credit account
+ * - Unique transaction reference (txRef)
+ * - Chapa checkout and verification state
+ * - Automatic Receipt generation
  */
 const paymentSchema = new mongoose.Schema(
   {
     paymentNumber: {
       type: String,
       unique: true,
+      sparse: true,
+    },
+    txRef: {
+      type: String,
+      required: [true, "Transaction reference is required"],
+      unique: true,
+      index: true,
     },
     shipmentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Shipment",
       required: [true, "Shipment ID is required"],
+      index: true,
     },
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Customer",
       required: [true, "Customer ID is required"],
+      index: true,
     },
     amount: {
       type: Number,
@@ -38,67 +41,44 @@ const paymentSchema = new mongoose.Schema(
     },
     currency: {
       type: String,
-      default: "PKR",
+      default: "ETB",
+      uppercase: true,
+    },
+    status: {
+      type: String,
+      enum: ["PENDING", "PAID", "FAILED", "CANCELLED"],
+      default: "PENDING",
+      index: true,
+    },
+    paymentStatus: {
+      // Legacy compatibility alias
+      type: String,
+      enum: ["pending", "processing", "paid", "failed", "cancelled"],
+      default: "pending",
     },
     paymentMethod: {
       type: String,
-      required: [true, "Payment method is required"],
-      enum: ["cash", "bank_transfer", "cheque", "online", "credit"],
+      default: "Chapa",
     },
-    paymentStatus: {
+    checkoutUrl: {
       type: String,
-      enum: [
-        "pending",
-        "processing",
-        "paid",
-        "failed",
-        "refunded",
-        "cancelled",
-      ],
-      default: "pending",
     },
-    paymentDate: {
+    chapaTransactionId: {
+      type: String,
+    },
+    receiptNumber: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    receiptDate: {
       type: Date,
     },
-    dueDate: {
+    paidAt: {
       type: Date,
     },
-    transactionDetails: {
-      transactionId: String,
-      bankName: String,
-      accountNumber: String,
-      chequeNumber: String,
-      paymentGateway: String,
-      reference: String,
-    },
-    invoice: {
-      invoiceNumber: String,
-      invoiceDate: Date,
-      dueDate: Date,
-      document: String, // Cloudinary URL
-    },
-    receipt: {
-      receiptNumber: String,
-      receiptDate: Date,
-      document: String, // Cloudinary URL
-    },
-    breakdown: {
-      baseAmount: {
-        type: Number,
-        default: 0,
-      },
-      tax: {
-        type: Number,
-        default: 0,
-      },
-      discount: {
-        type: Number,
-        default: 0,
-      },
-      additionalCharges: {
-        type: Number,
-        default: 0,
-      },
+    failedAt: {
+      type: Date,
     },
     paidBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -108,38 +88,50 @@ const paymentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    customerDetails: {
+      name: String,
+      email: String,
+      phone: String,
+    },
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
     notes: {
       type: String,
       trim: true,
     },
-    refundDetails: {
-      refundAmount: Number,
-      refundDate: Date,
-      refundReason: String,
-      refundMethod: String,
-    },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-// Pre-save middleware to generate payment number
-paymentSchema.pre("save", async function (next) {
+// Pre-save middleware to auto-generate payment and receipt numbers
+paymentSchema.pre("save", async function () {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
   if (!this.paymentNumber) {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const count = await mongoose.model("Payment").countDocuments();
-    this.paymentNumber = `PAY-${year}${month}-${String(count + 1).padStart(5, "0")}`;
+    const timestamp = Date.now().toString().slice(-6);
+    this.paymentNumber = `PAY-${year}${month}-${timestamp}`;
   }
-  next();
+
+  if (this.status === "PAID" && !this.receiptNumber) {
+    const random = Math.floor(1000 + Math.random() * 9000);
+    this.receiptNumber = `RCPT-${year}-${random}`;
+    this.receiptDate = this.receiptDate || new Date();
+  }
+
+  // Synchronize legacy paymentStatus field
+  if (this.status === "PAID") this.paymentStatus = "paid";
+  else if (this.status === "FAILED") this.paymentStatus = "failed";
+  else if (this.status === "CANCELLED") this.paymentStatus = "cancelled";
+  else this.paymentStatus = "pending";
 });
 
 // Indexes
-paymentSchema.index({ shipmentId: 1 });
-paymentSchema.index({ customerId: 1 });
-paymentSchema.index({ paymentStatus: 1 });
-paymentSchema.index({ paymentDate: -1 });
+paymentSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Payment", paymentSchema);

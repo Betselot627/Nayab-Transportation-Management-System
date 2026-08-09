@@ -33,31 +33,50 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
+const path = require("path");
+const fs = require("fs");
+
 // Security Middleware
-app.use(helmet()); // Set security HTTP headers
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: false,
+  }),
+); // Set security HTTP headers
 app.use(mongoSanitize()); // Prevent MongoDB injection
 
-// Rate limiting
+// Rate limiting (generous for active dashboard usage)
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again later",
+  max: 1000, // Limit each IP to 1000 requests per windowMs
+  message: {
+    success: false,
+    message: "Too many requests from this IP, please try again later",
+  },
 });
 app.use("/api/", limiter);
 
 // CORS Configuration
-app.use(cors({
-  origin: true, // Allow any origin dynamically to support any local testing port
-  credentials: true,
-  optionsSuccessStatus: 200,
-}));
+app.use(
+  cors({
+    origin: true, // Allow any origin dynamically to support any local testing port and network IPs
+    credentials: true,
+    optionsSuccessStatus: 200,
+  }),
+);
 
-// Body Parser Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body Parser Middleware with high limit for base64 images and documents
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// API Routes
-app.get("/", (req, res) => {
+// Serve frontend build if dist folder exists
+const frontendDistPath = path.join(__dirname, "../frontend/dist");
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+}
+
+// API Root Route
+app.get("/api", (req, res) => {
   res.json({
     message: "Nayab Transportation Management System API",
     version: "1.0.0",
@@ -91,14 +110,24 @@ app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/reports", require("./routes/reportRoutes"));
 
-// Error Handling Middleware
-app.use(notFound); // 404 handler
+// Catch-all for non-API routes to serve SPA index.html if dist exists
+if (fs.existsSync(frontendDistPath)) {
+  app.get("*", (req, res, next) => {
+    if (req.originalUrl.startsWith("/api")) {
+      return next();
+    }
+    res.sendFile(path.join(frontendDistPath, "index.html"));
+  });
+}
+
+// Error Handling Middleware for API routes
+app.use(notFound); // 404 handler for unmatched API routes
 app.use(errorHandler); // Global error handler
 
 // Start Server
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("  🚛 NTMS Backend Server Started");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -108,9 +137,18 @@ app.listen(PORT, () => {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 });
 
-// Handle unhandled promise rejections
+// Handle unhandled promise rejections gracefully without crashing the server
 process.on("unhandledRejection", (err) => {
-  console.error("❌ Unhandled Rejection:", err.message);
-  // Close server & exit process
-  process.exit(1);
+  console.error("⚠️ Unhandled Rejection (Server Kept Running):", err?.message || err);
+  if (err?.stack) {
+    console.error(err.stack);
+  }
+});
+
+// Handle uncaught exceptions gracefully without crashing the server
+process.on("uncaughtException", (err) => {
+  console.error("⚠️ Uncaught Exception (Server Kept Running):", err?.message || err);
+  if (err?.stack) {
+    console.error(err.stack);
+  }
 });

@@ -10,6 +10,7 @@ import {
   Lock,
 } from "lucide-react";
 import api from "../../services/api";
+import ThemeToggle from "../../components/common/ThemeToggle";
 
 /**
  * Forgot Password Component
@@ -28,26 +29,32 @@ const ForgotPassword = () => {
   const [error, setError] = useState("");
 
   // Step 1: Request password reset
-  const handleForgotPassword = async (e) => {
+  const handleRequestReset = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+    setLoading(true);
 
     try {
       const response = await api.post("/auth/forgot-password", { email });
 
       if (response.data.success) {
-        // Move to step 2 - reset password
-        setStep(2);
+        setSuccess(true);
+        setTimeout(() => {
+          setStep(2);
+          setSuccess(false);
+        }, 2000);
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to process request");
+      setError(
+        err.response?.data?.message ||
+          "Failed to request password reset. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 2: Reset password
+  // Step 2: Reset password with email
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError("");
@@ -58,7 +65,7 @@ const ForgotPassword = () => {
     }
 
     if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError("Password must be at least 6 characters long");
       return;
     }
 
@@ -74,56 +81,73 @@ const ForgotPassword = () => {
         setSuccess(true);
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to reset password");
+      setError(
+        err.response?.data?.message ||
+          "Failed to reset password. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Success screen
-  if (success) {
+  if (success && step === 2) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center py-12 px-4">
-        <div className="max-w-md w-full">
-          <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-            <div className="flex justify-center mb-6">
-              <div className="bg-green-100 p-4 rounded-full">
-                <CheckCircle className="h-12 w-12 text-green-600" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              Password Reset Successful!
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Your password has been reset successfully. You can now login with
-              your new password.
-            </p>
-            <Link
-              to="/login"
-              className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition"
-            >
-              Go to Login
-            </Link>
+      <div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center py-12 px-4 transition-colors duration-300">
+        <div className="absolute top-4 left-4 right-4 flex justify-between items-center max-w-4xl mx-auto">
+          <Link
+            to="/"
+            className="text-xs sm:text-sm font-medium text-slate-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white transition flex items-center gap-1.5"
+          >
+            &larr; Back to Home
+          </Link>
+          <ThemeToggle compact />
+        </div>
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center transition-colors duration-300">
+          <div className="w-16 h-16 bg-green-100 dark:bg-green-950/40 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="h-8 w-8" />
           </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Password Reset Successful!
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">
+            Your password has been updated. You can now log in with your new credentials.
+          </p>
+          <Link
+            to="/login"
+            className="inline-block w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition duration-200 shadow-sm"
+          >
+            Go to Login
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full">
+    <div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center py-12 px-4 transition-colors duration-300">
+      {/* Top Bar with Home link & Theme Toggle */}
+      <div className="absolute top-4 left-4 right-4 flex justify-between items-center max-w-4xl mx-auto">
+        <Link
+          to="/"
+          className="text-xs sm:text-sm font-medium text-slate-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white transition flex items-center gap-1.5"
+        >
+          &larr; Back to Home
+        </Link>
+        <ThemeToggle compact />
+      </div>
+
+      <div className="max-w-md w-full pt-6 sm:pt-0">
         {/* Logo and Title */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="bg-blue-600 p-3 rounded-xl">
+            <div className="bg-blue-600 dark:bg-blue-500 p-3 rounded-xl shadow-lg">
               <Truck className="h-10 w-10 text-white" />
             </div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
             {step === 1 ? "Forgot Password?" : "Reset Your Password"}
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
             {step === 1
               ? "Enter your email to reset your password"
               : "Enter your new password below"}
@@ -131,9 +155,9 @@ const ForgotPassword = () => {
         </div>
 
         {/* Form Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 transition-colors duration-300">
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+            <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg flex items-center gap-2">
               <AlertCircle className="h-5 w-5 shrink-0" />
               <span className="text-sm">{error}</span>
             </div>

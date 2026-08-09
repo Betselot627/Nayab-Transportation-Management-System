@@ -165,18 +165,20 @@ const updateMyProfile = async (req, res) => {
       customerUpdate.companyName = req.body.companyName;
     }
 
-    const customer = await Customer.findOneAndUpdate(
-      { userId: req.user._id },
-      customerUpdate,
-      { new: true, runValidators: true },
-    ).populate("userId");
-
+    let customer = await Customer.findOne({ userId: req.user._id });
     if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: "Customer profile not found",
+      customer = await Customer.create({
+        userId: req.user._id,
+        address: address || {},
+        companyName: req.body.companyName || "",
       });
+    } else {
+      if (address) customer.address = address;
+      if (req.body.companyName !== undefined) customer.companyName = req.body.companyName;
+      await customer.save();
     }
+
+    customer = await Customer.findOne({ userId: req.user._id }).populate("userId");
 
     res.status(200).json({
       success: true,

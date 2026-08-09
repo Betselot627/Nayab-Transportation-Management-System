@@ -145,7 +145,7 @@ const createUser = async (req, res) => {
  */
 const updateUser = async (req, res) => {
   try {
-    const { name, phone, role, status } = req.body;
+    const { name, phone, role, status, profileImage, email } = req.body;
 
     const user = await User.findById(req.params.id);
 
@@ -161,13 +161,30 @@ const updateUser = async (req, res) => {
     if (phone) user.phone = phone;
     if (role) user.role = role;
     if (status) user.status = status;
+    if (profileImage !== undefined) user.profileImage = profileImage;
+    if (email && email !== user.email) {
+      const emailExists = await User.findOne({
+        email,
+        _id: { $ne: user._id },
+      });
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: "Email is already in use by another user",
+        });
+      }
+      user.email = email;
+    }
 
     await user.save();
+
+    const userObj = user.toObject();
+    delete userObj.password;
 
     res.status(200).json({
       success: true,
       message: "User updated successfully",
-      data: user,
+      data: userObj,
     });
   } catch (error) {
     console.error("Update User Error:", error);

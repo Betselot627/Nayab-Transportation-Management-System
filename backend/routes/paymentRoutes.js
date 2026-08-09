@@ -1,44 +1,39 @@
 const express = require("express");
 const router = express.Router();
 const {
+  initializePayment,
+  verifyPayment,
+  handleWebhook,
+  getMyPayments,
+  getPaymentReceipt,
   getAllPayments,
-  getPaymentById,
-  createPayment,
-  updatePaymentStatus,
-  updatePayment,
-  deletePayment,
-  getShipmentPayments,
   getPaymentStats,
+  getPaymentById,
 } = require("../controllers/paymentController");
 const { protect } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/roleMiddleware");
 
 /**
- * Payment Management Routes
+ * Payment Management Routes - NTMS Chapa Gateway
  *
  * Base URL: /api/payments
- *
- * Access Control:
- * - Customer: View own payments, create payments
- * - Admin: Full access
  */
 
+// 1. Webhook endpoint (Public, signature validated internally)
+router.post("/webhook", handleWebhook);
+
+// 2. Public / Callback verification endpoint (also supports authenticated verification)
+router.get("/verify/:txRef", verifyPayment);
+
+// 3. Protected payment routes
 router.use(protect);
 
-router
-  .route("/")
-  .get(getAllPayments)
-  .post(authorize("admin", "customer"), createPayment);
-
+router.post("/initialize", authorize("customer", "admin"), initializePayment);
+router.get("/my-payments", authorize("customer", "admin"), getMyPayments);
+router.get("/receipt/:txRef", getPaymentReceipt);
 router.get("/stats", authorize("admin"), getPaymentStats);
-router.get("/shipment/:shipmentId", getShipmentPayments);
 
-router
-  .route("/:id")
-  .get(getPaymentById)
-  .put(authorize("admin"), updatePayment)
-  .delete(authorize("admin"), deletePayment);
-
-router.put("/:id/status", authorize("admin"), updatePaymentStatus);
+router.get("/", authorize("admin"), getAllPayments);
+router.get("/:id", getPaymentById);
 
 module.exports = router;

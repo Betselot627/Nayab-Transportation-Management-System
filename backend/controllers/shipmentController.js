@@ -694,6 +694,72 @@ const approveShipment = async (req, res) => {
   }
 };
 
+/**
+ * @route   PUT /api/shipments/:id/confirm-price
+ * @desc    Confirm final transportation price (Admin/Dispatcher)
+ * @access  Private/Admin/Dispatcher
+ */
+const confirmFinalPrice = async (req, res) => {
+  try {
+    const { finalPrice } = req.body;
+
+    if (!finalPrice || isNaN(finalPrice) || Number(finalPrice) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid positive final price amount is required",
+      });
+    }
+
+    const shipment = await Shipment.findById(req.params.id);
+    if (!shipment) {
+      return res.status(404).json({
+        success: false,
+        message: "Shipment not found",
+      });
+    }
+
+    shipment.finalPrice = Number(finalPrice);
+    shipment.pricing = shipment.pricing || {};
+    shipment.pricing.totalAmount = Number(finalPrice);
+    shipment.pricing.currency = "ETB";
+    shipment.priceConfirmedBy = req.user._id;
+    shipment.priceConfirmedAt = new Date();
+    if (shipment.status === "pending") {
+      shipment.status = "approved";
+    }
+
+    await shipment.save();
+
+    // Notify Customer that final price is confirmed and PAY NOW is available
+    const customer = await Customer.findById(shipment.customerId);
+    if (customer && customer.userId) {
+      await Notification.create({
+        userId: customer.userId,
+        title: "Final Price Confirmed - Ready to Pay",
+        message: `The transportation price for booking ${shipment.shipmentNumber} has been confirmed at ${Number(finalPrice).toLocaleString()} ETB. You can now click PAY NOW to complete payment.`,
+        type: "payment",
+        priority: "high",
+        relatedEntity: {
+          entityType: "shipment",
+          entityId: shipment._id,
+        },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Final transportation price confirmed successfully. Customer has been notified to pay.",
+      data: shipment,
+    });
+  } catch (error) {
+    console.error("Confirm Final Price Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createShipment,
   getAllShipments,
@@ -703,4 +769,6 @@ module.exports = {
   deleteShipment,
   getShipmentStats,
   approveShipment,
+  confirmFinalPrice,
 };
+

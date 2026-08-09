@@ -41,7 +41,7 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white font-sans antialiased overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-gray-950 text-slate-900 dark:text-gray-100 font-sans antialiased overflow-x-hidden transition-colors duration-200">
       <style>{`
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(24px); }
@@ -102,13 +102,13 @@ const Home = () => {
               <div className="anim-fade-up delay-300 flex flex-wrap justify-center md:justify-start gap-4 pt-2">
                 <button
                   onClick={() => navigate("/login")}
-                  className="bg-amber-500 text-slate-950 px-8 py-3.5 rounded-lg font-semibold shadow-lg shadow-amber-900/20 hover:bg-amber-400 hover:scale-105 active:scale-95 transition duration-200"
+                  className="bg-amber-500 text-slate-950 px-8 py-3.5 rounded-lg font-semibold shadow-lg shadow-amber-900/20 hover:bg-amber-400 hover:scale-105 active:scale-95 transition duration-200 cursor-pointer"
                 >
                   Book Shipment
                 </button>
                 <button
                   onClick={() => navigate("/login")}
-                  className="border border-slate-700 bg-white/5 backdrop-blur-sm text-white px-8 py-3.5 rounded-lg font-medium hover:bg-white/10 hover:scale-105 active:scale-95 transition duration-200"
+                  className="border border-slate-700 bg-white/5 backdrop-blur-sm text-white px-8 py-3.5 rounded-lg font-medium hover:bg-white/10 hover:scale-105 active:scale-95 transition duration-200 cursor-pointer"
                 >
                   Track Delivery
                 </button>
@@ -139,7 +139,7 @@ const Home = () => {
       {/* Statistics Section */}
       <section className="relative z-10 -mt-8 px-6">
         <div className="container mx-auto">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 bg-white rounded-2xl p-8 shadow-xl border border-slate-100">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-xl border border-slate-100 dark:border-gray-800 transition-colors">
             <div className="anim-fade-up delay-100">
               <StatCard
                 icon={<Truck />}
@@ -169,13 +169,13 @@ const Home = () => {
       </section>
 
       {/* Services Section */}
-      <section className="py-24 bg-slate-50">
+      <section id="services" className="py-24 bg-slate-50 dark:bg-gray-950 transition-colors scroll-mt-12">
         <div className="container mx-auto px-6">
           <div className="anim-fade-up max-w-2xl mx-auto text-center mb-16">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
               Our Transportation Services
             </h2>
-            <p className="text-lg text-slate-600 mt-4">
+            <p className="text-lg text-slate-600 dark:text-gray-400 mt-4">
               Complete solutions designed to streamline modern logistics and
               fleet operations.
             </p>
@@ -210,8 +210,8 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Why Choose Us Section */}
-      <section className="bg-slate-950 text-white py-24">
+      {/* Why Choose Us / Features Section */}
+      <section id="features" className="bg-slate-950 text-white py-24 scroll-mt-12">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             {/* Info Side */}
@@ -254,7 +254,7 @@ const Home = () => {
               </p>
               <button
                 onClick={() => navigate("/register")}
-                className="w-full sm:w-auto bg-amber-500 text-slate-950 px-8 py-3.5 rounded-lg font-semibold shadow hover:bg-amber-400 hover:scale-105 active:scale-95 transition duration-200"
+                className="w-full sm:w-auto bg-amber-500 text-slate-950 px-8 py-3.5 rounded-lg font-semibold shadow hover:bg-amber-400 hover:scale-105 active:scale-95 transition duration-200 cursor-pointer"
               >
                 Get Started Free
               </button>
@@ -270,26 +270,26 @@ const Home = () => {
 
 const StatCard = ({ icon, number, text }) => (
   <div className="flex flex-col items-center text-center p-4">
-    <div className="flex items-center justify-center text-amber-600 bg-amber-50 w-12 h-12 rounded-xl mb-4">
+    <div className="flex items-center justify-center text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 w-12 h-12 rounded-xl mb-4">
       {React.cloneElement(icon, { className: "w-6 h-6" })}
     </div>
-    <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+    <span className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
       {number}
     </span>
-    <span className="text-sm font-medium text-slate-500 mt-1">{text}</span>
+    <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">{text}</span>
   </div>
 );
 
 const ServiceCard = ({ icon, title, description, onClick }) => (
   <div
     onClick={onClick}
-    className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300 cursor-pointer"
+    className="bg-white dark:bg-gray-900 p-8 rounded-2xl border border-slate-200/60 dark:border-gray-800 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300 cursor-pointer"
   >
-    <div className="flex items-center justify-center text-amber-600 bg-amber-50 w-14 h-14 rounded-xl mb-5">
+    <div className="flex items-center justify-center text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 w-14 h-14 rounded-xl mb-5">
       {React.cloneElement(icon, { className: "w-7 h-7" })}
     </div>
-    <h3 className="text-xl font-bold text-slate-900 mb-3">{title}</h3>
-    <p className="text-slate-600 leading-relaxed">{description}</p>
+    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{title}</h3>
+    <p className="text-slate-600 dark:text-gray-400 leading-relaxed">{description}</p>
   </div>
 );
 
