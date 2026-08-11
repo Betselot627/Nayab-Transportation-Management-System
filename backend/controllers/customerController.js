@@ -18,7 +18,7 @@ const Shipment = require("../models/Shipment");
  */
 const getAllCustomers = async (req, res) => {
   try {
-    const { search, page = 1, limit = 10 } = req.query;
+    const { search, page = 1, limit = 50 } = req.query;
     const query = {};
 
     if (search) {
@@ -32,21 +32,36 @@ const getAllCustomers = async (req, res) => {
       query.userId = { $in: users.map((u) => u._id) };
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = parseInt(limit);
+    const skip = (parseInt(page) - 1) * limitNum;
 
-    const customers = await Customer.find(query)
-      .populate("userId", "name email phone status")
-      .limit(parseInt(limit))
-      .skip(skip)
-      .sort({ createdAt: -1 });
+    const [customersList, total] = await Promise.all([
+      Customer.find(query)
+        .populate("userId", "name email phone status")
+        .limit(limitNum)
+        .skip(skip)
+        .sort({ createdAt: -1 })
+        .lean(),
+      Customer.countDocuments(query),
+    ]);
 
-    const total = await Customer.countDocuments(query);
+    // Attach real dynamic shipment counts
+    const customers = await Promise.all(
+      customersList.map(async (c) => {
+        const shipmentCount = await Shipment.countDocuments({ customerId: c._id });
+        return {
+          ...c,
+          totalShipments: shipmentCount || c.totalShipments || 0,
+          companyName: c.companyName || c.userId?.name || "Customer",
+        };
+      })
+    );
 
     res.status(200).json({
       success: true,
       count: customers.length,
       total,
-      pages: Math.ceil(total / parseInt(limit)),
+      pages: Math.ceil(total / limitNum),
       currentPage: parseInt(page),
       data: customers,
     });
@@ -98,16 +113,25 @@ const getCustomerById = async (req, res) => {
  */
 const getMyProfile = async (req, res) => {
   try {
-    const customer = await Customer.findOne({ userId: req.user._id }).populate(
+    let customer = await Customer.findOne({ userId: req.user._id }).populate(
       "userId",
-      "name email phone",
+      "name email phone profileImage status"
     );
 
     if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: "Customer profile not found",
+      customer = await Customer.create({
+        userId: req.user._id,
+        companyName: req.user.name,
+        contactPerson: {
+          name: req.user.name,
+          phone: req.user.phone || "+251911000000",
+          email: req.user.email,
+        },
       });
+      customer = await Customer.findById(customer._id).populate(
+        "userId",
+        "name email phone profileImage status"
+      );
     }
 
     res.status(200).json({

@@ -50,19 +50,19 @@ const Contact = () => {
             <ContactInfoCard
               icon={<Phone />}
               title="Phone"
-              info="+1 (555) 123-4567"
+              info="+251 941896683"
               subInfo="Mon-Fri 9am-6pm"
             />
             <ContactInfoCard
               icon={<Mail />}
               title="Email"
-              info="support@ntms.com"
+              info="Nayabtrading2024@gmail.com"
               subInfo="24/7 Support"
             />
             <ContactInfoCard
               icon={<MapPin />}
               title="Office"
-              info="123 Logistics St, City"
+              info="Addis Ababa, Yeka Tesfaye bulding 3rd floor"
               subInfo="Visit us anytime"
             />
           </div>
@@ -84,7 +84,7 @@ const Contact = () => {
                     onChange={handleChange}
                     required
                     className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
-                    placeholder="John Doe"
+                    placeholder="Betsi Tig"
                   />
                 </div>
                 <div>
@@ -98,7 +98,7 @@ const Contact = () => {
                     onChange={handleChange}
                     required
                     className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
-                    placeholder="john@example.com"
+                    placeholder="Betsi@example.com"
                   />
                 </div>
               </div>
@@ -114,7 +114,7 @@ const Contact = () => {
                     value={formData.phone}
                     onChange={handleChange}
                     className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="+251 922827373 "
                   />
                 </div>
                 <div>

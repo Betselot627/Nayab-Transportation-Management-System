@@ -34,15 +34,6 @@ const CustomerManagement = () => {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
 
-  // Mock Customers Fallback Database
-  const mockCustomers = [
-    { id: 1, rollNumber: "C001", name: "Almaz Belay", mobile: "+251911223344", email: "almaz@gmail.com", address: "Bole, Addis Ababa", status: "Active" },
-    { id: 2, rollNumber: "C002", name: "Bekele Zewde", mobile: "+251912445566", email: "bekele@gmail.com", address: "Adama Hub", status: "Active" },
-    { id: 3, rollNumber: "C003", name: "Marta Kassa", mobile: "+251913778899", email: "marta@gmail.com", address: "Hawassa, Ethiopia", status: "Inactive" },
-    { id: 4, rollNumber: "C004", name: "Yonas Alemu", mobile: "+251914556677", email: "yonas@gmail.com", address: "Bahir Dar, Ethiopia", status: "Active" },
-    { id: 5, rollNumber: "C005", name: "Helen Solomon", mobile: "+251915998877", email: "helen@gmail.com", address: "Mekelle, Ethiopia", status: "Inactive" },
-  ];
-
   useEffect(() => {
     fetchCustomers();
   }, []);
@@ -50,27 +41,28 @@ const CustomerManagement = () => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const res = await customerService.getAllCustomers();
-      if (res && res.data && res.data.length > 0) {
+      const res = await customerService.getAllCustomers({ limit: 100 });
+      if (res && res.data) {
         const mapped = res.data.map((c, idx) => ({
           id: c._id,
           userId: c.userId?._id || null,
           rollNumber: `C${String(idx + 1).padStart(3, "0")}`,
-          name: c.companyName || c.userId?.name || "Customer",
-          mobile: c.userId?.phone || "+251900000000",
-          email: c.userId?.email || "customer@ntms.com",
+          name: c.companyName || c.userId?.name || c.contactPerson?.name || "Customer",
+          mobile: c.userId?.phone || c.contactPerson?.phone || "N/A",
+          email: c.userId?.email || c.contactPerson?.email || "N/A",
           address: c.address && typeof c.address === "object"
             ? [c.address.street, c.address.city, c.address.country].filter(Boolean).join(", ")
-            : (c.address || "Addis Ababa"),
+            : (c.address || "Addis Ababa, Ethiopia"),
+          totalShipments: c.totalShipments || 0,
           status: c.userId?.status === "active" ? "Active" : "Inactive",
         }));
         setCustomers(mapped);
       } else {
-        setCustomers(mockCustomers);
+        setCustomers([]);
       }
     } catch (err) {
-      console.warn("REST API offline, fallback to mock customers:", err);
-      setCustomers(mockCustomers);
+      console.error("Failed to fetch customers:", err);
+      setCustomers([]);
     } finally {
       setLoading(false);
     }

@@ -94,6 +94,20 @@ const driverSchema = new mongoose.Schema(
       medicalCertificate: String,
       other: [String],
     },
+    commissionRate: {
+      type: Number,
+      default: 15, // 15% commission per completed trip
+      min: 0,
+      max: 100,
+    },
+    totalEarnings: {
+      type: Number,
+      default: 0,
+    },
+    pendingPayout: {
+      type: Number,
+      default: 0,
+    },
     lastAssignedAt: {
       type: Date,
       default: null,
@@ -106,7 +120,7 @@ const driverSchema = new mongoose.Schema(
 
 // Geospatial index for location-based queries
 driverSchema.index({ currentLocation: "2dsphere" });
-driverSchema.index({ userId: 1 });
 driverSchema.index({ status: 1 });
+driverSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Driver", driverSchema);

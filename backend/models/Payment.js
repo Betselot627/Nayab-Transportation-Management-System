@@ -133,5 +133,8 @@ paymentSchema.pre("save", async function () {
 
 // Indexes
 paymentSchema.index({ createdAt: -1 });
+paymentSchema.index({ status: 1, createdAt: -1 });
+paymentSchema.index({ paymentStatus: 1, paymentDate: -1 });
+paymentSchema.index({ customerId: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Payment", paymentSchema);

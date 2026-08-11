@@ -30,16 +30,15 @@ const CustomerDashboard = () => {
   const fetchShipments = async () => {
     try {
       setLoading(true);
-      const response = await shipmentService.getAllShipments({ limit: 10 });
-      setShipments(response.data || []);
-
-      // Calculate stats
+      const response = await shipmentService.getAllShipments({ limit: 50 });
       const all = response.data || [];
+      setShipments(all.slice(0, 10));
+
       setStats({
-        total: all.length,
-        pending: all.filter((s) => s.status === "pending").length,
-        inTransit: all.filter((s) => s.status === "in_transit" || s.status === "assigned" || s.status === "picked_up").length,
-        delivered: all.filter((s) => s.status === "delivered" || s.status === "completed").length,
+        total: response.total || all.length,
+        pending: all.filter((s) => s.status === "pending" || s.status === "approved").length,
+        inTransit: all.filter((s) => ["in_transit", "assigned", "picked_up"].includes(s.status)).length,
+        delivered: all.filter((s) => ["delivered", "completed"].includes(s.status)).length,
       });
     } catch (err) {
       console.error("Failed to fetch shipments:", err);

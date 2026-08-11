@@ -382,6 +382,12 @@ const resetPassword = async (req, res) => {
   }
 };
 
+let publicStatsCache = {
+  data: null,
+  cachedAt: 0,
+};
+const CACHE_TTL_MS = 15 * 1000; // 15 seconds cache
+
 /**
  * @route   GET /api/auth/public-stats
  * @desc    Get public stats for Home page Hero dashboard
@@ -389,19 +395,37 @@ const resetPassword = async (req, res) => {
  */
 const getPublicStats = async (req, res) => {
   try {
-    const vehiclesCount = await Vehicle.countDocuments({ approvalStatus: "approved" });
-    const driversCount = await Driver.countDocuments();
-    const completedShipmentsCount = await Shipment.countDocuments({ status: "completed" });
-    const activeTripsCount = await Trip.countDocuments({ status: "in_progress" });
+    const now = Date.now();
+    if (publicStatsCache.data && now - publicStatsCache.cachedAt < CACHE_TTL_MS) {
+      return res.status(200).json({
+        success: true,
+        data: publicStatsCache.data,
+      });
+    }
+
+    const [vehiclesCount, driversCount, completedShipmentsCount, activeTripsCount] =
+      await Promise.all([
+        Vehicle.countDocuments({ approvalStatus: "approved" }),
+        Driver.countDocuments(),
+        Shipment.countDocuments({ status: "completed" }),
+        Trip.countDocuments({ status: { $in: ["in_progress", "in_transit", "on_the_way", "picked_up"] } }),
+      ]);
+
+    const statsData = {
+      vehiclesManaged: vehiclesCount,
+      registeredDrivers: driversCount,
+      completedShipments: completedShipmentsCount,
+      activeRoutes: activeTripsCount,
+    };
+
+    publicStatsCache = {
+      data: statsData,
+      cachedAt: now,
+    };
 
     res.status(200).json({
       success: true,
-      data: {
-        vehiclesManaged: vehiclesCount,
-        registeredDrivers: driversCount,
-        completedShipments: completedShipmentsCount,
-        activeRoutes: activeTripsCount,
-      },
+      data: statsData,
     });
   } catch (error) {
     console.error("Get Public Stats Error:", error);

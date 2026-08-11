@@ -206,7 +206,8 @@ const MyBookings = () => {
                   const finalPrice = shipment.finalPrice || shipment.pricing?.totalAmount || 0;
                   const estimatedPrice = shipment.pricing?.baseAmount || 0;
                   const isPaid = (shipment.paymentStatus || "").toUpperCase() === "PAID";
-                  const canPay = !isPaid && finalPrice > 0;
+                  const isApproved = shipment.status !== "pending";
+                  const canPay = !isPaid && isApproved && finalPrice > 0;
 
                   return (
                     <tr key={shipment._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
@@ -240,15 +241,20 @@ const MyBookings = () => {
                             <div className="font-extrabold text-slate-900 dark:text-white font-mono text-sm">
                               {Number(finalPrice).toLocaleString()} ETB
                             </div>
-                            {estimatedPrice > 0 && estimatedPrice !== finalPrice && (
-                              <div className="text-[10px] text-slate-400 line-through">
-                                Est: {Number(estimatedPrice).toLocaleString()} ETB
+                            {shipment.status === "pending" && (
+                              <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+                                Estimated (Pending Approval)
+                              </div>
+                            )}
+                            {shipment.status === "approved" && (
+                              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                                Approved & Confirmed
                               </div>
                             )}
                           </div>
                         ) : (
                           <div className="text-slate-400 italic">
-                            Est: {Number(estimatedPrice).toLocaleString()} ETB (Pending Admin Review)
+                            Est: {Number(estimatedPrice).toLocaleString()} ETB (Pending Review)
                           </div>
                         )}
                       </td>
@@ -269,17 +275,25 @@ const MyBookings = () => {
                             shipment.status
                           )}`}
                         >
-                          {shipment.status.replace("_", " ")}
+                          {shipment.status === "pending" ? "Pending Approval" : shipment.status.replace("_", " ")}
                         </span>
                       </td>
 
                       <td className="py-4 px-5 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {/* Payment Button or Pending Approval Indicator */}
+                          {shipment.status === "pending" && !isPaid && (
+                            <span className="px-3 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[11px] font-bold rounded-xl whitespace-nowrap">
+                              Awaiting Approval
+                            </span>
+                          )}
+
                           {canPay && (
                             <button
                               onClick={() => handlePayNow(shipment._id)}
                               disabled={initializingId === shipment._id}
-                              className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold flex items-center gap-1 shadow-xs transition cursor-pointer text-xs disabled:opacity-50"
+                              className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold flex items-center gap-1 shadow-md shadow-emerald-500/20 transition cursor-pointer text-xs disabled:opacity-50"
+                              title="Pay via Chapa (Telebirr / CBE Birr)"
                             >
                               {initializingId === shipment._id ? (
                                 <Loader className="w-3.5 h-3.5 animate-spin" />

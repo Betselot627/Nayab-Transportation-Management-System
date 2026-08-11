@@ -34,4 +34,27 @@ api.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
+// Response Interceptor to automatically clear stale/invalid tokens on 401
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      const currentPath = window.location.pathname;
+      const isAuthPage =
+        currentPath.includes("/login") ||
+        currentPath.includes("/register") ||
+        currentPath.includes("/forgot-password");
+
+      if (!isAuthPage) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("role");
+        // Redirect to login page
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;

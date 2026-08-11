@@ -23,7 +23,7 @@ const Navbar = () => {
           to="/"
           className="flex items-center gap-2 text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight hover:opacity-90 transition"
         >
-          <div className="bg-blue-950 text-white p-1.5 rounded-lg shadow-sm">
+          <div className="bg-blue-950 text-white p-1.5  shadow-sm">
             <Truck className="w-5 h-5" />
           </div>
           <span>
@@ -40,7 +40,7 @@ const Navbar = () => {
               className={`text-sm font-medium transition-colors ${
                 isActive(link.path)
                   ? "text-blue-950 dark:text-blue-400 font-semibold"
-                  : "text-slate-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white"
+                  : "text-slate-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
               }`}
             >
               {link.label}
@@ -54,14 +54,14 @@ const Navbar = () => {
 
           <Link
             to="/login"
-            className="text-sm font-medium text-slate-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-white px-3 py-2 transition"
+            className="text-sm font-medium text-slate-700 dark:text-gray-200 hover:text-black dark:hover:text-white px-3 py-2 transition"
           >
             Sign In
           </Link>
 
           <Link
             to="/register"
-            className="text-sm font-medium bg-blue-950 hover:bg-black text-white px-4 py-2 rounded-xl shadow-sm hover:shadow active:scale-95 transition duration-200"
+            className="text-sm font-medium bg-blue-950 hover:bg-black text-white px-4 py-2 rounded-lg shadow-sm hover:shadow active:scale-95 transition duration-200"
           >
             Get Started
           </Link>
@@ -112,7 +112,7 @@ const Navbar = () => {
             <Link
               to="/register"
               onClick={() => setIsOpen(false)}
-              className="w-full text-center py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition"
+              className="w-full text-center py-2.5  bg-amber-500  hover:bg-black text-black font-medium shadow-sm transition"
             >
               Get Started
             </Link>

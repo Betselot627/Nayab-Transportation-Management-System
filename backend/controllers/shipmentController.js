@@ -1,6 +1,8 @@
 const Shipment = require("../models/Shipment");
 const Customer = require("../models/Customer");
 const Driver = require("../models/Driver");
+const Vehicle = require("../models/Vehicle");
+const User = require("../models/User");
 const Trip = require("../models/Trip");
 const Notification = require("../models/Notification");
 
@@ -14,6 +16,8 @@ const Notification = require("../models/Notification");
  * - Real-time tracking
  */
 
+const { calculateShipmentPrice } = require("../utils/pricingCalculator");
+
 /**
  * @route   POST /api/shipments
  * @desc    Create new shipment (Customer)
@@ -22,50 +26,113 @@ const Notification = require("../models/Notification");
 const createShipment = async (req, res) => {
   try {
     // Get customer profile
-    const customer = await Customer.findOne({ userId: req.user._id });
+    let customer = await Customer.findOne({ userId: req.user._id });
 
     if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: "Customer profile not found",
+      customer = await Customer.create({
+        userId: req.user._id,
+        companyName: req.user.name,
+        contactPerson: {
+          name: req.user.name,
+          phone: req.user.phone || "+251911000000",
+          email: req.user.email,
+        },
       });
     }
 
-    const shipmentData = {
-      ...req.body,
-      customerId: customer._id,
-    };
+    const payload = { ...req.body };
 
-    const shipment = await Shipment.create(shipmentData);
+    // Auto-calculate price if not supplied or zero
+    if (!payload.pricing?.totalAmount || payload.pricing?.totalAmount <= 0) {
+      const priceEst = calculateShipmentPrice({
+        pickupCity: payload.pickupLocation?.city,
+        deliveryCity: payload.destination?.city,
+        weight: payload.cargoDetails?.weight || 100,
+        unit: payload.cargoDetails?.unit || "kg",
+        distanceKm: payload.distance || 0,
+      });
+
+      payload.distance = priceEst.distanceKm;
+      payload.pricing = {
+        baseAmount: priceEst.baseFee,
+        additionalCharges: priceEst.weightSurcharge,
+        totalAmount: priceEst.totalAmount,
+        currency: "ETB",
+      };
+      payload.finalPrice = priceEst.totalAmount;
+    } else {
+      payload.finalPrice = payload.pricing.totalAmount;
+    }
+
+    payload.customerId = customer._id;
+    payload.status = "pending"; // Always starts as Pending Approval
+
+    // Default scheduledPickupDate if omitted or empty string
+    if (!payload.scheduledPickupDate || payload.scheduledPickupDate === "") {
+      payload.scheduledPickupDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // default to tomorrow
+    } else {
+      payload.scheduledPickupDate = new Date(payload.scheduledPickupDate);
+    }
+
+    if (!payload.estimatedDeliveryDate || payload.estimatedDeliveryDate === "") {
+      delete payload.estimatedDeliveryDate;
+    } else {
+      payload.estimatedDeliveryDate = new Date(payload.estimatedDeliveryDate);
+    }
+
+    const shipment = await Shipment.create(payload);
 
     // Update customer stats
-    customer.totalShipments += 1;
+    customer.totalShipments = (customer.totalShipments || 0) + 1;
     await customer.save();
 
     // Trigger notification to Admin(s)
     try {
       const User = require("../models/User");
       const admins = await User.find({ role: "admin" });
+      const pickupCity = shipment.pickupLocation?.city || "Origin";
+      const destCity = shipment.destination?.city || "Destination";
+      const cargoType = shipment.cargoDetails?.type || "General";
+      const cargoWeight = shipment.cargoDetails?.weight || 0;
+      const cargoUnit = shipment.cargoDetails?.unit || "kg";
+      const schedDate = shipment.scheduledPickupDate ? new Date(shipment.scheduledPickupDate).toLocaleDateString() : "Immediate";
+      const customerName = customer.companyName || req.user.name;
+
       for (const admin of admins) {
         await Notification.create({
           userId: admin._id,
           title: "New Booking Pending Approval",
-          message: `A new booking ${shipment.shipmentNumber || shipment._id} has been created and is pending approval.`,
+          message: `New booking #${shipment.shipmentNumber} from ${customerName}. Route: ${pickupCity} → ${destCity}. Cargo: ${cargoType} (${cargoWeight} ${cargoUnit}). Date: ${schedDate}.`,
           type: "shipment",
-          priority: "medium",
+          priority: "high",
+          actionUrl: "/admin/shipments",
           relatedEntity: {
             entityType: "shipment",
             entityId: shipment._id,
           },
         });
       }
+
+      // Customer confirmation notification
+      await Notification.create({
+        userId: req.user._id,
+        title: "Booking Submitted Successfully",
+        message: `Your booking #${shipment.shipmentNumber} (${pickupCity} → ${destCity}) has been submitted and is awaiting Admin approval.`,
+        type: "shipment",
+        priority: "medium",
+        actionUrl: "/customer/my-bookings",
+        relatedEntity: {
+          entityType: "shipment",
+          entityId: shipment._id,
+        },
+      });
     } catch (notifError) {
-      console.error("Failed to trigger new booking notification to admins:", notifError.message);
+      console.error("Failed to trigger new booking notification:", notifError.message);
     }
 
     res.status(201).json({
       success: true,
-      message: "Shipment created successfully",
+      message: "Shipment booking created successfully. Awaiting Admin approval.",
       data: shipment,
     });
   } catch (error) {
@@ -84,57 +151,76 @@ const createShipment = async (req, res) => {
  */
 const getAllShipments = async (req, res) => {
   try {
-    const { status, page = 1, limit = 10 } = req.query;
+    const { status, page = 1, limit = 50 } = req.query;
     const query = {};
 
     // Role-based filtering
     if (req.user.role === "customer") {
-      const customer = await Customer.findOne({ userId: req.user._id });
+      let customer = await Customer.findOne({ userId: req.user._id }).select("_id");
       if (!customer) {
-        return res.status(200).json({
-          success: true,
-          count: 0,
-          total: 0,
-          pages: 0,
-          currentPage: parseInt(page),
-          data: [],
+        customer = await Customer.create({
+          userId: req.user._id,
+          companyName: req.user.name,
+          contactPerson: {
+            name: req.user.name,
+            phone: req.user.phone || "+251911000000",
+            email: req.user.email,
+          },
         });
       }
-      query.customerId = customer._id;
+      query.$or = [{ customerId: customer._id }, { customerId: req.user._id }];
     } else if (req.user.role === "driver") {
-      const driver = await Driver.findOne({ userId: req.user._id });
+      let driver = await Driver.findOne({ userId: req.user._id }).select("_id");
       if (!driver) {
-        return res.status(200).json({
-          success: true,
-          count: 0,
-          total: 0,
-          pages: 0,
-          currentPage: parseInt(page),
-          data: [],
+        const uniqueLicense = `DL-${req.user._id.toString().slice(-6).toUpperCase()}`;
+        driver = await Driver.create({
+          userId: req.user._id,
+          fullName: req.user.name || "Driver",
+          licenseNumber: uniqueLicense,
+          licenseExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          experience: 1,
+          status: "available",
         });
       }
-      query.driverId = driver._id;
+      query.$or = [{ driverId: driver._id }, { driverId: req.user._id }];
     }
 
-    if (status) query.status = status;
+    if (status && status !== "all") query.status = status;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = parseInt(limit);
+    const skip = (parseInt(page) - 1) * limitNum;
 
-    const shipments = await Shipment.find(query)
-      .populate("customerId", "companyName")
-      .populate("vehicleId", "plateNumber model type")
-      .populate("driverId", "fullName phone")
-      .limit(parseInt(limit))
-      .skip(skip)
-      .sort({ createdAt: -1 });
-
-    const total = await Shipment.countDocuments(query);
+    const [shipments, total] = await Promise.all([
+      Shipment.find(query)
+        .populate({
+          path: "customerId",
+          select: "companyName contactPerson address userId",
+          populate: {
+            path: "userId",
+            select: "name email phone profileImage status",
+          },
+        })
+        .populate("vehicleId", "plateNumber model manufacturer type capacity status")
+        .populate({
+          path: "driverId",
+          select: "fullName licenseNumber experience status userId",
+          populate: {
+            path: "userId",
+            select: "name email phone profileImage",
+          },
+        })
+        .limit(limitNum)
+        .skip(skip)
+        .sort({ createdAt: -1 })
+        .lean(),
+      Shipment.countDocuments(query),
+    ]);
 
     res.status(200).json({
       success: true,
       count: shipments.length,
       total,
-      pages: Math.ceil(total / parseInt(limit)),
+      pages: Math.ceil(total / limitNum),
       currentPage: parseInt(page),
       data: shipments,
     });
@@ -303,12 +389,26 @@ const assignShipment = async (req, res) => {
       vehicleId: vehicle._id,
     });
 
+    const User = require("../models/User");
+    const customer = await Customer.findById(shipment.customerId).populate("userId");
+    const driverUser = await User.findById(driver.userId);
+    const customerUser = customer?.userId;
+
     // Create notification for driver
+    const customerName = customerUser?.name || customer?.companyName || "Valued Customer";
+    const customerPhone = customerUser?.phone || customer?.contactPerson?.phone || "N/A";
+    const pickupLoc = shipment.pickupLocation?.city || "Pickup Location";
+    const destLoc = shipment.destination?.city || "Destination";
+    const cargoDesc = `${shipment.cargoDetails?.type || "Cargo"} (${shipment.cargoDetails?.weight || 0} ${shipment.cargoDetails?.unit || "kg"})`;
+    const schedDate = shipment.scheduledPickupDate ? new Date(shipment.scheduledPickupDate).toLocaleDateString() : "Immediate";
+
     await Notification.create({
       userId: driver.userId,
       title: "New Trip Assigned",
-      message: `You have been assigned to shipment ${shipment.shipmentNumber} with vehicle ${vehicle.plateNumber}`,
+      message: `You have been assigned to shipment #${shipment.shipmentNumber}. Customer: ${customerName} (${customerPhone}). Route: ${pickupLoc} → ${destLoc}. Cargo: ${cargoDesc}. Vehicle: ${vehicle.plateNumber}. Scheduled: ${schedDate}.`,
       type: "trip",
+      priority: "high",
+      actionUrl: "/driver/my-trips",
       relatedEntity: {
         entityType: "trip",
         entityId: trip._id,
@@ -316,13 +416,31 @@ const assignShipment = async (req, res) => {
     });
 
     // Create notification for customer
-    const customer = await Customer.findById(shipment.customerId);
     if (customer && customer.userId) {
       await Notification.create({
-        userId: customer.userId,
+        userId: customer.userId._id || customer.userId,
         title: "Shipment Assigned & Dispatched",
-        message: `Your booking ${shipment.shipmentNumber} has been assigned to driver ${driver.fullName} with vehicle ${vehicle.plateNumber}. You can now track it live!`,
+        message: `Your booking #${shipment.shipmentNumber} has been assigned to driver ${driver.fullName} (${driverUser?.phone || "Contact via App"}) with vehicle ${vehicle.plateNumber} (${vehicle.manufacturer} ${vehicle.model}). Live tracking is ready!`,
         type: "shipment",
+        priority: "high",
+        actionUrl: `/customer/track-shipment/${shipment._id}`,
+        relatedEntity: {
+          entityType: "shipment",
+          entityId: shipment._id,
+        },
+      });
+    }
+
+    // Create notification for Admins
+    const admins = await User.find({ role: "admin" });
+    for (const admin of admins) {
+      await Notification.create({
+        userId: admin._id,
+        title: "Shipment Assigned",
+        message: `Shipment #${shipment.shipmentNumber} assigned to driver ${driver.fullName} and vehicle ${vehicle.plateNumber}.`,
+        type: "shipment",
+        priority: "medium",
+        actionUrl: "/admin/shipments",
         relatedEntity: {
           entityType: "shipment",
           entityId: shipment._id,
@@ -495,27 +613,27 @@ const deleteShipment = async (req, res) => {
  */
 const getShipmentStats = async (req, res) => {
   try {
-    const total = await Shipment.countDocuments();
-
-    const byStatus = await Shipment.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
+    const [total, byStatus, revenue] = await Promise.all([
+      Shipment.countDocuments(),
+      Shipment.aggregate([
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+          },
         },
-      },
-    ]);
-
-    const revenue = await Shipment.aggregate([
-      {
-        $match: { status: "completed" },
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$pricing.totalAmount" },
+      ]),
+      Shipment.aggregate([
+        {
+          $match: { status: "completed" },
         },
-      },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$pricing.totalAmount" },
+          },
+        },
+      ]),
     ]);
 
     res.status(200).json({
@@ -537,7 +655,7 @@ const getShipmentStats = async (req, res) => {
 
 /**
  * @route   PUT /api/shipments/:id/approve
- * @desc    Approve booking and auto-assign available driver and vehicle (Admin only)
+ * @desc    Approve booking, confirm final price, and assign suitable driver & vehicle (Admin only)
  * @access  Private/Admin
  */
 const approveShipment = async (req, res) => {
@@ -551,140 +669,175 @@ const approveShipment = async (req, res) => {
       });
     }
 
-    if (shipment.status !== "pending") {
+    if (shipment.status !== "pending" && shipment.status !== "approved") {
       return res.status(400).json({
         success: false,
-        message: `Shipment is already ${shipment.status} and cannot be approved.`,
+        message: `Shipment is currently ${shipment.status} and cannot be re-approved.`,
       });
     }
 
-    // Find all available drivers sorted by longest waiting first (fair queue)
-    const drivers = await Driver.find({ status: "available" })
-      .populate("userId")
-      .sort({ lastAssignedAt: 1, createdAt: 1 });
-    
-    let selectedDriver = null;
-    let selectedVehicle = null;
+    const { finalPrice, driverId, vehicleId } = req.body || {};
+
+    // 1. Confirm and save final price
+    if (finalPrice && parseFloat(finalPrice) > 0) {
+      shipment.finalPrice = parseFloat(finalPrice);
+      if (!shipment.pricing) shipment.pricing = {};
+      shipment.pricing.totalAmount = parseFloat(finalPrice);
+    } else if (!shipment.finalPrice || shipment.finalPrice <= 0) {
+      // Auto-calculate if price was 0
+      const priceEst = calculateShipmentPrice({
+        pickupCity: shipment.pickupLocation?.city,
+        deliveryCity: shipment.destination?.city,
+        weight: shipment.cargoDetails?.weight || 100,
+        unit: shipment.cargoDetails?.unit || "kg",
+        distanceKm: shipment.distance || 0,
+      });
+      shipment.finalPrice = priceEst.totalAmount;
+      if (!shipment.pricing) shipment.pricing = {};
+      shipment.pricing.totalAmount = priceEst.totalAmount;
+    }
+
+    shipment.priceConfirmedBy = req.user._id;
+    shipment.priceConfirmedAt = new Date();
 
     const Vehicle = require("../models/Vehicle");
+    let selectedDriver = null;
+    let selectedVehicle = null;
+    let trip = null;
 
-    // Loop through available drivers to find one who has an approved & available vehicle
-    for (const driver of drivers) {
-      const vehicles = await Vehicle.find({
-        registeredBy: driver._id,
-        approvalStatus: "approved",
-        status: "available",
-      });
+    // 2. Handle manual driver & vehicle assignment if provided
+    if (driverId && vehicleId) {
+      const d = await Driver.findById(driverId).populate("userId");
+      const v = await Vehicle.findById(vehicleId);
 
-      if (vehicles.length > 0) {
-        selectedDriver = driver;
+      if (!d || d.status !== "available") {
+        return res.status(400).json({
+          success: false,
+          message: "Selected driver is not available.",
+        });
+      }
+      if (!v || v.status !== "available" || v.approvalStatus !== "approved") {
+        return res.status(400).json({
+          success: false,
+          message: "Selected vehicle is not approved or available.",
+        });
+      }
 
-        // Auto selection based on weight capacity
-        const cargoWeight = shipment.cargoDetails?.weight || 0;
-        const cargoUnit = shipment.cargoDetails?.unit || "kg";
-        const cargoWeightKg = cargoUnit === "ton" ? cargoWeight * 1000 : cargoWeight;
+      selectedDriver = d;
+      selectedVehicle = v;
+    } else if (!shipment.driverId) {
+      // Auto-search available drivers & vehicles
+      const drivers = await Driver.find({ status: "available" })
+        .populate("userId")
+        .sort({ lastAssignedAt: 1, createdAt: 1 });
 
-        // Sort vehicles by capacity ascending to find the smallest suitable vehicle
-        vehicles.sort((a, b) => {
-          const capA = a.capacity.unit === "ton" ? a.capacity.weight * 1000 : a.capacity.weight;
-          const capB = b.capacity.unit === "ton" ? b.capacity.weight * 1000 : b.capacity.weight;
-          return capA - capB;
+      const cargoWeight = shipment.cargoDetails?.weight || 0;
+      const cargoUnit = shipment.cargoDetails?.unit || "kg";
+      const cargoWeightKg = cargoUnit === "ton" ? cargoWeight * 1000 : cargoWeight;
+
+      for (const d of drivers) {
+        const vehicles = await Vehicle.find({
+          registeredBy: d._id,
+          approvalStatus: "approved",
+          status: "available",
         });
 
-        // Pick first vehicle that can carry the load
-        for (const vehicle of vehicles) {
-          const vehicleCapKg = vehicle.capacity.unit === "ton" ? vehicle.capacity.weight * 1000 : vehicle.capacity.weight;
-          if (vehicleCapKg >= cargoWeightKg) {
-            selectedVehicle = vehicle;
-            break;
-          }
-        }
+        if (vehicles.length > 0) {
+          const suitable = vehicles.find((v) => {
+            const capKg = v.capacity.unit === "ton" ? v.capacity.weight * 1000 : v.capacity.weight;
+            return capKg >= cargoWeightKg;
+          }) || vehicles[0];
 
-        // Fallback: if no vehicle is large enough, pick the largest one
-        if (!selectedVehicle) {
-          selectedVehicle = vehicles[vehicles.length - 1];
+          selectedDriver = d;
+          selectedVehicle = suitable;
+          break;
         }
-        break;
       }
     }
 
-    if (!selectedDriver || !selectedVehicle) {
-      return res.status(400).json({
-        success: false,
-        message: "No available driver with an approved and available vehicle could be found for auto-assignment.",
-      });
+    // 3. Assign driver & vehicle if matched
+    if (selectedDriver && selectedVehicle) {
+      shipment.driverId = selectedDriver._id;
+      shipment.vehicleId = selectedVehicle._id;
+
+      selectedVehicle.status = "in_use";
+      selectedVehicle.assignedCustomer = shipment.customerId;
+      selectedVehicle.assignedItemType = shipment.cargoDetails?.type;
+      selectedVehicle.assignedAt = new Date();
+      await selectedVehicle.save();
+
+      selectedDriver.status = "on_trip";
+      selectedDriver.lastAssignedAt = new Date();
+      selectedDriver.totalTrips = (selectedDriver.totalTrips || 0) + 1;
+      await selectedDriver.save();
+
+      // Check if active trip already exists
+      trip = await Trip.findOne({ shipmentId: shipment._id });
+      if (!trip) {
+        trip = await Trip.create({
+          shipmentId: shipment._id,
+          driverId: selectedDriver._id,
+          vehicleId: selectedVehicle._id,
+        });
+      }
     }
 
-    // Update shipment details
-    shipment.driverId = selectedDriver._id;
-    shipment.vehicleId = selectedVehicle._id;
-    shipment.status = "approved"; // Status transitions to approved
+    shipment.status = "approved";
     shipment.statusHistory.push({
       status: "approved",
       updatedBy: req.user._id,
-      remarks: `Booking approved. Auto-assigned driver ${selectedDriver.fullName} and vehicle ${selectedVehicle.plateNumber}.`,
+      remarks: `Booking approved with confirmed price ${shipment.finalPrice.toLocaleString()} ETB.${selectedDriver ? ` Assigned driver: ${selectedDriver.fullName}` : ""}`,
     });
 
     await shipment.save();
 
-    // Update vehicle status
-    selectedVehicle.status = "in_use";
-    selectedVehicle.assignedCustomer = shipment.customerId;
-    selectedVehicle.assignedItemType = shipment.cargoDetails?.type;
-    selectedVehicle.assignedAt = new Date();
-    await selectedVehicle.save();
+    // 4. Notify Customer that booking is approved and ready for payment
+    setImmediate(async () => {
+      try {
+        const customer = await Customer.findById(shipment.customerId);
+        if (customer && customer.userId) {
+          await Notification.create({
+            userId: customer.userId,
+            title: "Booking Approved - Ready for Payment",
+            message: `Your booking ${shipment.shipmentNumber} has been approved for ${shipment.finalPrice.toLocaleString()} ETB. You can now proceed to payment via Chapa (Telebirr / CBE Birr).`,
+            type: "payment",
+            priority: "high",
+            relatedEntity: {
+              entityType: "shipment",
+              entityId: shipment._id,
+            },
+          });
+        }
 
-    // Update driver status
-    selectedDriver.status = "on_trip";
-    selectedDriver.lastAssignedAt = new Date();
-    selectedDriver.totalTrips = (selectedDriver.totalTrips || 0) + 1;
-    await selectedDriver.save();
-
-    // Create the active trip
-    const trip = await Trip.create({
-      shipmentId: shipment._id,
-      driverId: selectedDriver._id,
-      vehicleId: selectedVehicle._id,
+        if (selectedDriver && selectedDriver.userId) {
+          await Notification.create({
+            userId: selectedDriver.userId._id || selectedDriver.userId,
+            title: "New Shipment Assigned",
+            message: `You have been assigned to shipment ${shipment.shipmentNumber} (${shipment.pickupLocation?.city} → ${shipment.destination?.city}).`,
+            type: "trip",
+            priority: "medium",
+            relatedEntity: {
+              entityType: "shipment",
+              entityId: shipment._id,
+            },
+          });
+        }
+      } catch (notifErr) {
+        console.error("Approval notification error:", notifErr);
+      }
     });
-
-    // Notify Driver
-    if (selectedDriver.userId) {
-       await Notification.create({
-         userId: selectedDriver.userId._id || selectedDriver.userId,
-         title: "New Trip Assigned",
-         message: `You have been assigned to shipment ${shipment.shipmentNumber} with vehicle ${selectedVehicle.plateNumber}.`,
-         type: "trip",
-         relatedEntity: {
-           entityType: "trip",
-           entityId: trip._id,
-         },
-       });
-     }
-
-    // Notify Customer
-    const customer = await Customer.findById(shipment.customerId);
-    if (customer && customer.userId) {
-      await Notification.create({
-        userId: customer.userId,
-        title: "Booking Approved",
-        message: `Your booking ${shipment.shipmentNumber} has been approved and scheduled. Driver: ${selectedDriver.fullName}, Vehicle: ${selectedVehicle.plateNumber}.`,
-        type: "shipment",
-        relatedEntity: {
-          entityType: "shipment",
-          entityId: shipment._id,
-        },
-      });
-    }
 
     res.status(200).json({
       success: true,
-      message: "Shipment approved and driver/vehicle auto-assigned successfully",
+      message: "Shipment booking approved successfully. Ready for customer payment.",
       data: {
         shipment,
         trip,
+        finalPrice: shipment.finalPrice,
+        selectedDriver: selectedDriver ? { _id: selectedDriver._id, fullName: selectedDriver.fullName } : null,
+        selectedVehicle: selectedVehicle ? { _id: selectedVehicle._id, plateNumber: selectedVehicle.plateNumber } : null,
       },
     });
-
   } catch (error) {
     console.error("Approve Shipment Error:", error);
     res.status(500).json({

@@ -475,12 +475,7 @@ const Settings = () => {
                       </div>
                     </div>
                     <button
-                      onClick={() => {
-                        console.log("Toggle button clicked!");
-                        console.log("Current theme:", theme);
-                        console.log("Is dark:", isDark);
-                        toggleTheme();
-                      }}
+                      onClick={toggleTheme}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
                     >
                       Switch to {isDark ? "Light" : "Dark"} Mode

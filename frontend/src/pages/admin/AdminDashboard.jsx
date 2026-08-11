@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useAdminData } from "../../context/AdminDataContext";
 import {
   Truck,
   Users,
@@ -25,25 +26,22 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { vehicleService } from "../../services/vehicleService";
-import { driverService } from "../../services/driverService";
-import { shipmentService } from "../../services/shipmentService";
-import api from "../../services/api";
 import Loading from "../../components/common/Loading";
 import toast from "react-hot-toast";
 
 const AdminDashboard = () => {
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
+  const adminContext = useAdminData();
+  const stats = adminContext?.stats || {
     totalVehicles: 0,
     totalDrivers: 0,
     totalCustomers: 0,
     totalTrips: 0,
-  });
+  };
+  const vehicles = adminContext?.vehicles || [];
+  const loading = adminContext?.loading || {};
+  const fetchAllData = adminContext?.fetchAllData || (() => {});
 
-  const [vehicles, setVehicles] = useState([]);
   const [vehicleStats, setVehicleStats] = useState(null);
-  const [shipmentStats, setShipmentStats] = useState(null);
 
   const monthlyTripsData = [
     { month: "Jan", trips: 65 },
@@ -64,74 +62,62 @@ const AdminDashboard = () => {
   ];
 
   useEffect(() => {
-    fetchDashboardData();
+    // Fetch data using cached context on mount
+    if (typeof fetchAllData === "function") {
+      fetchAllData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
+  useEffect(() => {
+    // Calculate vehicle stats from cached vehicles
+    if (vehicles && vehicles.length > 0) {
+      const availableCount = vehicles.filter(
+        (v) => v.status === "available" || v.approvalStatus === "approved",
+      ).length;
+      const inUseCount = vehicles.filter((v) => v.status === "in_use").length;
+      const maintenanceCount = vehicles.filter(
+        (v) => v.status === "maintenance",
+      ).length;
 
-      // Fetch all stats in parallel
-      const [vehiclesRes, driversRes, customersRes, shipmentsRes] =
-        await Promise.all([
-          vehicleService
-            .getAllVehicles({ limit: 5, approvalStatus: "approved" })
-            .catch(() => ({ data: [], total: 0 })),
-          driverService
-            .getAllDrivers({ limit: 1 })
-            .catch(() => ({ data: [], total: 0 })),
-          api.get("/customers").catch(() => ({ data: { total: 0 } })),
-          shipmentService
-            .getAllShipments({ limit: 1 })
-            .catch(() => ({ data: [], total: 0 })),
-        ]);
-
-      // Fetch vehicle and shipment stats
-      const [vehicleStatsRes, shipmentStatsRes] = await Promise.all([
-        vehicleService.getVehicleStats().catch(() => ({ data: {} })),
-        shipmentService.getShipmentStats().catch(() => ({ data: {} })),
-      ]);
-
-      // Update stats
-      setStats({
-        totalVehicles: vehiclesRes.total || vehiclesRes.data?.length || 0,
-        totalDrivers: driversRes.total || driversRes.data?.length || 0,
-        totalCustomers:
-          customersRes.data?.total || customersRes.data?.data?.length || 0,
-        totalTrips: shipmentsRes.total || shipmentsRes.data?.length || 0,
+      setVehicleStats({
+        available: availableCount,
+        inUse: inUseCount,
+        maintenance: maintenanceCount,
       });
+    } else {
+      setVehicleStats({
+        available: 0,
+        inUse: 0,
+        maintenance: 0,
+      });
+    }
+  }, [vehicles]);
 
-      // Update vehicles list
-      setVehicles(vehiclesRes.data || []);
-      setVehicleStats(vehicleStatsRes.data);
-      setShipmentStats(shipmentStatsRes.data);
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      toast.error("Failed to load dashboard data");
-    } finally {
-      setLoading(false);
+  const handleRefreshData = async () => {
+    if (typeof fetchAllData === "function") {
+      toast.promise(
+        fetchAllData(true), // Force refresh
+        {
+          loading: "Refreshing data...",
+          success: "Data refreshed successfully!",
+          error: "Failed to refresh data",
+        },
+      );
     }
   };
 
   const getVehicleUsageData = () => {
-    if (!vehicleStats) {
-      return [
-        { name: "In Use", value: 28, color: "#6366f1" },
-        { name: "Idle", value: 12, color: "#f59e0b" },
-        { name: "Maintenance", value: 5, color: "#ef4444" },
-      ];
-    }
-
     return [
-      { name: "In Use", value: vehicleStats.inUse || 0, color: "#6366f1" },
+      { name: "In Use", value: vehicleStats?.inUse || 0, color: "#6366f1" },
       {
         name: "Available",
-        value: vehicleStats.available || 0,
+        value: vehicleStats?.available || 0,
         color: "#10b981",
       },
       {
         name: "Maintenance",
-        value: vehicleStats.maintenance || 0,
+        value: vehicleStats?.maintenance || 0,
         color: "#ef4444",
       },
     ];
@@ -152,7 +138,7 @@ const AdminDashboard = () => {
     }
   };
 
-  if (loading) {
+  if (loading?.stats && !vehicleStats && (!vehicles || vehicles.length === 0)) {
     return <Loading />;
   }
 
@@ -170,8 +156,8 @@ const AdminDashboard = () => {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={fetchDashboardData}
-            className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all shadow-sm"
+            onClick={handleRefreshData}
+            className="px-4 py-2 text-sm font-semibold text-slate-700 dark:text-gray-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all shadow-sm"
           >
             Refresh Data
           </button>
@@ -284,15 +270,27 @@ const AdminDashboard = () => {
           </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyTripsData} margin={{ left: -15, right: 10 }}>
+              <AreaChart
+                data={monthlyTripsData}
+                margin={{ left: -15, right: 10 }}
+              >
                 <defs>
                   <linearGradient id="colorTrips" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#f1f5f9"
+                />
+                <XAxis
+                  dataKey="month"
+                  stroke="#94a3b8"
+                  fontSize={12}
+                  tickLine={false}
+                />
                 <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} />
                 <Tooltip
                   contentStyle={{
@@ -371,7 +369,10 @@ const AdminDashboard = () => {
             {/* Custom Pie Legend */}
             <div className="space-y-4">
               {getVehicleUsageData().map((entry, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 rounded-xl border border-slate-50 dark:border-slate-900 bg-slate-50/50 dark:bg-slate-950/50">
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 rounded-xl border border-slate-50 dark:border-slate-900 bg-slate-50/50 dark:bg-slate-950/50"
+                >
                   <div className="flex items-center gap-2.5">
                     <div
                       className="w-3.5 h-3.5 rounded-full"
@@ -411,8 +412,17 @@ const AdminDashboard = () => {
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={revenueData} margin={{ left: -10 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#f1f5f9"
+                />
+                <XAxis
+                  dataKey="month"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                />
                 <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
                 <Tooltip
                   contentStyle={{
@@ -423,7 +433,12 @@ const AdminDashboard = () => {
                     fontSize: "13px",
                   }}
                 />
-                <Bar dataKey="revenue" fill="#10b981" radius={[6, 6, 0, 0]} barSize={36} />
+                <Bar
+                  dataKey="revenue"
+                  fill="#10b981"
+                  radius={[6, 6, 0, 0]}
+                  barSize={36}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -441,8 +456,12 @@ const AdminDashboard = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-50 dark:border-slate-900 hover:border-emerald-500/10 hover:bg-slate-50/50 dark:hover:bg-slate-950/50 transition-all">
                 <div className="space-y-0.5">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">Active on Trip</p>
-                  <p className="text-xs text-slate-400">Currently delivering cargo</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    Active on Trip
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    Currently delivering cargo
+                  </p>
                 </div>
                 <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
                   {vehicleStats?.inUse || 0}
@@ -450,8 +469,12 @@ const AdminDashboard = () => {
               </div>
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-50 dark:border-slate-900 hover:border-blue-500/10 hover:bg-slate-50/50 dark:hover:bg-slate-950/50 transition-all">
                 <div className="space-y-0.5">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">Available Duty</p>
-                  <p className="text-xs text-slate-400">Waiting for assignment</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    Available Duty
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    Waiting for assignment
+                  </p>
                 </div>
                 <span className="text-xl font-extrabold text-blue-600 dark:text-blue-400">
                   {vehicleStats?.available || 0}
@@ -459,7 +482,9 @@ const AdminDashboard = () => {
               </div>
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-50 dark:border-slate-900 hover:border-rose-500/10 hover:bg-slate-50/50 dark:hover:bg-slate-950/50 transition-all">
                 <div className="space-y-0.5">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">On Leave / Maintenance</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    On Leave / Maintenance
+                  </p>
                   <p className="text-xs text-slate-400">Inactive temporarily</p>
                 </div>
                 <span className="text-xl font-extrabold text-slate-550 dark:text-slate-400">
@@ -543,7 +568,10 @@ const AdminDashboard = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" className="py-10 text-center font-medium text-slate-400">
+                  <td
+                    colSpan="4"
+                    className="py-10 text-center font-medium text-slate-400"
+                  >
                     No vehicles registered yet in the database.
                   </td>
                 </tr>

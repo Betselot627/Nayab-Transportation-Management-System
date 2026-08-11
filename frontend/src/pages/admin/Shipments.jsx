@@ -156,11 +156,30 @@ const Shipments = () => {
     return "bg-slate-500/15 text-slate-500 dark:text-slate-400 border-slate-500/20";
   };
 
+  const handleApproveBooking = async (shipment) => {
+    try {
+      setLoading(true);
+      await shipmentService.approveShipment(shipment._id);
+      toast.success(`Booking ${shipment.shipmentNumber} approved successfully! Customer notified to pay.`);
+      await fetchData();
+    } catch (err) {
+      console.error("Approve error:", err);
+      toast.error(err.response?.data?.message || "Failed to approve booking");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredShipments = shipments.filter((shipment) => {
+    const custName = shipment.customerId?.companyName || shipment.customerId?.userId?.name || shipment.customerId?.contactPerson?.name || "";
+    const custPhone = shipment.customerId?.userId?.phone || shipment.customerId?.contactPerson?.phone || "";
+
     const matchesSearch =
       (shipment.shipmentNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (shipment.pickupLocation?.city || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (shipment.destination?.city || "").toLowerCase().includes(searchTerm.toLowerCase());
+      (shipment.destination?.city || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      custName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      custPhone.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesFilter = filterStatus === "all" || shipment.status === filterStatus;
     return matchesSearch && matchesFilter;
@@ -172,11 +191,13 @@ const Shipments = () => {
     const cargoUnit = selectedShipment.cargoDetails?.unit || "kg";
     const cargoWeightKg = cargoUnit === "ton" ? cargoWeight * 1000 : cargoWeight;
 
-    return vehicles.filter(v => {
+    return vehicles.filter((v) => {
       const cap = v.capacity?.weight || 0;
       const unit = v.capacity?.unit || "kg";
       const capKg = unit === "ton" ? cap * 1000 : cap;
-      return capKg >= cargoWeightKg && v.approvalStatus === "approved" && v.status === "available";
+      const isApproved = (v.approvalStatus || "approved") === "approved";
+      const isAvailable = v.status === "available";
+      return capKg >= cargoWeightKg && isApproved && isAvailable;
     });
   };
 
@@ -191,7 +212,7 @@ const Shipments = () => {
             Shipment Management
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium mt-0.5">
-            Review bookings, confirm final transportation pricing in ETB, and dispatch fleet crews.
+            Review customer bookings, approve & confirm final transportation pricing, and dispatch fleet crews.
           </p>
         </div>
       </div>
@@ -202,7 +223,7 @@ const Shipments = () => {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search by tracking number, origin, or destination..."
+            placeholder="Search by tracking #, customer name, phone, origin, or destination..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-slate-900 dark:text-white placeholder-slate-400"
@@ -233,6 +254,7 @@ const Shipments = () => {
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
               <tr>
                 <th className="py-3.5 px-5">Shipment #</th>
+                <th className="py-3.5 px-5">Customer</th>
                 <th className="py-3.5 px-5">Route</th>
                 <th className="py-3.5 px-5">Cargo</th>
                 <th className="py-3.5 px-5">Pricing (ETB)</th>
@@ -245,7 +267,7 @@ const Shipments = () => {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredShipments.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="text-center py-16 text-slate-500 dark:text-slate-400">
+                  <td colSpan="9" className="text-center py-16 text-slate-500 dark:text-slate-400">
                     <Package className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-700 mb-3" />
                     No shipments found matching the criteria.
                   </td>
@@ -254,6 +276,8 @@ const Shipments = () => {
                 filteredShipments.map((shipment) => {
                   const finalPrice = shipment.finalPrice || shipment.pricing?.totalAmount || 0;
                   const estPrice = shipment.pricing?.baseAmount || 0;
+                  const customerName = shipment.customerId?.companyName || shipment.customerId?.userId?.name || shipment.customerId?.contactPerson?.name || "Customer";
+                  const customerContact = shipment.customerId?.userId?.phone || shipment.customerId?.contactPerson?.phone || shipment.customerId?.userId?.email || "";
 
                   return (
                     <tr key={shipment._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
@@ -264,6 +288,17 @@ const Shipments = () => {
                         <div className="text-[10px] text-slate-400 mt-0.5">
                           {new Date(shipment.createdAt).toLocaleDateString()}
                         </div>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="font-bold text-slate-900 dark:text-white">
+                          {customerName}
+                        </div>
+                        {customerContact && (
+                          <div className="text-slate-400 text-[11px] font-mono">
+                            {customerContact}
+                          </div>
+                        )}
                       </td>
 
                       <td className="px-5 py-4">
@@ -347,6 +382,18 @@ const Shipments = () => {
 
                       <td className="px-5 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Approve Booking Action if Pending */}
+                          {shipment.status === "pending" && (
+                            <button
+                              onClick={() => handleApproveBooking(shipment)}
+                              className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs transition cursor-pointer flex items-center gap-1"
+                              title="Approve Booking & Confirm Price"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Approve</span>
+                            </button>
+                          )}
+
                           {/* Confirm Price Action */}
                           <button
                             onClick={() => {
@@ -358,7 +405,7 @@ const Shipments = () => {
                             title="Set / Confirm Final Price (ETB)"
                           >
                             <DollarSign className="w-3.5 h-3.5" />
-                            <span>{finalPrice > 0 ? "Edit Price" : "Set Price"}</span>
+                            <span>{finalPrice > 0 ? "Price" : "Set Price"}</span>
                           </button>
 
                           {/* Assign Driver Action */}
@@ -513,15 +560,30 @@ const Shipments = () => {
                 </label>
                 <select
                   value={assignData.driverId}
-                  onChange={(e) => setAssignData({ ...assignData, driverId: e.target.value })}
+                  onChange={(e) => {
+                    const dId = e.target.value;
+                    const matchedVehicle = vehicles.find(
+                      (v) =>
+                        (String(v.registeredBy?._id || v.registeredBy) === String(dId)) &&
+                        v.status === "available" &&
+                        (v.approvalStatus || "approved") === "approved"
+                    );
+                    setAssignData((prev) => ({
+                      ...prev,
+                      driverId: dId,
+                      vehicleId: matchedVehicle ? matchedVehicle._id : prev.vehicleId,
+                    }));
+                  }}
                   className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500/20 focus:outline-none"
                 >
                   <option value="">-- Choose Available Driver --</option>
-                  {drivers.map((d) => (
-                    <option key={d._id} value={d._id}>
-                      {d.fullName || d.user?.name}
-                    </option>
-                  ))}
+                  {drivers
+                    .filter((d) => d.status === "available")
+                    .map((d) => (
+                      <option key={d._id} value={d._id}>
+                        {d.fullName || d.user?.name} (Status: Available)
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -532,13 +594,22 @@ const Shipments = () => {
                 </label>
                 <select
                   value={assignData.vehicleId}
-                  onChange={(e) => setAssignData({ ...assignData, vehicleId: e.target.value })}
+                  onChange={(e) => {
+                    const vId = e.target.value;
+                    const v = vehicles.find((veh) => String(veh._id) === String(vId));
+                    const ownerId = v?.registeredBy?._id || v?.registeredBy;
+                    setAssignData((prev) => ({
+                      ...prev,
+                      vehicleId: vId,
+                      driverId: ownerId ? String(ownerId) : prev.driverId,
+                    }));
+                  }}
                   className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500/20 focus:outline-none"
                 >
                   <option value="">-- Choose Compatible Vehicle --</option>
                   {getCompatibleVehicles().map((v) => (
                     <option key={v._id} value={v._id}>
-                      {v.plateNumber} ({v.type}) - Cap: {v.capacity?.weight} {v.capacity?.unit}
+                      {v.plateNumber} ({v.type}) - Cap: {v.capacity?.weight} {v.capacity?.unit} {v.registeredBy ? "(Driver Owned)" : "(Fleet)"}
                     </option>
                   ))}
                 </select>

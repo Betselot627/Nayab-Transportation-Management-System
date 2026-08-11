@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Bell, Check, X, ShieldAlert, Wrench, CalendarPlus, Trash2, RotateCcw } from "lucide-react";
+import {
+  Bell,
+  Check,
+  X,
+  ShieldAlert,
+  Wrench,
+  CalendarPlus,
+  Trash2,
+  RotateCcw,
+  Package,
+  CreditCard,
+  Truck,
+  User,
+  ArrowRight,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { notificationService } from "../../services/notificationService";
 import { useAuth } from "../../hooks/useAuth";
@@ -10,49 +24,7 @@ const NotificationCenter = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
-
-  const getMockFallbackNotifications = () => [
-    {
-      id: "n1",
-      title: "Driver License Expiry",
-      message: "Driver Abebe Kebede's license DL-908123 expires in 5 days.",
-      type: "driver_expiry",
-      time: "2 hours ago",
-      read: false,
-    },
-    {
-      id: "n2",
-      title: "Vehicle Maintenance Due",
-      message: "Toyota Hiace (AA-12345-ET) is due for service this week.",
-      type: "maintenance_due",
-      time: "5 hours ago",
-      read: false,
-    },
-    {
-      id: "n3",
-      title: "Booking Created",
-      message: "Trip B001 (Addis Ababa → Adama) booked successfully.",
-      type: "booking_created",
-      time: "1 day ago",
-      read: true,
-    },
-    {
-      id: "n4",
-      title: "Booking Cancelled",
-      message: "Trip B004 (Mekelle → Addis Ababa) has been cancelled.",
-      type: "booking_cancelled",
-      time: "2 days ago",
-      read: false,
-    },
-    {
-      id: "n5",
-      title: "Vehicle Returned",
-      message: "Isuzu Truck (AA-67890-ET) returned to Adama Hub.",
-      type: "vehicle_returned",
-      time: "3 days ago",
-      read: true,
-    },
-  ];
+  const [loading, setLoading] = useState(false);
 
   const formatTime = (dateStr) => {
     const date = new Date(dateStr);
@@ -60,7 +32,7 @@ const NotificationCenter = () => {
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
-    
+
     if (isNaN(date.getTime())) return dateStr || "Recent";
     if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins}m ago`;
@@ -71,15 +43,8 @@ const NotificationCenter = () => {
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem("token");
-      if (!token || token.startsWith("mock-")) {
-        const saved = localStorage.getItem("ntms_notifications");
-        if (saved) {
-          setNotifications(JSON.parse(saved));
-        } else {
-          setNotifications(getMockFallbackNotifications());
-        }
-        return;
-      }
+      if (!token) return;
+
       const response = await notificationService.getMyNotifications();
       if (response && response.data) {
         const mapped = response.data.map((n) => ({
@@ -87,16 +52,16 @@ const NotificationCenter = () => {
           title: n.title,
           message: n.message,
           type: n.type,
+          priority: n.priority,
           time: formatTime(n.createdAt),
           read: n.read,
+          actionUrl: n.actionUrl,
           relatedEntity: n.relatedEntity,
         }));
         setNotifications(mapped);
       }
     } catch (err) {
-      console.warn("Notification API failed, using fallback:", err);
-      const saved = localStorage.getItem("ntms_notifications");
-      if (saved) setNotifications(JSON.parse(saved));
+      console.warn("Failed to fetch notifications:", err);
     }
   };
 
@@ -115,13 +80,6 @@ const NotificationCenter = () => {
   }, [isOpen]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token || token.startsWith("mock-")) {
-      localStorage.setItem("ntms_notifications", JSON.stringify(notifications));
-    }
-  }, [notifications]);
-
-  useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
@@ -135,10 +93,7 @@ const NotificationCenter = () => {
 
   const markAllAsRead = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (token && !token.startsWith("mock-")) {
-        await notificationService.markAllAsRead();
-      }
+      await notificationService.markAllAsRead();
     } catch (err) {
       console.error(err);
     }
@@ -147,10 +102,7 @@ const NotificationCenter = () => {
 
   const markAsRead = async (id) => {
     try {
-      const token = localStorage.getItem("token");
-      if (token && !token.startsWith("mock-")) {
-        await notificationService.markAsRead(id);
-      }
+      await notificationService.markAsRead(id);
     } catch (err) {
       console.error(err);
     }
@@ -160,88 +112,211 @@ const NotificationCenter = () => {
   };
 
   const handleNotificationClick = async (n) => {
-    await markAsRead(n.id);
+    try {
+      await markAsRead(n.id);
+    } catch (e) {}
+
     setIsOpen(false);
-    
-    const type = n.type?.toLowerCase();
-    const title = n.title?.toLowerCase();
-    
-    // Direct link to shipment/trip details based on role
-    if (type === "trip" || type === "shipment" || title.includes("shipment") || title.includes("trip")) {
-      const entityId = n.relatedEntity?.entityId || n.id;
-      if (user?.role === "driver") {
-        navigate(`/driver/trip-details/${entityId}`);
-      } else if (user?.role === "customer") {
-        navigate(`/customer/shipment-details/${entityId}`);
-      } else {
+
+    // If explicit actionUrl is attached, navigate directly
+    if (n.actionUrl) {
+      navigate(n.actionUrl);
+      return;
+    }
+
+    const userRole = user?.role || "customer";
+    const type = (n.type || "").toLowerCase();
+    const title = (n.title || "").toLowerCase();
+    const message = (n.message || "").toLowerCase();
+    const entityType = (n.relatedEntity?.entityType || "").toLowerCase();
+    const entityId = n.relatedEntity?.entityId || "";
+
+    // 1. Shipment / Booking Notifications
+    if (
+      entityType === "shipment" ||
+      type === "shipment" ||
+      title.includes("shipment") ||
+      title.includes("booking") ||
+      message.includes("shipment") ||
+      message.includes("booking")
+    ) {
+      if (userRole === "admin") {
         navigate("/admin/shipments");
+      } else if (userRole === "driver") {
+        if (entityId) {
+          navigate(`/driver/trip-details/${entityId}`);
+        } else {
+          navigate("/driver/my-trips");
+        }
+      } else if (userRole === "dispatcher") {
+        navigate("/dispatcher/bookings");
+      } else {
+        // Customer
+        if (entityId) {
+          navigate(`/customer/shipment-details/${entityId}`);
+        } else {
+          navigate("/customer/my-bookings");
+        }
       }
       return;
     }
 
-    if (type === "vehicle_registration") {
-      navigate("/admin/vehicles");
-    } else {
-      if (title.includes("customer")) {
-        navigate("/admin/customers");
-      } else if (title.includes("driver")) {
-        navigate("/admin/drivers");
+    // 2. Trip Notifications
+    if (
+      entityType === "trip" ||
+      type === "trip" ||
+      title.includes("trip") ||
+      message.includes("trip")
+    ) {
+      if (userRole === "driver") {
+        if (entityId) {
+          navigate(`/driver/trip-details/${entityId}`);
+        } else {
+          navigate("/driver/my-trips");
+        }
+      } else if (userRole === "admin") {
+        navigate("/admin/shipments");
+      } else if (userRole === "dispatcher") {
+        navigate("/dispatcher/track-trips");
+      } else {
+        navigate("/customer/my-bookings");
       }
+      return;
     }
+
+    // 3. Payment Notifications
+    if (
+      entityType === "payment" ||
+      type === "payment" ||
+      title.includes("payment") ||
+      title.includes("paid") ||
+      title.includes("receipt") ||
+      message.includes("payment") ||
+      message.includes("receipt")
+    ) {
+      if (userRole === "customer") {
+        if (entityId) {
+          navigate(`/customer/shipment-details/${entityId}`);
+        } else {
+          navigate("/customer/payments");
+        }
+      } else if (userRole === "admin") {
+        navigate("/admin/payments");
+      } else if (userRole === "driver") {
+        navigate("/driver/dashboard");
+      }
+      return;
+    }
+
+    // 4. Vehicle / Maintenance Notifications
+    if (
+      entityType === "vehicle" ||
+      type === "vehicle" ||
+      type === "vehicle_registration" ||
+      type === "maintenance_due" ||
+      title.includes("vehicle") ||
+      title.includes("maintenance") ||
+      message.includes("vehicle")
+    ) {
+      if (userRole === "admin") {
+        navigate("/admin/vehicles");
+      } else if (userRole === "driver") {
+        navigate("/driver/my-vehicles");
+      } else if (userRole === "dispatcher") {
+        navigate("/dispatcher/assign-vehicle");
+      }
+      return;
+    }
+
+    // 5. Driver or Customer Profiles
+    if (title.includes("customer") || message.includes("customer")) {
+      if (userRole === "admin") navigate("/admin/customers");
+      return;
+    }
+
+    if (
+      title.includes("driver") ||
+      title.includes("license") ||
+      message.includes("driver") ||
+      type === "driver_expiry"
+    ) {
+      if (userRole === "admin") navigate("/admin/drivers");
+      else if (userRole === "driver") navigate("/driver/profile");
+      return;
+    }
+
+    // Default Fallback based on Role
+    if (userRole === "admin") navigate("/admin/dashboard");
+    else if (userRole === "driver") navigate("/driver/dashboard");
+    else if (userRole === "dispatcher") navigate("/dispatcher/dashboard");
+    else navigate("/customer/dashboard");
   };
 
   const deleteNotification = async (id, e) => {
     e.stopPropagation();
     try {
-      const token = localStorage.getItem("token");
-      if (token && !token.startsWith("mock-")) {
-        await notificationService.deleteNotification(id);
-      }
+      await notificationService.deleteNotification(id);
     } catch (err) {
       console.error(err);
     }
     setNotifications(notifications.filter((n) => n.id !== id));
   };
 
-  const getIcon = (type) => {
-    switch (type) {
-      case "driver_expiry":
-        return <ShieldAlert className="w-5 h-5 text-red-500" />;
-      case "maintenance_due":
-        return <Wrench className="w-5 h-5 text-amber-505" />;
-      case "booking_created":
-        return <CalendarPlus className="w-5 h-5 text-green-500" />;
-      case "booking_cancelled":
-        return <Trash2 className="w-5 h-5 text-red-400" />;
-      default:
-        return <RotateCcw className="w-5 h-5 text-blue-500" />;
+  const getIcon = (type, title = "") => {
+    const t = (type || "").toLowerCase();
+    const head = (title || "").toLowerCase();
+
+    if (t === "payment" || head.includes("payment") || head.includes("paid")) {
+      return <CreditCard className="w-4 h-4 text-emerald-500 shrink-0" />;
     }
+    if (t === "shipment" || head.includes("shipment") || head.includes("booking")) {
+      return <Package className="w-4 h-4 text-purple-500 shrink-0" />;
+    }
+    if (t === "trip" || head.includes("trip")) {
+      return <Truck className="w-4 h-4 text-sky-500 shrink-0" />;
+    }
+    if (t === "maintenance_due" || head.includes("maintenance")) {
+      return <Wrench className="w-4 h-4 text-amber-500 shrink-0" />;
+    }
+    if (t === "driver_expiry" || head.includes("license") || head.includes("driver")) {
+      return <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />;
+    }
+    return <Bell className="w-4 h-4 text-blue-500 shrink-0" />;
   };
 
   return (
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full focus:outline-none transition-colors duration-200"
+        className="relative p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full focus:outline-none transition-colors duration-200 cursor-pointer"
+        aria-label="Notifications"
       >
-        <Bell className="w-6 h-6" />
+        <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-bounce shadow-md">
-            {unreadCount}
+          <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-extrabold h-4 w-4 rounded-full flex items-center justify-center shadow-md animate-pulse">
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-xl shadow-2xl overflow-hidden z-50 animate-slide-down">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-900 border-b border-gray-250 dark:border-gray-800">
-            <h3 className="text-sm font-semibold text-gray-850 dark:text-white">
-              Notifications
-            </h3>
+        <div className="absolute right-0 mt-3 w-84 sm:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                Notifications
+              </h3>
+              {unreadCount > 0 && (
+                <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 text-[10px] font-bold rounded-full">
+                  {unreadCount} new
+                </span>
+              )}
+            </div>
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-1"
+                className="text-[11px] text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-bold flex items-center gap-1 cursor-pointer transition"
               >
                 <Check className="w-3.5 h-3.5" />
                 Mark all read
@@ -249,39 +324,63 @@ const NotificationCenter = () => {
             )}
           </div>
 
-          <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-850">
+          {/* List */}
+          <div className="max-h-84 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
             {notifications.length > 0 ? (
               notifications.map((n) => (
                 <div
                   key={n.id}
                   onClick={() => handleNotificationClick(n)}
-                  className={`flex gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer transition-colors duration-150 relative group ${
-                    !n.read ? "bg-blue-50/20 dark:bg-blue-900/5" : ""
+                  className={`flex items-start gap-3 p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer transition-colors duration-150 relative group ${
+                    !n.read ? "bg-purple-50/40 dark:bg-purple-950/20" : ""
                   }`}
                 >
-                  <div className="mt-0.5">{getIcon(n.type)}</div>
-                  <div className="flex-1 min-w-0 pr-4">
-                    <p className={`text-xs font-semibold text-gray-900 dark:text-white ${!n.read ? "font-bold" : ""}`}>
-                      {n.title}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                  <div className="mt-1 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0">
+                    {getIcon(n.type, n.title)}
+                  </div>
+                  <div className="flex-1 min-w-0 pr-5">
+                    <div className="flex items-center justify-between gap-1">
+                      <p
+                        className={`text-xs text-slate-900 dark:text-white truncate ${
+                          !n.read ? "font-extrabold" : "font-semibold"
+                        }`}
+                      >
+                        {n.title}
+                      </p>
+                      {!n.read && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-600 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">
                       {n.message}
                     </p>
-                    <span className="text-[10px] text-gray-450 mt-1.5 block">
-                      {n.time}
-                    </span>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {n.time}
+                      </span>
+                      <span className="text-[10px] text-purple-600 dark:text-purple-400 font-bold flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        View <ArrowRight className="w-3 h-3" />
+                      </span>
+                    </div>
                   </div>
                   <button
                     onClick={(e) => deleteNotification(n.id, e)}
-                    className="absolute right-3 top-4 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                    className="absolute right-3 top-3 p-1 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                    title="Dismiss notification"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))
             ) : (
-              <div className="p-6 text-center text-sm text-gray-400">
-                All caught up! No notifications.
+              <div className="p-8 text-center space-y-2">
+                <Bell className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto" />
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                  No notifications
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  You're all caught up with your transportation alerts!
+                </p>
               </div>
             )}
           </div>

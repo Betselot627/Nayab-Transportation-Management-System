@@ -139,7 +139,7 @@ const Register = () => {
                   value={formData.name}
                   onChange={handleChange}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors duration-300"
-                  placeholder="John Doe"
+                  placeholder="Betsi Tig"
                 />
               </div>
             </div>
@@ -164,7 +164,7 @@ const Register = () => {
                   value={formData.email}
                   onChange={handleChange}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors duration-300"
-                  placeholder="you@example.com"
+                  placeholder="Betsi@example.com"
                 />
               </div>
             </div>
@@ -189,7 +189,7 @@ const Register = () => {
                   value={formData.phone}
                   onChange={handleChange}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors duration-300"
-                  placeholder="03001234567"
+                  placeholder="0922827373"
                 />
               </div>
             </div>

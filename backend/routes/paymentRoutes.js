@@ -28,8 +28,8 @@ router.get("/verify/:txRef", verifyPayment);
 // 3. Protected payment routes
 router.use(protect);
 
-router.post("/initialize", authorize("customer", "admin"), initializePayment);
-router.get("/my-payments", authorize("customer", "admin"), getMyPayments);
+router.post("/initialize", initializePayment);
+router.get("/my-payments", getMyPayments);
 router.get("/receipt/:txRef", getPaymentReceipt);
 router.get("/stats", authorize("admin"), getPaymentStats);
 

@@ -10,6 +10,7 @@ const {
   getAvailableDrivers,
   getMyProfile,
   updateMyProfile,
+  getMyEarnings,
 } = require("../controllers/driverController");
 const { protect } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/roleMiddleware");
@@ -28,6 +29,7 @@ router.use(protect);
 
 router.get("/profile/me", authorize("driver"), getMyProfile);
 router.put("/profile/me", authorize("driver"), updateMyProfile);
+router.get("/earnings/me", authorize("driver"), getMyEarnings);
 
 router
   .route("/")

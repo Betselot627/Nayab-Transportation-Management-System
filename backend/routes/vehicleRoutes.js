@@ -35,8 +35,8 @@ router.use(protect);
 
 router
   .route("/")
-  .get(authorize("admin", "dispatcher", "driver"), getAllVehicles)
-  .post(authorize("admin", "driver"), createVehicle);
+  .get(getAllVehicles)
+  .post(createVehicle);
 
 router.get("/pending", authorize("admin"), getPendingVehicles);
 router.get(

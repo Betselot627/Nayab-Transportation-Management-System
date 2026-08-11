@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Search,
@@ -11,59 +11,70 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { useAdminData } from "../../context/AdminDataContext";
 import { vehicleService } from "../../services/vehicleService";
 import Loading from "../../components/common/Loading";
 import toast from "react-hot-toast";
 
 const VehicleManagement = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const {
+    vehicles: cachedVehicles,
+    loading: contextLoading,
+    fetchVehicles,
+    removeVehicleFromCache,
+    updateVehicleInCache,
+  } = useAdminData();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [filterStatus, setFilterStatus] = useState("all");
-  const [vehicles, setVehicles] = useState([]);
-  const [totalVehicles, setTotalVehicles] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
+    // Fetch vehicles from cache on mount
     fetchVehicles();
-  }, [currentPage, filterStatus, searchTerm]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const fetchVehicles = async () => {
-    try {
-      setLoading(true);
-      const params = {
-        page: currentPage,
-        limit: itemsPerPage,
-      };
+  // Filter and search vehicles locally
+  const filteredVehicles = useMemo(() => {
+    let filtered = [...cachedVehicles];
 
-      if (filterStatus !== "all") {
-        params.status = filterStatus;
-      }
-
-      if (searchTerm) {
-        params.search = searchTerm;
-      }
-
-      const response = await vehicleService.getAllVehicles(params);
-      setVehicles(response.data || []);
-      setTotalVehicles(response.total || 0);
-      setTotalPages(response.pages || 1);
-    } catch (error) {
-      console.error("Error fetching vehicles:", error);
-      toast.error("Failed to load vehicles");
-    } finally {
-      setLoading(false);
+    // Apply status filter
+    if (filterStatus !== "all") {
+      filtered = filtered.filter((v) => v.status === filterStatus);
     }
-  };
+
+    // Apply search
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (v) =>
+          v.plateNumber?.toLowerCase().includes(search) ||
+          v.model?.toLowerCase().includes(search) ||
+          v.manufacturer?.toLowerCase().includes(search) ||
+          v.type?.toLowerCase().includes(search),
+      );
+    }
+
+    return filtered;
+  }, [cachedVehicles, filterStatus, searchTerm]);
+
+  // Pagination
+  const totalVehicles = filteredVehicles.length;
+  const totalPages = Math.ceil(totalVehicles / itemsPerPage);
+  const paginatedVehicles = filteredVehicles.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this vehicle?")) {
       try {
         await vehicleService.deleteVehicle(id);
         toast.success("Vehicle deleted successfully");
-        fetchVehicles();
+        removeVehicleFromCache(id);
       } catch (error) {
         console.error("Error deleting vehicle:", error);
         toast.error(
@@ -120,7 +131,7 @@ const VehicleManagement = () => {
           "Status",
           "Approval Status",
         ],
-        ...vehicles.map((v) => [
+        ...filteredVehicles.map((v) => [
           v.plateNumber,
           v.model,
           v.manufacturer,
@@ -150,7 +161,7 @@ const VehicleManagement = () => {
     setCurrentPage(1);
   };
 
-  if (loading && currentPage === 1) {
+  if (contextLoading.vehicles && cachedVehicles.length === 0) {
     return <Loading />;
   }
 
@@ -252,8 +263,8 @@ const VehicleManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {vehicles.length > 0 ? (
-                vehicles.map((vehicle) => (
+              {paginatedVehicles.length > 0 ? (
+                paginatedVehicles.map((vehicle) => (
                   <tr
                     key={vehicle._id}
                     className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
@@ -328,7 +339,7 @@ const VehicleManagement = () => {
         </div>
 
         {/* Pagination */}
-        {vehicles.length > 0 && (
+        {filteredVehicles.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-700 gap-4">
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}

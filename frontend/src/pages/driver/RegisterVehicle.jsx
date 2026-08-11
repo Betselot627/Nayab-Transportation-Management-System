@@ -1,7 +1,19 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { vehicleService } from "../../services/vehicleService";
-import { Upload, Camera, FileText, CheckCircle, AlertCircle, Trash2, Image } from "lucide-react";
+import {
+  Upload,
+  Camera,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Trash2,
+  Image,
+  Truck,
+  ArrowLeft,
+  ShieldCheck,
+  Clock,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 const RegisterVehicle = () => {
@@ -43,7 +55,6 @@ const RegisterVehicle = () => {
     other: "",
   });
 
-  // File Inputs Refs
   const refs = {
     front: useRef(),
     back: useRef(),
@@ -68,8 +79,8 @@ const RegisterVehicle = () => {
   const handlePhotoUpload = (position, e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        return toast.error("Photo size cannot exceed 2MB");
+      if (file.size > 3 * 1024 * 1024) {
+        return toast.error("Photo size cannot exceed 3MB");
       }
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -83,8 +94,8 @@ const RegisterVehicle = () => {
   const handleDocUpload = (docType, e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 3 * 1024 * 1024) {
-        return toast.error("Document size cannot exceed 3MB");
+      if (file.size > 4 * 1024 * 1024) {
+        return toast.error("Document size cannot exceed 4MB");
       }
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -114,54 +125,52 @@ const RegisterVehicle = () => {
     setSuccess("");
 
     try {
-      // Gather photos
       const imagesArray = Object.values(vehiclePhotos).filter(Boolean);
 
-      // Prepare data for API
       const vehicleData = {
-        plateNumber: formData.plateNumber.toUpperCase(),
-        model: formData.model,
-        manufacturer: formData.manufacturer,
+        plateNumber: formData.plateNumber.toUpperCase().trim(),
+        model: formData.model.trim(),
+        manufacturer: formData.manufacturer.trim(),
         type: formData.type,
         year: Number(formData.year),
-        color: formData.color,
+        color: formData.color.trim(),
         capacity: {
           weight: Number(formData.capacityWeight),
           unit: formData.capacityUnit,
         },
         fuelType: formData.fuelType,
         insurance: {
-          company: formData.insuranceCompany,
-          policyNumber: formData.insurancePolicyNumber,
-          expiryDate: formData.insuranceExpiryDate,
+          company: formData.insuranceCompany || undefined,
+          policyNumber: formData.insurancePolicyNumber || undefined,
+          expiryDate: formData.insuranceExpiryDate || undefined,
           document: documents.insurance || undefined,
         },
         registration: {
-          number: formData.registrationNumber,
-          expiryDate: formData.registrationExpiryDate,
+          number: formData.registrationNumber || undefined,
+          expiryDate: formData.registrationExpiryDate || undefined,
           document: documents.registration || undefined,
         },
         inspectionDocument: documents.inspection || undefined,
         supportingDocuments: documents.other ? [documents.other] : [],
         images: imagesArray,
-        notes: formData.notes,
+        notes: formData.notes || undefined,
       };
 
       const response = await vehicleService.registerVehicle(vehicleData);
 
       setSuccess(
         response.message ||
-          "Vehicle registered successfully! Awaiting admin approval."
+          "Vehicle registered successfully! Submitted for Admin review."
       );
-      toast.success("Vehicle registered successfully!");
+      toast.success("Vehicle registered! Awaiting Admin approval.");
 
-      // Reset form
       setTimeout(() => {
-        navigate("/driver/dashboard");
-      }, 2000);
+        navigate("/driver/my-vehicles");
+      }, 1500);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to register vehicle");
-      toast.error(err.response?.data?.message || "Failed to register vehicle");
+      const msg = err.response?.data?.message || "Failed to register vehicle";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -174,122 +183,161 @@ const RegisterVehicle = () => {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Register Your Vehicle</h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-          Submit your vehicle info, uploads, and certifications for verification and admin activation.
-        </p>
+    <div className="container mx-auto px-4 py-8 max-w-4xl min-h-screen text-slate-900 dark:text-slate-100 transition-colors">
+      {/* Top Breadcrumb & Header */}
+      <div className="mb-8 space-y-3">
+        <button
+          onClick={() => navigate("/driver/my-vehicles")}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-purple-600 dark:text-slate-400 dark:hover:text-purple-400 transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to My Vehicles</span>
+        </button>
+
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Register New Vehicle
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Submit your vehicle specifications, registration papers, and
+              inspection certificates for Admin approval.
+            </p>
+          </div>
+          <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center gap-2 text-amber-800 dark:text-amber-300 text-xs font-semibold">
+            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>Workflow: Pending Admin Approval</span>
+          </div>
+        </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-red-500" />
+        <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-200 px-4 py-3.5 rounded-2xl mb-6 flex items-center gap-2.5 text-xs font-medium animate-in fade-in">
+          <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-6 flex items-center gap-2 font-semibold">
-          <CheckCircle className="w-5 h-5 text-green-600" />
+        <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-200 px-4 py-3.5 rounded-2xl mb-6 flex items-center gap-2.5 text-xs font-bold animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
           <span>{success}</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        
-        {/* Basic Stats Grid */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white border-b pb-2 border-gray-100 dark:border-gray-900">
-            Basic Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">PLATE NUMBER *</label>
+        {/* Section 1: Basic Vehicle Specs */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <Truck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Vehicle Specifications
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Plate Number *
+              </label>
               <input
                 type="text"
                 name="plateNumber"
                 value={formData.plateNumber}
                 onChange={handleChange}
                 required
-                placeholder="REG-9912"
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-sm bg-transparent focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 dark:text-white"
+                placeholder="e.g. 3-AA-12345"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white uppercase font-mono font-bold focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">MANUFACTURER *</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Manufacturer *
+              </label>
               <input
                 type="text"
                 name="manufacturer"
                 value={formData.manufacturer}
                 onChange={handleChange}
                 required
-                placeholder="Toyota / Hino"
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-sm bg-transparent focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 dark:text-white"
+                placeholder="e.g. Isuzu / Toyota"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">MODEL *</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Model *
+              </label>
               <input
                 type="text"
                 name="model"
                 value={formData.model}
                 onChange={handleChange}
                 required
-                placeholder="Dyna / Dutro"
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-sm bg-transparent focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 dark:text-white"
+                placeholder="e.g. FSR / Dyna / Hino"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">VEHICLE TYPE *</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Vehicle Type *
+              </label>
               <select
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-sm bg-transparent focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 dark:text-white"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
               >
-                <option value="truck">Truck</option>
-                <option value="van">Van</option>
-                <option value="pickup">Pickup</option>
-                <option value="trailer">Trailer</option>
-                <option value="other">Other</option>
+                <option value="truck" className="dark:bg-slate-900">Truck</option>
+                <option value="van" className="dark:bg-slate-900">Van</option>
+                <option value="pickup" className="dark:bg-slate-900">Pickup</option>
+                <option value="trailer" className="dark:bg-slate-900">Trailer</option>
+                <option value="other" className="dark:bg-slate-900">Other</option>
               </select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">YEAR *</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Manufacturing Year *
+              </label>
               <select
                 name="year"
                 value={formData.year}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-sm bg-transparent focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 dark:text-white"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
               >
                 {years.map((y) => (
-                  <option key={y} value={y}>{y}</option>
+                  <option key={y} value={y} className="dark:bg-slate-900">
+                    {y}
+                  </option>
                 ))}
               </select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">COLOR *</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Color *
+              </label>
               <input
                 type="text"
                 name="color"
                 value={formData.color}
                 onChange={handleChange}
                 required
-                placeholder="White"
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-sm bg-transparent focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 dark:text-white"
+                placeholder="e.g. White / Blue"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">WEIGHT CAPACITY *</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Weight Capacity *
+              </label>
               <input
                 type="number"
                 name="capacityWeight"
@@ -298,79 +346,96 @@ const RegisterVehicle = () => {
                 required
                 min="0"
                 step="0.1"
-                placeholder="5"
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-sm bg-transparent focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 dark:text-white"
+                placeholder="e.g. 5"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">CAPACITY UNIT *</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Capacity Unit *
+              </label>
               <select
                 name="capacityUnit"
                 value={formData.capacityUnit}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-sm bg-transparent focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 dark:text-white"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
               >
-                <option value="ton">Tons</option>
-                <option value="kg">Kilograms (kg)</option>
+                <option value="ton" className="dark:bg-slate-900">Tons</option>
+                <option value="kg" className="dark:bg-slate-900">Kilograms (kg)</option>
               </select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">FUEL TYPE *</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Fuel Type *
+              </label>
               <select
                 name="fuelType"
                 value={formData.fuelType}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-sm bg-transparent focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 dark:text-white"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
               >
-                <option value="diesel">Diesel</option>
-                <option value="petrol">Petrol</option>
-                <option value="cng">CNG</option>
-                <option value="electric">Electric</option>
-                <option value="hybrid">Hybrid</option>
+                <option value="diesel" className="dark:bg-slate-900">Diesel</option>
+                <option value="petrol" className="dark:bg-slate-900">Petrol</option>
+                <option value="electric" className="dark:bg-slate-900">Electric</option>
+                <option value="hybrid" className="dark:bg-slate-900">Hybrid</option>
               </select>
             </div>
           </div>
         </div>
 
-        {/* Media (Vehicle Photos) */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Vehicle Photos</h2>
-            <p className="text-xs text-gray-400 mt-1">Please provide clear photos of the vehicle from the following angles.</p>
+        {/* Section 2: Vehicle Photos */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <Camera className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                Vehicle Photos
+              </h2>
+              <p className="text-xs text-slate-400">
+                Upload clear photos from multiple angles for visual inspection.
+              </p>
+            </div>
           </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
             {["front", "back", "left", "right", "interior"].map((pos) => (
-              <div 
-                key={pos} 
+              <div
+                key={pos}
                 onClick={() => refs[pos].current.click()}
-                className="relative cursor-pointer border border-gray-200 dark:border-gray-800 rounded-xl p-3 flex flex-col items-center justify-center text-center space-y-2 hover:border-green-500 transition-all bg-gray-50 dark:bg-gray-900 aspect-square group"
+                className="relative cursor-pointer border border-dashed border-slate-300 dark:border-slate-700 hover:border-purple-500 dark:hover:border-purple-500 rounded-2xl p-3 flex flex-col items-center justify-center text-center bg-slate-50 dark:bg-slate-800/40 aspect-square group transition-all"
               >
                 {vehiclePhotos[pos] ? (
                   <>
-                    <img src={vehiclePhotos[pos]} alt={pos} className="w-full h-full object-cover rounded-lg" />
-                    <button 
+                    <img
+                      src={vehiclePhotos[pos]}
+                      alt={pos}
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                    <button
+                      type="button"
                       onClick={(e) => removePhoto(pos, e)}
-                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-2 right-2 bg-rose-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   </>
                 ) : (
-                  <>
-                    <Camera className="w-6 h-6 text-gray-400" />
-                    <span className="text-[10px] font-bold text-gray-700 capitalize">{pos}</span>
-                  </>
+                  <div className="space-y-1.5 flex flex-col items-center">
+                    <Camera className="w-6 h-6 text-slate-400 group-hover:text-purple-500 transition-colors" />
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">
+                      {pos}
+                    </span>
+                  </div>
                 )}
-                <input 
-                  type="file" 
-                  ref={refs[pos]} 
-                  onChange={(e) => handlePhotoUpload(pos, e)} 
-                  className="hidden" 
+                <input
+                  type="file"
+                  ref={refs[pos]}
+                  onChange={(e) => handlePhotoUpload(pos, e)}
+                  className="hidden"
                   accept="image/*"
                 />
               </div>
@@ -378,207 +443,246 @@ const RegisterVehicle = () => {
           </div>
         </div>
 
-        {/* Insurance & Registration Credentials & Documents */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white border-b pb-2 border-gray-100 dark:border-gray-900">
-            Documents & Credentials
-          </h2>
-          
+        {/* Section 3: Registration & Insurance Documents */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Documents & Certifications
+            </h2>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            {/* Registration details */}
-            <div className="border border-gray-200 dark:border-gray-800 rounded-2xl p-4 space-y-4">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                <FileText className="w-4 h-4 text-green-500" /> Registration details
+            {/* Registration Book */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-4">
+              <h3 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                Registration Certificate (Libre)
               </h3>
-              
+
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Registration Number</label>
+                  <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">
+                    Registration / Libre Number
+                  </label>
                   <input
                     type="text"
                     name="registrationNumber"
                     value={formData.registrationNumber}
                     onChange={handleChange}
-                    placeholder="REG-1001"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs bg-transparent focus:outline-none focus:border-green-500"
+                    placeholder="e.g. LIB-99120"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500 font-mono"
                   />
                 </div>
-                
+
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Registration Expiry Date</label>
+                  <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">
+                    Registration Expiry Date
+                  </label>
                   <input
                     type="date"
                     name="registrationExpiryDate"
                     value={formData.registrationExpiryDate}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs bg-transparent focus:outline-none focus:border-green-500"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                   />
                 </div>
 
-                <div 
+                <div
                   onClick={() => refs.registration.current.click()}
-                  className="border border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-3 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition flex flex-col items-center justify-center space-y-1.5"
+                  className="border border-dashed border-slate-300 dark:border-slate-700 hover:border-purple-500 rounded-xl p-3 text-center cursor-pointer bg-white dark:bg-slate-900 transition flex flex-col items-center justify-center space-y-1"
                 >
                   {documents.registration ? (
-                    <div className="flex items-center gap-2 text-xs font-semibold text-green-600">
-                      <CheckCircle className="w-4 h-4" /> Registration Document Attached
-                      <button onClick={(e) => removeDoc("registration", e)} className="ml-1 text-red-650 hover:underline">Remove</button>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Registration Document Attached</span>
+                      <button
+                        type="button"
+                        onClick={(e) => removeDoc("registration", e)}
+                        className="ml-2 text-rose-500 hover:underline"
+                      >
+                        Remove
+                      </button>
                     </div>
                   ) : (
                     <>
-                      <Upload className="w-5 h-5 text-gray-400" />
-                      <span className="text-[10px] text-gray-500">Upload Registration Book/Card</span>
+                      <Upload className="w-4 h-4 text-slate-400" />
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Upload Registration Certificate (PDF/Image)
+                      </span>
                     </>
                   )}
-                  <input type="file" ref={refs.registration} onChange={(e) => handleDocUpload("registration", e)} className="hidden" accept="image/*" />
+                  <input
+                    type="file"
+                    ref={refs.registration}
+                    onChange={(e) => handleDocUpload("registration", e)}
+                    className="hidden"
+                    accept="image/*,.pdf"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Insurance details */}
-            <div className="border border-gray-200 dark:border-gray-800 rounded-2xl p-4 space-y-4">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                <FileText className="w-4 h-4 text-green-500" /> Insurance details
+            {/* Insurance Policy */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-4">
+              <h3 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                Insurance Policy
               </h3>
-              
+
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Insurance Company</label>
+                  <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">
+                    Insurance Provider Company
+                  </label>
                   <input
                     type="text"
                     name="insuranceCompany"
                     value={formData.insuranceCompany}
                     onChange={handleChange}
-                    placeholder="EFU / Jubilee"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs bg-transparent focus:outline-none focus:border-green-500"
+                    placeholder="e.g. Ethiopian Insurance Corp"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Policy Number</label>
+                  <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">
+                    Policy Number
+                  </label>
                   <input
                     type="text"
                     name="insurancePolicyNumber"
                     value={formData.insurancePolicyNumber}
                     onChange={handleChange}
-                    placeholder="POL-9923"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs bg-transparent focus:outline-none focus:border-green-500"
+                    placeholder="e.g. POL-ETH-8821"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500 font-mono"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Insurance Expiry Date *</label>
+                  <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">
+                    Insurance Expiry Date *
+                  </label>
                   <input
                     type="date"
                     name="insuranceExpiryDate"
                     required
                     value={formData.insuranceExpiryDate}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs bg-transparent focus:outline-none focus:border-green-500"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                   />
                 </div>
 
-                <div 
+                <div
                   onClick={() => refs.insurance.current.click()}
-                  className="border border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-3 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition flex flex-col items-center justify-center space-y-1.5"
+                  className="border border-dashed border-slate-300 dark:border-slate-700 hover:border-purple-500 rounded-xl p-3 text-center cursor-pointer bg-white dark:bg-slate-900 transition flex flex-col items-center justify-center space-y-1"
                 >
                   {documents.insurance ? (
-                    <div className="flex items-center gap-2 text-xs font-semibold text-green-600">
-                      <CheckCircle className="w-4 h-4" /> Insurance Certificate Attached
-                      <button onClick={(e) => removeDoc("insurance", e)} className="ml-1 text-red-650 hover:underline">Remove</button>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Insurance Document Attached</span>
+                      <button
+                        type="button"
+                        onClick={(e) => removeDoc("insurance", e)}
+                        className="ml-2 text-rose-500 hover:underline"
+                      >
+                        Remove
+                      </button>
                     </div>
                   ) : (
                     <>
-                      <Upload className="w-5 h-5 text-gray-400" />
-                      <span className="text-[10px] text-gray-500">Upload Insurance Policy PDF/Image</span>
+                      <Upload className="w-4 h-4 text-slate-400" />
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Upload Insurance Policy (PDF/Image)
+                      </span>
                     </>
                   )}
-                  <input type="file" ref={refs.insurance} onChange={(e) => handleDocUpload("insurance", e)} className="hidden" accept="image/*" />
+                  <input
+                    type="file"
+                    ref={refs.insurance}
+                    onChange={(e) => handleDocUpload("insurance", e)}
+                    className="hidden"
+                    accept="image/*,.pdf"
+                  />
                 </div>
               </div>
             </div>
-
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            {/* Inspection Document */}
-            <div className="border border-gray-200 dark:border-gray-800 rounded-2xl p-4 space-y-3">
-              <h3 className="text-xs font-bold text-gray-750 dark:text-gray-300">Inspection Certificate</h3>
-              <div 
-                onClick={() => refs.inspection.current.click()}
-                className="border border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-4 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition flex flex-col items-center justify-center space-y-2"
-              >
-                {documents.inspection ? (
-                  <div className="flex items-center gap-2 text-xs font-semibold text-green-600">
-                    <CheckCircle className="w-4 h-4" /> Certificate Attached
-                    <button onClick={(e) => removeDoc("inspection", e)} className="ml-1 text-red-650 hover:underline">Remove</button>
-                  </div>
-                ) : (
-                  <>
-                    <Upload className="w-5 h-5 text-gray-400" />
-                    <span className="text-[10px] text-gray-500">Attach Vehicle Fitness/Inspection Certificate</span>
-                  </>
-                )}
-                <input type="file" ref={refs.inspection} onChange={(e) => handleDocUpload("inspection", e)} className="hidden" accept="image/*" />
-              </div>
-            </div>
-
-            {/* Other Supporting Documents */}
-            <div className="border border-gray-200 dark:border-gray-800 rounded-2xl p-4 space-y-3">
-              <h3 className="text-xs font-bold text-gray-750 dark:text-gray-300">Supporting Documentation</h3>
-              <div 
-                onClick={() => refs.other.current.click()}
-                className="border border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-4 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition flex flex-col items-center justify-center space-y-2"
-              >
-                {documents.other ? (
-                  <div className="flex items-center gap-2 text-xs font-semibold text-green-600">
-                    <CheckCircle className="w-4 h-4" /> Document Attached
-                    <button onClick={(e) => removeDoc("other", e)} className="ml-1 text-red-650 hover:underline">Remove</button>
-                  </div>
-                ) : (
-                  <>
-                    <Upload className="w-5 h-5 text-gray-400" />
-                    <span className="text-[10px] text-gray-500">Attach Any Other Supporting Files</span>
-                  </>
-                )}
-                <input type="file" ref={refs.other} onChange={(e) => handleDocUpload("other", e)} className="hidden" accept="image/*" />
-              </div>
+          {/* Inspection Fitness */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-3">
+            <h3 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+              Inspection / Bolo Fitness Certificate
+            </h3>
+            <div
+              onClick={() => refs.inspection.current.click()}
+              className="border border-dashed border-slate-300 dark:border-slate-700 hover:border-purple-500 rounded-2xl p-4 text-center cursor-pointer bg-white dark:bg-slate-900 transition flex flex-col items-center justify-center space-y-1.5"
+            >
+              {documents.inspection ? (
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Inspection Fitness Certificate Attached</span>
+                  <button
+                    type="button"
+                    onClick={(e) => removeDoc("inspection", e)}
+                    className="ml-2 text-rose-500 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Upload className="w-5 h-5 text-slate-400" />
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Attach Annual Vehicle Inspection / Bolo Certificate
+                  </span>
+                </>
+              )}
+              <input
+                type="file"
+                ref={refs.inspection}
+                onChange={(e) => handleDocUpload("inspection", e)}
+                className="hidden"
+                accept="image/*,.pdf"
+              />
             </div>
           </div>
         </div>
 
-        {/* Additional Notes */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Additional Notes</label>
+        {/* Section 4: Additional Notes */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-3">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+            Additional Vehicle Notes & Specifications
+          </label>
           <textarea
             name="notes"
             value={formData.notes}
             onChange={handleChange}
             rows="3"
-            placeholder="Any extra comments or special equipment installed on the vehicle..."
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-sm bg-transparent focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 dark:text-white"
+            placeholder="Special refrigeration, cargo tie-downs, liftgate equipment, or special operational notes..."
+            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
           />
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all shadow-sm disabled:opacity-50"
+            className="w-full sm:flex-1 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50 text-sm cursor-pointer"
           >
-            {loading ? "Registering Vehicle..." : "Register Vehicle"}
+            {loading
+              ? "Submitting Vehicle Registration..."
+              : "Submit for Admin Approval"}
           </button>
           <button
             type="button"
-            onClick={() => navigate("/driver/dashboard")}
-            className="px-6 py-3.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-xl transition-all"
+            onClick={() => navigate("/driver/my-vehicles")}
+            className="w-full sm:w-auto px-6 py-3.5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition text-xs font-bold"
           >
             Cancel
           </button>
         </div>
-
       </form>
     </div>
   );

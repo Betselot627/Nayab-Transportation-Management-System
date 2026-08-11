@@ -155,11 +155,14 @@ const vehicleSchema = new mongoose.Schema(
 );
 
 // Indexes for efficient queries
-vehicleSchema.index({ plateNumber: 1 });
+vehicleSchema.index({ approvalStatus: 1, status: 1 });
+vehicleSchema.index({ registeredBy: 1, approvalStatus: 1 });
+vehicleSchema.index({ status: 1, type: 1 });
 vehicleSchema.index({ status: 1 });
 vehicleSchema.index({ type: 1 });
 vehicleSchema.index({ approvalStatus: 1 });
 vehicleSchema.index({ registeredBy: 1 });
 vehicleSchema.index({ assignedCustomer: 1 });
+vehicleSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Vehicle", vehicleSchema);

@@ -95,6 +95,7 @@ const tripSchema = new mongoose.Schema(
         "picked_up",
         "in_transit",
         "arrived_at_destination",
+        "arrived",
         "completed",
         "cancelled"
       ],
@@ -156,28 +157,49 @@ const tripSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    driverCommission: {
+      amount: {
+        type: Number,
+        default: 0,
+      },
+      percentage: {
+        type: Number,
+        default: 15,
+      },
+      status: {
+        type: String,
+        enum: ["pending", "earned", "paid"],
+        default: "pending",
+      },
+      earnedAt: Date,
+      paidAt: Date,
+    },
   },
   {
     timestamps: true,
   },
 );
 
-// Pre-save middleware to generate trip number
-tripSchema.pre("save", async function (next) {
+// Pre-validate middleware to generate trip number
+tripSchema.pre("validate", async function () {
   if (!this.tripNumber) {
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
-    const count = await mongoose.model("Trip").countDocuments();
-    this.tripNumber = `TRP-${year}${month}-${String(count + 1).padStart(5, "0")}`;
+    const timestamp = Date.now().toString().slice(-5);
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+    this.tripNumber = `TRP-${year}${month}-${timestamp}${random}`;
   }
-  next();
 });
 
 // Geospatial index
 tripSchema.index({ currentLocation: "2dsphere" });
+tripSchema.index({ driverId: 1, status: 1, createdAt: -1 });
+tripSchema.index({ driverId: 1, createdAt: -1 });
+tripSchema.index({ status: 1, createdAt: -1 });
 tripSchema.index({ driverId: 1 });
 tripSchema.index({ status: 1 });
+tripSchema.index({ shipmentId: 1 });
 tripSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Trip", tripSchema);

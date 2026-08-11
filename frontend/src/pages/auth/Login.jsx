@@ -32,7 +32,7 @@ const Login = () => {
   const roles = [
     {
       name: "admin",
-      label: "Administrator",
+      label: "Admin",
       icon: Shield,
     },
     {
@@ -95,7 +95,7 @@ const Login = () => {
       <div className="w-full max-w-md pt-6 sm:pt-0">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center bg-blue-600 dark:bg-blue-500 p-4 rounded-2xl shadow-lg">
+          <div className="inline-flex items-center justify-center bg-amber-600 dark:bg-amber-600 p-4 rounded-2xl shadow-lg">
             <Truck className="w-10 h-10 text-white" />
           </div>
 
@@ -226,7 +226,7 @@ const Login = () => {
             {/* Button */}
             <button
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white py-3 rounded-lg font-semibold flex justify-center items-center gap-2 transition disabled:opacity-50"
+              className="w-full bg-amber-600 hover:bg-blue-700 dark:bg-amber-600 dark:hover:bg-blue-600 text-white py-3 rounded-lg font-semibold flex justify-center items-center gap-2 transition disabled:opacity-50"
             >
               {loading ? (
                 <>

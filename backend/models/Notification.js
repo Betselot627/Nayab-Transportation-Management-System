@@ -48,6 +48,7 @@ const notificationSchema = new mongoose.Schema(
         "system",
         "alert",
         "info",
+        "vehicle",
         "vehicle_registration",
         "vehicle_approval",
         "vehicle_rejection",

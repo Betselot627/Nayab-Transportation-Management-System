@@ -21,8 +21,8 @@ const { authorize } = require("../middleware/roleMiddleware");
 router.use(protect);
 
 // Customer own profile routes
-router.get("/profile/me", authorize("customer"), getMyProfile);
-router.put("/profile/me", authorize("customer"), updateMyProfile);
+router.get("/profile/me", getMyProfile);
+router.put("/profile/me", updateMyProfile);
 
 // Admin routes
 router.get("/", authorize("admin"), getAllCustomers);

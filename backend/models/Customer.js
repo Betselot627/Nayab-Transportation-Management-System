@@ -45,7 +45,7 @@ const customerSchema = new mongoose.Schema(
       country: {
         type: String,
         trim: true,
-        default: "Pakistan",
+        default: "Ethiopia",
       },
     },
     contactPerson: {
@@ -84,8 +84,5 @@ const customerSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
-
-// Index for faster queries
-customerSchema.index({ userId: 1 });
 
 module.exports = mongoose.model("Customer", customerSchema);

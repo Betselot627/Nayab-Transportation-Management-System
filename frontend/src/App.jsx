@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { AdminDataProvider } from "./context/AdminDataContext";
 import { Toaster } from "react-hot-toast";
 import MainLayout from "./layouts/MainLayout";
 import AdminLayout from "./layouts/AdminLayout";
@@ -110,7 +111,9 @@ function App() {
               element={
                 <ProtectedRoute>
                   <RoleRoute allowedRoles={["admin"]}>
-                    <AdminLayout />
+                    <AdminDataProvider>
+                      <AdminLayout />
+                    </AdminDataProvider>
                   </RoleRoute>
                 </ProtectedRoute>
               }

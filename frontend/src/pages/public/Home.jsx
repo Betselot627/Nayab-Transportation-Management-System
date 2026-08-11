@@ -117,13 +117,22 @@ const Home = () => {
 
             {/* Right Image */}
             <div className="flex justify-center anim-scale delay-200">
-              <div className="anim-float relative w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+              <div className="anim-float relative w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-slate-900">
                 <img
-                  src="https://images.unsplash.com/photo-1565793298595-6a879b1d9492?auto=format&fit=crop&w=900&q=80"
-                  alt="Fleet of transportation trucks parked in a logistics yard"
-                  className="w-full h-80 sm:h-96 object-cover"
+                  src="/images/hero-fleet.jpg"
+                  alt="Fleet of transportation trucks in modern logistics hub"
+                  className="w-full h-80 sm:h-96 object-cover transition-opacity duration-500 ease-out"
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
+                  onError={(e) => {
+                    // Graceful fallback to remote high-res if local path is unavailable in specific test setups
+                    if (e.target.src !== "https://images.unsplash.com/photo-1565793298595-6a879b1d9492?auto=format&fit=crop&w=900&q=80") {
+                      e.target.src = "https://images.unsplash.com/photo-1565793298595-6a879b1d9492?auto=format&fit=crop&w=900&q=80";
+                    }
+                  }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/15 to-transparent pointer-events-none" />
                 <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg border border-white/10">
                   <Truck className="w-4 h-4 text-amber-400" />
                   <span className="text-sm font-medium text-white">

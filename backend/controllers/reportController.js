@@ -15,6 +15,7 @@ const Maintenance = require("../models/Maintenance");
  * - Performance metrics
  * - Monthly/Yearly reports
  */
+const Customer = require("../models/Customer");
 
 /**
  * @route   GET /api/reports/dashboard
@@ -23,87 +24,110 @@ const Maintenance = require("../models/Maintenance");
  */
 const getDashboardStats = async (req, res) => {
   try {
-    // Count totals
-    const totalVehicles = await Vehicle.countDocuments();
-    const availableVehicles = await Vehicle.countDocuments({
-      status: "available",
-    });
-    const totalDrivers = await Driver.countDocuments();
-    const availableDrivers = await Driver.countDocuments({
-      status: "available",
-    });
-    const totalShipments = await Shipment.countDocuments();
-    const activeShipments = await Shipment.countDocuments({
-      status: { $in: ["assigned", "picked_up", "in_transit"] },
-    });
-    const completedShipments = await Shipment.countDocuments({
-      status: "completed",
-    });
-
-    // Revenue calculation
-    const revenueData = await Payment.aggregate([
-      { $match: { paymentStatus: "paid" } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$amount" },
-        },
-      },
-    ]);
-    const totalRevenue = revenueData[0]?.total || 0;
-
-    // Pending payments
-    const pendingPayments = await Payment.countDocuments({
-      paymentStatus: "pending",
-    });
-
-    // Recent shipments
-    const recentShipments = await Shipment.find()
-      .limit(5)
-      .sort({ createdAt: -1 })
-      .populate("customerId", "companyName")
-      .populate("vehicleId", "plateNumber")
-      .populate("driverId", "fullName");
-
-    // Active trips
-    const activeTrips = await Trip.find({ status: "in_progress" })
-      .limit(5)
-      .populate("driverId", "fullName")
-      .populate("vehicleId", "plateNumber");
-
-    // Shipments by status
-    const shipmentsByStatus = await Shipment.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    // Monthly revenue (last 6 months)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    const monthlyRevenue = await Payment.aggregate([
-      {
-        $match: {
-          paymentStatus: "paid",
-          paymentDate: { $gte: sixMonthsAgo },
-        },
-      },
-      {
-        $group: {
-          _id: {
-            year: { $year: "$paymentDate" },
-            month: { $month: "$paymentDate" },
+    // Run all aggregation and count queries concurrently in parallel
+    const [
+      totalVehicles,
+      availableVehicles,
+      inUseVehicles,
+      maintenanceVehicles,
+      totalDrivers,
+      availableDrivers,
+      totalCustomers,
+      totalShipments,
+      activeShipments,
+      completedShipments,
+      revenueData,
+      pendingPayments,
+      vehiclesByType,
+      recentVehicles,
+      recentShipments,
+      activeTrips,
+      shipmentsByStatus,
+      monthlyRevenue,
+    ] = await Promise.all([
+      Vehicle.countDocuments(),
+      Vehicle.countDocuments({ status: "available" }),
+      Vehicle.countDocuments({ status: "in_use" }),
+      Vehicle.countDocuments({ status: "maintenance" }),
+      Driver.countDocuments(),
+      Driver.countDocuments({ status: "available" }),
+      Customer.countDocuments(),
+      Shipment.countDocuments(),
+      Shipment.countDocuments({
+        status: { $in: ["assigned", "picked_up", "in_transit"] },
+      }),
+      Shipment.countDocuments({ status: "completed" }),
+      Payment.aggregate([
+        { $match: { $or: [{ paymentStatus: "paid" }, { status: "PAID" }] } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+      Payment.countDocuments({
+        $or: [{ paymentStatus: "pending" }, { status: "PENDING" }],
+      }),
+      Vehicle.aggregate([
+        { $group: { _id: "$type", count: { $sum: 1 } } },
+      ]),
+      Vehicle.find({ approvalStatus: "approved" })
+        .select("manufacturer model plateNumber type status capacity registeredBy")
+        .limit(5)
+        .sort({ createdAt: -1 })
+        .lean(),
+      Shipment.find()
+        .select("shipmentNumber pickupLocation destination status createdAt pricing customerId vehicleId driverId")
+        .limit(5)
+        .sort({ createdAt: -1 })
+        .populate("customerId", "companyName")
+        .populate("vehicleId", "plateNumber")
+        .populate("driverId", "fullName")
+        .lean(),
+      Trip.find({ status: { $in: ["in_progress", "in_transit", "on_the_way", "picked_up"] } })
+        .select("tripNumber status driverId vehicleId startTime currentLocation")
+        .limit(5)
+        .populate("driverId", "fullName")
+        .populate("vehicleId", "plateNumber")
+        .lean(),
+      Shipment.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+      Payment.aggregate([
+        {
+          $match: {
+            $or: [{ paymentStatus: "paid" }, { status: "PAID" }],
+            createdAt: { $gte: sixMonthsAgo },
           },
-          revenue: { $sum: "$amount" },
-          count: { $sum: 1 },
         },
-      },
-      { $sort: { "_id.year": 1, "_id.month": 1 } },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+            },
+            revenue: { $sum: "$amount" },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { "_id.year": 1, "_id.month": 1 } },
+      ]),
     ]);
+
+    const totalRevenue = revenueData[0]?.total || 0;
+
+    const vehicleStats = {
+      total: totalVehicles,
+      available: availableVehicles,
+      inUse: inUseVehicles,
+      maintenance: maintenanceVehicles,
+      byType: vehiclesByType,
+    };
+
+    const shipmentStats = {
+      total: totalShipments,
+      byStatus: shipmentsByStatus,
+      totalRevenue,
+    };
 
     res.status(200).json({
       success: true,
@@ -111,14 +135,20 @@ const getDashboardStats = async (req, res) => {
         overview: {
           totalVehicles,
           availableVehicles,
+          inUseVehicles,
+          maintenanceVehicles,
           totalDrivers,
           availableDrivers,
+          totalCustomers,
           totalShipments,
           activeShipments,
           completedShipments,
           totalRevenue,
           pendingPayments,
         },
+        vehicleStats,
+        shipmentStats,
+        vehicles: recentVehicles,
         recentShipments,
         activeTrips,
         shipmentsByStatus,

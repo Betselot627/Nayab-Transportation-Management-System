@@ -111,6 +111,8 @@ const shipmentSchema = new mongoose.Schema(
         "assigned",
         "picked_up",
         "in_transit",
+        "arrived_at_destination",
+        "arrived",
         "delivered",
         "completed",
         "cancelled",
@@ -121,7 +123,6 @@ const shipmentSchema = new mongoose.Schema(
       type: String,
       enum: ["UNPAID", "PENDING", "PAID", "FAILED"],
       default: "UNPAID",
-      index: true,
     },
     pricing: {
       baseAmount: {
@@ -223,10 +224,11 @@ shipmentSchema.pre("save", async function () {
 });
 
 // Indexes
-shipmentSchema.index({ customerId: 1 });
-shipmentSchema.index({ status: 1 });
+shipmentSchema.index({ customerId: 1, createdAt: -1 });
+shipmentSchema.index({ customerId: 1, status: 1 });
+shipmentSchema.index({ driverId: 1, status: 1 });
+shipmentSchema.index({ status: 1, createdAt: -1 });
 shipmentSchema.index({ paymentStatus: 1 });
-shipmentSchema.index({ shipmentNumber: 1 });
 shipmentSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Shipment", shipmentSchema);

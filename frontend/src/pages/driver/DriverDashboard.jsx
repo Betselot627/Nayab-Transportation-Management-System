@@ -40,14 +40,51 @@ const DriverDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  // Set up 5-second polling interval
+  // Smart visibility-aware polling interval
   useEffect(() => {
-    fetchTrips(true);
-    const interval = setInterval(() => {
-      fetchTrips(false);
-    }, 5000);
+    let isMounted = true;
 
-    return () => clearInterval(interval);
+    const loadData = async (showLoader = false) => {
+      if (document.hidden && !showLoader) return;
+      try {
+        if (showLoader) setLoading(true);
+        const response = await tripService.getMyTrips();
+        if (!isMounted) return;
+        const all = response.data || [];
+        setTrips(all);
+
+        setStats({
+          pending: all.filter((t) => t.status === "pending").length,
+          assigned: all.filter((t) => ["pending", "on_the_way", "arrived_at_pickup"].includes(t.status)).length,
+          active: all.filter((t) => ["on_the_way", "arrived_at_pickup", "picked_up", "in_transit", "arrived_at_destination"].includes(t.status)).length,
+          completed: all.filter((t) => t.status === "completed").length,
+        });
+      } catch (err) {
+        if (isMounted) console.error("Failed to fetch trips:", err);
+      } finally {
+        if (isMounted && showLoader) setLoading(false);
+      }
+    };
+
+    loadData(true);
+
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 8000); // 8s optimal polling
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadData(false);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   const fetchTrips = async (showLoader = false) => {
@@ -84,17 +121,14 @@ const DriverDashboard = () => {
     return colors[status] || "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/20";
   };
 
-  const handleStartTrip = async (tripId) => {
+  const handleStepUpdate = async (tripId, nextStatus) => {
     try {
-      await tripService.updateTripStatus(tripId, {
-        status: "on_the_way",
-        remarks: "Driver is on the way to pickup",
-      });
-      toast.success("Trip started! Head to pickup location.");
+      await tripService.updateTripStatus(tripId, { status: nextStatus });
+      toast.success(`Status updated to "${nextStatus.replace(/_/g, " ")}"`);
       fetchTrips(false);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to start trip");
+      toast.error(err.response?.data?.message || "Failed to update trip status");
     }
   };
 
@@ -405,20 +439,63 @@ const DriverDashboard = () => {
                       </div>
 
                       <div className="flex sm:flex-col gap-2 shrink-0">
-                        {trip.status === "pending" && (
+                        {(trip.status === "pending" ||
+                          trip.status === "assigned" ||
+                          trip.status === "on_the_way" ||
+                          trip.status === "arrived_at_pickup") && (
                           <button
-                            onClick={() => handleStartTrip(trip._id)}
-                            className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                            onClick={() =>
+                              handleStepUpdate(trip._id, "picked_up")
+                            }
+                            className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <Package className="h-3.5 w-3.5" />
+                            Package Picked Up
+                          </button>
+                        )}
+
+                        {trip.status === "picked_up" && (
+                          <button
+                            onClick={() =>
+                              handleStepUpdate(trip._id, "in_transit")
+                            }
+                            className="bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                           >
                             <Navigation className="h-3.5 w-3.5" />
                             Start Trip
                           </button>
                         )}
+
+                        {trip.status === "in_transit" && (
+                          <button
+                            onClick={() =>
+                              handleStepUpdate(trip._id, "arrived")
+                            }
+                            className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <MapPin className="h-3.5 w-3.5" />
+                            Arrived
+                          </button>
+                        )}
+
+                        {(trip.status === "arrived" ||
+                          trip.status === "arrived_at_destination") && (
+                          <button
+                            onClick={() =>
+                              handleStepUpdate(trip._id, "completed")
+                            }
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            Delivered
+                          </button>
+                        )}
+
                         <Link
                           to={`/driver/trip-details/${trip._id}`}
                           className="border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold px-4 py-2.5 rounded-xl transition-all text-center"
                         >
-                          View Run Details
+                          View Details
                         </Link>
                       </div>
                     </div>

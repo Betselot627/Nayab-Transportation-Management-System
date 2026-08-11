@@ -124,78 +124,68 @@ const TripDetails = () => {
         </span>
       </div>
 
-      {/* Interactive Status Progression Card */}
+      {/* Interactive Status Progression Card - 4 Direct Actions */}
       <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold text-slate-900">Trip Stage Controller</h3>
-        <p className="text-xs text-slate-550">Progress the shipment status sequentially through the stages below:</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">Trip Stage Controller</h3>
+            <p className="text-xs text-slate-500">Perform sequential transportation actions below:</p>
+          </div>
+          {trip.driverCommission?.amount > 0 && (
+            <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-bold font-mono">
+              Commission: {trip.driverCommission.amount.toLocaleString()} ETB ({trip.driverCommission.percentage || 15}%)
+            </div>
+          )}
+        </div>
         
         <div className="flex flex-wrap gap-3 pt-2">
-          {trip.status === "pending" && (
-            <button
-              onClick={() => handleUpdateStatus("on_the_way")}
-              className="px-5 py-3 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl transition text-xs shadow-md"
-            >
-              Start Trip: On the Way to Pickup
-            </button>
-          )}
-
-          {trip.status === "on_the_way" && (
-            <button
-              onClick={() => handleUpdateStatus("arrived_at_pickup")}
-              className="px-5 py-3 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl transition text-xs shadow-md"
-            >
-              Mark: Arrived at Pickup
-            </button>
-          )}
-
-          {trip.status === "arrived_at_pickup" && (
+          {(trip.status === "pending" || trip.status === "on_the_way" || trip.status === "arrived_at_pickup") && (
             <button
               onClick={() => handleUpdateStatus("picked_up")}
-              className="px-5 py-3 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl transition text-xs shadow-md"
+              className="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition text-xs shadow-md cursor-pointer flex items-center gap-2"
             >
-              Confirm: Cargo Picked Up
+              <Package className="w-4 h-4" />
+              <span>Package Picked Up</span>
             </button>
           )}
 
           {trip.status === "picked_up" && (
             <button
               onClick={() => handleUpdateStatus("in_transit")}
-              className="px-5 py-3 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl transition text-xs shadow-md"
+              className="px-5 py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition text-xs shadow-md cursor-pointer flex items-center gap-2"
             >
-              Start: In Transit Route
+              <Navigation className="w-4 h-4" />
+              <span>Start Trip / In Transit</span>
             </button>
           )}
 
           {trip.status === "in_transit" && (
-            <div className="flex gap-3 w-full sm:w-auto">
-              <button
-                onClick={() => handleUpdateStatus("arrived_at_destination")}
-                className="px-5 py-3 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl transition text-xs shadow-md"
-              >
-                Mark: Arrived at Destination
-              </button>
-              <button
-                onClick={() => navigate(`/driver/update-status/${trip._id}`)}
-                className="px-5 py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl transition text-xs shadow-md"
-              >
-                Update GPS Coordinates
-              </button>
-            </div>
+            <button
+              onClick={() => handleUpdateStatus("arrived")}
+              className="px-5 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition text-xs shadow-md cursor-pointer flex items-center gap-2"
+            >
+              <MapPin className="w-4 h-4" />
+              <span>Arrived at Destination</span>
+            </button>
           )}
 
-          {trip.status === "arrived_at_destination" && (
+          {(trip.status === "arrived" || trip.status === "arrived_at_destination") && (
             <button
               onClick={() => handleUpdateStatus("completed")}
-              className="px-5 py-3 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl transition text-xs shadow-md"
+              className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition text-xs shadow-md cursor-pointer flex items-center gap-2"
             >
-              Confirm: Delivered & Completed
+              <CheckCircle className="w-4 h-4" />
+              <span>Delivered</span>
             </button>
           )}
 
           {trip.status === "completed" && (
-            <div className="flex items-center gap-2 bg-green-50 text-green-800 border border-green-200 px-4 py-3 rounded-xl text-xs font-semibold">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <span>This trip is successfully completed and delivered!</span>
+            <div className="flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200 px-4 py-3 rounded-xl text-xs font-semibold w-full">
+              <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+              <div>
+                <p className="font-bold">Shipment delivered successfully!</p>
+                <p className="text-[11px] text-emerald-700">Driver commission has been calculated and credited to your earnings balance.</p>
+              </div>
             </div>
           )}
         </div>
@@ -206,36 +196,42 @@ const TripDetails = () => {
         {/* Left Primary Details Panel */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* Complete Customer details - Presented in clean card layout as requested */}
+          {/* Complete Customer details */}
           <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-slate-900 border-b pb-3">Client Contact Information</h3>
             {customerUser ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-green-100 bg-green-50 flex items-center justify-center shrink-0">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-emerald-100 bg-emerald-50 flex items-center justify-center shrink-0">
                     {customerUser.profileImage ? (
                       <img src={customerUser.profileImage} alt={customerUser.name} className="w-full h-full object-cover" />
                     ) : (
-                      <User className="w-7 h-7 text-green-700" />
+                      <User className="w-7 h-7 text-emerald-700" />
                     )}
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Customer Owner</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Customer Name</p>
                     <p className="font-extrabold text-slate-900 text-base">{customerUser.name}</p>
-                    <p className="text-xs text-slate-500 font-medium">{customer.companyName || "Private Customer"}</p>
+                    <p className="text-xs text-slate-500 font-medium">{customer.companyName || "Individual Customer"}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t text-xs">
                   <div className="flex items-center gap-2.5">
-                    <Phone className="w-4 h-4 text-green-700 shrink-0" />
+                    <Phone className="w-4 h-4 text-emerald-700 shrink-0" />
                     <div>
                       <p className="text-[9px] font-bold text-slate-400 uppercase">Phone Number</p>
-                      <p className="font-bold text-slate-700">{customerUser.phone || "No phone registered"}</p>
+                      {customerUser.phone ? (
+                        <a href={`tel:${customerUser.phone}`} className="font-bold text-emerald-600 hover:underline">
+                          {customerUser.phone}
+                        </a>
+                      ) : (
+                        <p className="font-bold text-slate-700">No phone registered</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <Mail className="w-4 h-4 text-green-700 shrink-0" />
+                    <Mail className="w-4 h-4 text-emerald-700 shrink-0" />
                     <div>
                       <p className="text-[9px] font-bold text-slate-400 uppercase">Email Address</p>
                       <p className="font-bold text-slate-700">{customerUser.email || "No email registered"}</p>

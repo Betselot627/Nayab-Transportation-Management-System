@@ -23,21 +23,24 @@ const getAllDrivers = async (req, res) => {
     if (status) query.status = status;
     if (available === "true") query.status = "available";
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = parseInt(limit);
+    const skip = (parseInt(page) - 1) * limitNum;
 
-    const drivers = await Driver.find(query)
-      .populate("userId", "name email phone status")
-      .limit(parseInt(limit))
-      .skip(skip)
-      .sort({ createdAt: -1 });
-
-    const total = await Driver.countDocuments(query);
+    const [drivers, total] = await Promise.all([
+      Driver.find(query)
+        .populate("userId", "name email phone status")
+        .limit(limitNum)
+        .skip(skip)
+        .sort({ createdAt: -1 })
+        .lean(),
+      Driver.countDocuments(query),
+    ]);
 
     res.status(200).json({
       success: true,
       count: drivers.length,
       total,
-      pages: Math.ceil(total / parseInt(limit)),
+      pages: Math.ceil(total / limitNum),
       currentPage: parseInt(page),
       data: drivers,
     });
@@ -406,6 +409,48 @@ const updateMyProfile = async (req, res) => {
   }
 };
 
+/**
+ * @route   GET /api/drivers/earnings/me
+ * @desc    Get logged in driver's earnings & commission history
+ * @access  Private/Driver
+ */
+const getMyEarnings = async (req, res) => {
+  try {
+    const driver = await Driver.findOne({ userId: req.user._id });
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: "Driver profile not found",
+      });
+    }
+
+    const Trip = require("../models/Trip");
+    const trips = await Trip.find({ driverId: driver._id, status: "completed" })
+      .populate("shipmentId", "shipmentNumber pickupLocation destination pricing finalPrice actualDeliveryDate")
+      .populate("vehicleId", "plateNumber model type")
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    const totalEarned = driver.totalEarnings || trips.reduce((sum, t) => sum + (t.driverCommission?.amount || 0), 0);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalEarnings: totalEarned,
+        commissionRate: driver.commissionRate || 15,
+        completedTrips: trips.length,
+        trips,
+      },
+    });
+  } catch (error) {
+    console.error("Get Driver Earnings Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllDrivers,
   getDriverById,
@@ -416,4 +461,5 @@ module.exports = {
   getAvailableDrivers,
   getMyProfile,
   updateMyProfile,
+  getMyEarnings,
 };

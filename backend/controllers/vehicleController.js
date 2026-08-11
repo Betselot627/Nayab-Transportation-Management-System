@@ -1,5 +1,7 @@
 const Vehicle = require("../models/Vehicle");
 const Driver = require("../models/Driver");
+const User = require("../models/User");
+const Shipment = require("../models/Shipment");
 const Notification = require("../models/Notification");
 
 /**
@@ -37,15 +39,18 @@ const getAllVehicles = async (req, res) => {
 
     // For drivers, show only their own vehicles
     if (req.user.role === "driver") {
-      let driver = await Driver.findOne({ userId: req.user._id });
+      let driver = await Driver.findOne({ userId: req.user._id })
+        .select("_id")
+        .lean();
       if (!driver) {
-        driver = await Driver.create({
+        const created = await Driver.create({
           userId: req.user._id,
           fullName: req.user.name,
           licenseNumber: `PENDING-${req.user._id.toString().substring(18)}`,
           licenseExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
           experience: 0,
         });
+        driver = { _id: created._id };
       }
       query.registeredBy = driver._id;
     }
@@ -66,30 +71,34 @@ const getAllVehicles = async (req, res) => {
       ];
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = parseInt(limit);
+    const skip = (parseInt(page) - 1) * limitNum;
 
-    const vehicles = await Vehicle.find(query)
-      .populate("currentDriver", "fullName phone")
-      .populate("registeredBy", "fullName licenseNumber")
-      .populate("approvedBy", "name email")
-      .populate({
-        path: "assignedCustomer",
-        populate: {
-          path: "userId",
-          select: "name email phone profileImage"
-        }
-      })
-      .limit(parseInt(limit))
-      .skip(skip)
-      .sort({ createdAt: -1 });
-
-    const total = await Vehicle.countDocuments(query);
+    const [vehicles, total] = await Promise.all([
+      Vehicle.find(query)
+        .populate("currentDriver", "fullName phone")
+        .populate("registeredBy", "fullName licenseNumber")
+        .populate("approvedBy", "name email")
+        .populate({
+          path: "assignedCustomer",
+          select: "companyName contactPerson userId",
+          populate: {
+            path: "userId",
+            select: "name email phone profileImage",
+          },
+        })
+        .limit(limitNum)
+        .skip(skip)
+        .sort({ createdAt: -1 })
+        .lean(),
+      Vehicle.countDocuments(query),
+    ]);
 
     res.status(200).json({
       success: true,
       count: vehicles.length,
       total,
-      pages: Math.ceil(total / parseInt(limit)),
+      pages: Math.ceil(total / limitNum),
       currentPage: parseInt(page),
       data: vehicles,
     });
@@ -141,9 +150,19 @@ const getVehicleById = async (req, res) => {
  */
 const createVehicle = async (req, res) => {
   try {
-    const vehicleData = req.body;
+    const vehicleData = { ...req.body };
 
-    // Check if plate number exists
+    if (!vehicleData.plateNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "Plate number is required",
+      });
+    }
+
+    // Format plate number
+    vehicleData.plateNumber = vehicleData.plateNumber.toUpperCase().trim();
+
+    // Check if plate number already exists
     const existingVehicle = await Vehicle.findOne({
       plateNumber: vehicleData.plateNumber,
     });
@@ -151,50 +170,96 @@ const createVehicle = async (req, res) => {
     if (existingVehicle) {
       return res.status(400).json({
         success: false,
-        message: "Vehicle with this plate number already exists",
+        message: `Vehicle with plate number ${vehicleData.plateNumber} already exists in the fleet records`,
       });
     }
 
-    // If driver is registering their vehicle
-    if (req.user.role === "driver") {
+    // Sanitize capacity
+    if (typeof vehicleData.capacity === "number") {
+      vehicleData.capacity = { weight: vehicleData.capacity, unit: "kg" };
+    } else if (vehicleData.capacity && typeof vehicleData.capacity.weight === "string") {
+      vehicleData.capacity.weight = Number(vehicleData.capacity.weight) || 1000;
+    }
+    if (!vehicleData.capacity || !vehicleData.capacity.weight) {
+      vehicleData.capacity = { weight: 1000, unit: "kg" };
+    }
+
+    // Sanitize year & color & fuelType
+    vehicleData.year = Number(vehicleData.year) || new Date().getFullYear();
+    vehicleData.color = (vehicleData.color || "White").trim();
+    vehicleData.fuelType = (vehicleData.fuelType || "diesel").toLowerCase();
+    vehicleData.manufacturer = (vehicleData.manufacturer || "General").trim();
+    vehicleData.model = (vehicleData.model || "Fleet Standard").trim();
+    vehicleData.type = (vehicleData.type || "truck").toLowerCase();
+
+    // Sanitize insurance dates
+    if (vehicleData.insurance) {
+      if (!vehicleData.insurance.expiryDate || vehicleData.insurance.expiryDate === "") {
+        vehicleData.insurance.expiryDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+      } else {
+        vehicleData.insurance.expiryDate = new Date(vehicleData.insurance.expiryDate);
+      }
+    } else {
+      vehicleData.insurance = {
+        expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      };
+    }
+
+    // Sanitize registration dates
+    if (vehicleData.registration) {
+      if (!vehicleData.registration.expiryDate || vehicleData.registration.expiryDate === "") {
+        delete vehicleData.registration.expiryDate;
+      } else {
+        vehicleData.registration.expiryDate = new Date(vehicleData.registration.expiryDate);
+      }
+    }
+
+    // If non-admin is registering vehicle
+    if (req.user.role !== "admin") {
       let driver = await Driver.findOne({ userId: req.user._id });
 
       if (!driver) {
-        // Auto-create basic driver profile if it doesn't exist
+        // Auto-create driver profile if it doesn't exist
+        const uniqueLicense = `DL-${req.user._id.toString().slice(-6).toUpperCase()}-${Date.now().toString().slice(-3)}`;
         driver = await Driver.create({
           userId: req.user._id,
           fullName: req.user.name || "Driver",
-          licenseNumber: `TEMP-${Date.now()}`, // Temporary license number
-          licenseExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-          experience: 0,
+          licenseNumber: uniqueLicense,
+          licenseExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          experience: 1,
+          status: "available",
         });
       }
 
       vehicleData.registeredBy = driver._id;
-      vehicleData.approvalStatus = "pending";
       vehicleData.currentDriver = driver._id;
-    } else if (req.user.role === "admin") {
-      // Admin can directly approve
+      vehicleData.approvalStatus = "pending";
+      vehicleData.status = "inactive";
+      vehicleData.approvedBy = null;
+      vehicleData.approvalDate = null;
+      vehicleData.rejectionReason = null;
+    } else {
+      // Admin can directly approve or create
       vehicleData.approvalStatus = "approved";
+      vehicleData.status = vehicleData.status || "available";
       vehicleData.approvedBy = req.user._id;
       vehicleData.approvalDate = new Date();
+      vehicleData.rejectionReason = null;
     }
 
     const vehicle = await Vehicle.create(vehicleData);
 
     // Notify admins if driver registered
-    if (req.user.role === "driver") {
-      // Find all admin users
+    if (req.user.role !== "admin") {
       const User = require("../models/User");
       const adminUsers = await User.find({ role: "admin" });
 
-      // Create notification for each admin
       for (const admin of adminUsers) {
         await Notification.create({
           userId: admin._id,
-          title: "New Vehicle Registration",
-          message: `Driver has registered vehicle ${vehicle.plateNumber} for approval`,
-          type: "vehicle_registration",
+          title: "New Vehicle Registration Pending",
+          message: `Driver ${req.user.name} has submitted vehicle ${vehicle.plateNumber} (${vehicle.manufacturer} ${vehicle.model}) for approval.`,
+          type: "vehicle",
           relatedEntity: {
             entityType: "vehicle",
             entityId: vehicle._id,
@@ -206,8 +271,8 @@ const createVehicle = async (req, res) => {
     res.status(201).json({
       success: true,
       message:
-        req.user.role === "driver"
-          ? "Vehicle registered successfully. Awaiting admin approval."
+        req.user.role !== "admin"
+          ? "Vehicle registered successfully and submitted for Admin approval."
           : "Vehicle created successfully",
       data: vehicle,
     });
@@ -335,18 +400,19 @@ const updateVehicleStatus = async (req, res) => {
  */
 const getVehicleStats = async (req, res) => {
   try {
-    const total = await Vehicle.countDocuments();
-    const available = await Vehicle.countDocuments({ status: "available" });
-    const inUse = await Vehicle.countDocuments({ status: "in_use" });
-    const maintenance = await Vehicle.countDocuments({ status: "maintenance" });
-
-    const byType = await Vehicle.aggregate([
-      {
-        $group: {
-          _id: "$type",
-          count: { $sum: 1 },
+    const [total, available, inUse, maintenance, byType] = await Promise.all([
+      Vehicle.countDocuments(),
+      Vehicle.countDocuments({ status: "available" }),
+      Vehicle.countDocuments({ status: "in_use" }),
+      Vehicle.countDocuments({ status: "maintenance" }),
+      Vehicle.aggregate([
+        {
+          $group: {
+            _id: "$type",
+            count: { $sum: 1 },
+          },
         },
-      },
+      ]),
     ]);
 
     res.status(200).json({
@@ -375,6 +441,13 @@ const getVehicleStats = async (req, res) => {
  */
 const approveVehicle = async (req, res) => {
   try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Only Admins can approve vehicle registrations.",
+      });
+    }
+
     const vehicle = await Vehicle.findById(req.params.id).populate(
       "registeredBy",
     );
@@ -396,6 +469,7 @@ const approveVehicle = async (req, res) => {
     vehicle.approvalStatus = "approved";
     vehicle.approvedBy = req.user._id;
     vehicle.approvalDate = new Date();
+    vehicle.rejectionReason = undefined;
     vehicle.status = "available";
 
     await vehicle.save();
@@ -404,9 +478,10 @@ const approveVehicle = async (req, res) => {
     if (vehicle.registeredBy && vehicle.registeredBy.userId) {
       await Notification.create({
         userId: vehicle.registeredBy.userId,
-        title: "Vehicle Approved",
-        message: `Your vehicle ${vehicle.plateNumber} has been approved and is now available for assignments`,
-        type: "vehicle_approval",
+        title: "Vehicle Registration Approved",
+        message: `Your vehicle ${vehicle.plateNumber} (${vehicle.manufacturer} ${vehicle.model}) has been approved and is now active in the fleet.`,
+        type: "vehicle",
+        actionUrl: "/driver/my-vehicles",
         relatedEntity: {
           entityType: "vehicle",
           entityId: vehicle._id,
@@ -435,14 +510,15 @@ const approveVehicle = async (req, res) => {
  */
 const rejectVehicle = async (req, res) => {
   try {
-    const { reason } = req.body;
-
-    if (!reason) {
-      return res.status(400).json({
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
         success: false,
-        message: "Rejection reason is required",
+        message: "Access denied. Only Admins can reject vehicle registrations.",
       });
     }
+
+    const { reason } = req.body;
+    const finalReason = reason?.trim() || "Vehicle documentation does not meet fleet compliance requirements.";
 
     const vehicle = await Vehicle.findById(req.params.id).populate(
       "registeredBy",
@@ -456,7 +532,7 @@ const rejectVehicle = async (req, res) => {
     }
 
     vehicle.approvalStatus = "rejected";
-    vehicle.rejectionReason = reason;
+    vehicle.rejectionReason = finalReason;
     vehicle.status = "inactive";
 
     await vehicle.save();
@@ -466,8 +542,9 @@ const rejectVehicle = async (req, res) => {
       await Notification.create({
         userId: vehicle.registeredBy.userId,
         title: "Vehicle Registration Rejected",
-        message: `Your vehicle ${vehicle.plateNumber} registration was rejected. Reason: ${reason}`,
-        type: "vehicle_rejection",
+        message: `Your vehicle ${vehicle.plateNumber} registration was rejected. Reason: ${finalReason}`,
+        type: "vehicle",
+        actionUrl: "/driver/my-vehicles",
         relatedEntity: {
           entityType: "vehicle",
           entityId: vehicle._id,
@@ -708,7 +785,11 @@ const getVehicleRecommendations = async (req, res) => {
 const getPendingVehicles = async (req, res) => {
   try {
     const vehicles = await Vehicle.find({ approvalStatus: "pending" })
-      .populate("registeredBy", "fullName phone licenseNumber")
+      .populate({
+        path: "registeredBy",
+        select: "fullName phone licenseNumber userId experience",
+        populate: { path: "userId", select: "name email phone profileImage" },
+      })
       .sort({ createdAt: -1 });
 
     res.status(200).json({

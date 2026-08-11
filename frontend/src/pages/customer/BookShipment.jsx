@@ -455,19 +455,60 @@ const BookShipment = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Estimated Price (PKR)
-                  </label>
-                  <input
-                    type="number"
-                    {...register("estimatedPrice")}
-                    defaultValue={0}
-                    min="0"
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 focus:outline-none transition-all"
-                    placeholder="Enter price"
-                  />
-                </div>
+                {/* Auto Price Estimation Box */}
+                {(() => {
+                  const pCity = (watch("pickupCity") || "").toLowerCase().trim();
+                  const dCity = (watch("deliveryCity") || "").toLowerCase().trim();
+                  const w = parseFloat(watch("weight")) || 100;
+                  const unit = watch("weightUnit") || "kg";
+                  const wKg = unit === "ton" ? w * 1000 : w;
+
+                  const distances = {
+                    "addis ababa": 0,
+                    "adama": 99,
+                    "hawassa": 275,
+                    "bahir dar": 565,
+                    "gondar": 658,
+                    "dire dawa": 450,
+                    "mekelle": 780,
+                    "jimma": 350,
+                  };
+
+                  let dist = 25;
+                  if (pCity && dCity && pCity !== dCity) {
+                    const pD = distances[pCity];
+                    const dD = distances[dCity];
+                    if (pD !== undefined && dD !== undefined) {
+                      dist = Math.max(Math.abs(pD - dD), 50);
+                    } else {
+                      dist = 120;
+                    }
+                  }
+
+                  const rate = wKg > 3500 ? 55 : 35;
+                  const weightExtra = wKg > 1000 ? Math.round((wKg - 1000) * 1.5) : 0;
+                  const autoEstimate = Math.max(500 + Math.round(dist * rate) + weightExtra, 800);
+
+                  return (
+                    <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/40 p-4 rounded-2xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-purple-900 dark:text-purple-300">
+                          Automated Price Estimate:
+                        </span>
+                        <span className="text-base font-extrabold font-mono text-purple-700 dark:text-purple-400">
+                          {autoEstimate.toLocaleString()} ETB
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-purple-600 dark:text-purple-400/80 flex items-center justify-between">
+                        <span>Est. Distance: ~{dist} km ({unit.toUpperCase()}: {w})</span>
+                        <span>Base Rate + Distance Fare</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 border-t border-purple-200/60 dark:border-purple-800/30 pt-1.5 mt-1">
+                        ℹ️ <strong>Workflow:</strong> Submitted bookings start as <em>"Pending Approval"</em>. You will receive an instant notification once Admin reviews and approves the booking, after which you can pay securely with Chapa (Telebirr / CBE Birr).
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 <div className="flex gap-4 pt-2">
                   <button
@@ -485,12 +526,12 @@ const BookShipment = () => {
                     {loading ? (
                       <>
                         <Loader className="animate-spin h-4 w-4" />
-                        Creating...
+                        Submitting...
                       </>
                     ) : (
                       <>
                         <Package className="h-4 w-4" />
-                        Book Shipment
+                        Submit for Admin Approval
                       </>
                     )}
                   </button>

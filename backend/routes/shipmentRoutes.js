@@ -30,14 +30,14 @@ router.use(protect);
 router
   .route("/")
   .get(getAllShipments)
-  .post(authorize("customer"), createShipment);
+  .post(createShipment);
 
 router.get("/stats", authorize("admin", "dispatcher"), getShipmentStats);
 
 router
   .route("/:id")
   .get(getShipmentById)
-  .delete(authorize("admin", "customer"), deleteShipment);
+  .delete(deleteShipment);
 
 router.put("/:id/assign", authorize("admin", "dispatcher"), assignShipment);
 router.put("/:id/approve", authorize("admin"), approveShipment);
