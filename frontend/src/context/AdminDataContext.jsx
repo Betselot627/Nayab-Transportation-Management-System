@@ -66,95 +66,118 @@ export const AdminDataProvider = ({ children }) => {
   }, [vehicles.length, drivers.length, customers.length, shipments.length]);
 
   // Check if cache is still valid
-  const isCacheValid = (key) => {
-    const timestamp = cacheTimestamps.current[key];
-    if (!timestamp) return false;
-    return Date.now() - timestamp < CACHE_DURATION;
-  };
+  const isCacheValid = useCallback(
+    (key) => {
+      const timestamp = cacheTimestamps.current[key];
+      if (!timestamp) return false;
+      return Date.now() - timestamp < CACHE_DURATION;
+    },
+    [CACHE_DURATION],
+  );
 
   // Fetch vehicles with caching
-  const fetchVehicles = useCallback(async (force = false) => {
-    if (!force && isCacheValid("vehicles") && vehicles.length > 0) {
-      return vehicles;
-    }
+  const fetchVehicles = useCallback(
+    async (force = false) => {
+      if (!force && isCacheValid("vehicles")) {
+        console.log("Using cached vehicles data");
+        return vehicles;
+      }
 
-    setLoading((prev) => ({ ...prev, vehicles: true }));
-    try {
-      const response = await vehicleService.getAllVehicles();
-      const data = response.data || [];
-      setVehicles(data);
-      cacheTimestamps.current.vehicles = Date.now();
-      return data;
-    } catch (error) {
-      console.error("Error fetching vehicles:", error);
-      return [];
-    } finally {
-      setLoading((prev) => ({ ...prev, vehicles: false }));
-    }
-  }, []);
+      console.log("Fetching fresh vehicles data...");
+      setLoading((prev) => ({ ...prev, vehicles: true }));
+      try {
+        const response = await vehicleService.getAllVehicles();
+        const data = response.data || [];
+        setVehicles(data);
+        cacheTimestamps.current.vehicles = Date.now();
+        return data;
+      } catch (error) {
+        console.error("Error fetching vehicles:", error);
+        return vehicles;
+      } finally {
+        setLoading((prev) => ({ ...prev, vehicles: false }));
+      }
+    },
+    [isCacheValid, vehicles],
+  );
 
   // Fetch drivers with caching
-  const fetchDrivers = useCallback(async (force = false) => {
-    if (!force && isCacheValid("drivers") && drivers.length > 0) {
-      return drivers;
-    }
+  const fetchDrivers = useCallback(
+    async (force = false) => {
+      if (!force && isCacheValid("drivers")) {
+        console.log("Using cached drivers data");
+        return drivers;
+      }
 
-    setLoading((prev) => ({ ...prev, drivers: true }));
-    try {
-      const response = await driverService.getAllDrivers();
-      const data = response.data || [];
-      setDrivers(data);
-      cacheTimestamps.current.drivers = Date.now();
-      return data;
-    } catch (error) {
-      console.error("Error fetching drivers:", error);
-      return [];
-    } finally {
-      setLoading((prev) => ({ ...prev, drivers: false }));
-    }
-  }, []);
+      console.log("Fetching fresh drivers data...");
+      setLoading((prev) => ({ ...prev, drivers: true }));
+      try {
+        const response = await driverService.getAllDrivers();
+        const data = response.data || [];
+        setDrivers(data);
+        cacheTimestamps.current.drivers = Date.now();
+        return data;
+      } catch (error) {
+        console.error("Error fetching drivers:", error);
+        return drivers;
+      } finally {
+        setLoading((prev) => ({ ...prev, drivers: false }));
+      }
+    },
+    [isCacheValid, drivers],
+  );
 
   // Fetch customers with caching
-  const fetchCustomers = useCallback(async (force = false) => {
-    if (!force && isCacheValid("customers") && customers.length > 0) {
-      return customers;
-    }
+  const fetchCustomers = useCallback(
+    async (force = false) => {
+      if (!force && isCacheValid("customers")) {
+        console.log("Using cached customers data");
+        return customers;
+      }
 
-    setLoading((prev) => ({ ...prev, customers: true }));
-    try {
-      const response = await api.get("/customers");
-      const data = response.data?.data || [];
-      setCustomers(data);
-      cacheTimestamps.current.customers = Date.now();
-      return data;
-    } catch (error) {
-      console.error("Error fetching customers:", error);
-      return [];
-    } finally {
-      setLoading((prev) => ({ ...prev, customers: false }));
-    }
-  }, []);
+      console.log("Fetching fresh customers data...");
+      setLoading((prev) => ({ ...prev, customers: true }));
+      try {
+        const response = await api.get("/customers");
+        const data = response.data?.data || [];
+        setCustomers(data);
+        cacheTimestamps.current.customers = Date.now();
+        return data;
+      } catch (error) {
+        console.error("Error fetching customers:", error);
+        return customers;
+      } finally {
+        setLoading((prev) => ({ ...prev, customers: false }));
+      }
+    },
+    [isCacheValid, customers],
+  );
 
   // Fetch shipments with caching
-  const fetchShipments = useCallback(async (force = false) => {
-    if (!force && isCacheValid("shipments") && shipments.length > 0) {
-      return shipments;
-    }
+  const fetchShipments = useCallback(
+    async (force = false) => {
+      if (!force && isCacheValid("shipments")) {
+        console.log("Using cached shipments data");
+        return shipments;
+      }
 
-    setLoading((prev) => ({ ...prev, shipments: true }));
-    try {
-      const response = await shipmentService.getAllShipments();
-      const data = response.data || [];
-      setShipments(data);
-      cacheTimestamps.current.shipments = Date.now();
-      return data;
-    } catch (error) {
-      console.error("Error fetching shipments:", error);
-      return [];
-    } finally {
-      setLoading((prev) => ({ ...prev, shipments: false }));
-    }
-  }, []);
+      console.log("Fetching fresh shipments data...");
+      setLoading((prev) => ({ ...prev, shipments: true }));
+      try {
+        const response = await shipmentService.getAllShipments();
+        const data = response.data || [];
+        setShipments(data);
+        cacheTimestamps.current.shipments = Date.now();
+        return data;
+      } catch (error) {
+        console.error("Error fetching shipments:", error);
+        return shipments;
+      } finally {
+        setLoading((prev) => ({ ...prev, shipments: false }));
+      }
+    },
+    [isCacheValid, shipments],
+  );
 
   // Fetch stats with caching
   const fetchStats = useCallback(
@@ -190,19 +213,29 @@ export const AdminDataProvider = ({ children }) => {
         setLoading((prev) => ({ ...prev, stats: false }));
       }
     },
-    [stats],
+    [
+      stats,
+      isCacheValid,
+      fetchVehicles,
+      fetchDrivers,
+      fetchCustomers,
+      fetchShipments,
+    ],
   );
 
   // Fetch all admin data
-  const fetchAllData = useCallback(async (force = false) => {
-    await Promise.all([
-      fetchVehicles(force),
-      fetchDrivers(force),
-      fetchCustomers(force),
-      fetchShipments(force),
-    ]);
-    // Stats will be calculated automatically when data changes
-  }, []);
+  const fetchAllData = useCallback(
+    async (force = false) => {
+      console.log(`Fetching all admin data (force: ${force})...`);
+      await Promise.all([
+        fetchVehicles(force),
+        fetchDrivers(force),
+        fetchCustomers(force),
+        fetchShipments(force),
+      ]);
+    },
+    [fetchVehicles, fetchDrivers, fetchCustomers, fetchShipments],
+  );
 
   // Invalidate cache for specific resource
   const invalidateCache = useCallback((resource) => {
@@ -226,13 +259,11 @@ export const AdminDataProvider = ({ children }) => {
   // Remove vehicle from cache
   const removeVehicleFromCache = useCallback((vehicleId) => {
     setVehicles((prev) => prev.filter((v) => v._id !== vehicleId));
-    setStats((prev) => ({ ...prev, totalVehicles: prev.totalVehicles - 1 }));
   }, []);
 
   // Add vehicle to cache
   const addVehicleToCache = useCallback((newVehicle) => {
     setVehicles((prev) => [newVehicle, ...prev]);
-    setStats((prev) => ({ ...prev, totalVehicles: prev.totalVehicles + 1 }));
   }, []);
 
   // Similar functions for drivers
@@ -244,12 +275,10 @@ export const AdminDataProvider = ({ children }) => {
 
   const removeDriverFromCache = useCallback((driverId) => {
     setDrivers((prev) => prev.filter((d) => d._id !== driverId));
-    setStats((prev) => ({ ...prev, totalDrivers: prev.totalDrivers - 1 }));
   }, []);
 
   const addDriverToCache = useCallback((newDriver) => {
     setDrivers((prev) => [newDriver, ...prev]);
-    setStats((prev) => ({ ...prev, totalDrivers: prev.totalDrivers + 1 }));
   }, []);
 
   // Similar functions for customers
@@ -261,12 +290,10 @@ export const AdminDataProvider = ({ children }) => {
 
   const removeCustomerFromCache = useCallback((customerId) => {
     setCustomers((prev) => prev.filter((c) => c._id !== customerId));
-    setStats((prev) => ({ ...prev, totalCustomers: prev.totalCustomers - 1 }));
   }, []);
 
   const addCustomerToCache = useCallback((newCustomer) => {
     setCustomers((prev) => [newCustomer, ...prev]);
-    setStats((prev) => ({ ...prev, totalCustomers: prev.totalCustomers + 1 }));
   }, []);
 
   const value = {
@@ -290,7 +317,7 @@ export const AdminDataProvider = ({ children }) => {
 
     // Cache management
     invalidateCache,
-    isCacheValid: (key) => isCacheValid(key),
+    isCacheValid,
 
     // Cache update functions
     updateVehicleInCache,

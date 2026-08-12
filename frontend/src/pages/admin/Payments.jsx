@@ -32,17 +32,17 @@ const Payments = () => {
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   useEffect(() => {
-    fetchPayments();
+    fetchPayments(false);
   }, [filter]);
 
-  const fetchPayments = async () => {
+  const fetchPayments = async (force = false) => {
     try {
-      setLoading(true);
+      if (payments.length === 0) setLoading(true);
       const params = {};
       if (filter !== "all") params.status = filter;
       if (searchTerm) params.search = searchTerm;
 
-      const res = await paymentService.getAllPayments(params);
+      const res = await paymentService.getAllPayments(params, { force, ttl: 30000 });
       if (res && res.data) {
         setPayments(res.data);
         if (res.stats) {

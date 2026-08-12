@@ -1,26 +1,28 @@
 import api from "./api";
 
 export const customerService = {
-  // Get all customers
-  getAllCustomers: async (params = {}) => {
-    const response = await api.get("/customers", { params });
+  // Get all customers with caching
+  getAllCustomers: async (params = {}, options = {}) => {
+    const { force = false, ttl = 45000 } = options;
+    const response = await api.cachedGet("/customers", { params, force, ttl });
     return response.data;
   },
 
   // Get single customer details
-  getCustomerById: async (id) => {
-    const response = await api.get(`/customers/${id}`);
+  getCustomerById: async (id, options = {}) => {
+    const { force = false, ttl = 30000 } = options;
+    const response = await api.cachedGet(`/customers/${id}`, { force, ttl });
     return response.data;
   },
 
-  // Create customer (simulates registering customer)
+  // Create customer
   createCustomer: async (customerData) => {
-    // Falls back to backend register auth route since customer accounts need authentication records
     const response = await api.post("/auth/register", {
       name: customerData.fullName,
       email: customerData.email,
       phone: customerData.mobileNumber,
-      password: "customer123", // default temporary password
+      companyName: customerData.companyName || customerData.fullName,
+      password: customerData.password || "customer123",
       role: "customer",
     });
     return response.data;

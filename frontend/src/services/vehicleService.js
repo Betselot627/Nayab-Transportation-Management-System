@@ -2,14 +2,16 @@ import api from "./api";
 
 export const vehicleService = {
   // Get all vehicles (role-based)
-  getAllVehicles: async (params = {}) => {
-    const response = await api.get("/vehicles", { params });
+  getAllVehicles: async (params = {}, options = {}) => {
+    const { force = false, ttl = 35000 } = options;
+    const response = await api.cachedGet("/vehicles", { params, force, ttl });
     return response.data;
   },
 
   // Get single vehicle
-  getVehicleById: async (id) => {
-    const response = await api.get(`/vehicles/${id}`);
+  getVehicleById: async (id, options = {}) => {
+    const { force = false, ttl = 30000 } = options;
+    const response = await api.cachedGet(`/vehicles/${id}`, { force, ttl });
     return response.data;
   },
 
@@ -20,8 +22,9 @@ export const vehicleService = {
   },
 
   // Get pending vehicles (Admin)
-  getPendingVehicles: async () => {
-    const response = await api.get("/vehicles/pending");
+  getPendingVehicles: async (options = {}) => {
+    const { force = false, ttl = 20000 } = options;
+    const response = await api.cachedGet("/vehicles/pending", { force, ttl });
     return response.data;
   },
 
@@ -79,8 +82,9 @@ export const vehicleService = {
   },
 
   // Get vehicle stats (Admin)
-  getVehicleStats: async () => {
-    const response = await api.get("/vehicles/stats");
+  getVehicleStats: async (options = {}) => {
+    const { force = false, ttl = 60000 } = options;
+    const response = await api.cachedGet("/vehicles/stats", { force, ttl });
     return response.data;
   },
 };

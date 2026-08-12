@@ -263,7 +263,8 @@ const updateTripStatus = async (req, res) => {
 
     // 1. Role & Driver Assignment Validation
     if (req.user.role === "driver") {
-      const loggedDriver = await Driver.findOne({ userId: req.user._id });
+      const userId = req.user._id || req.user.id;
+      const loggedDriver = await Driver.findOne({ userId });
       if (!loggedDriver || String(trip.driverId) !== String(loggedDriver._id)) {
         return res.status(403).json({
           success: false,
@@ -278,16 +279,27 @@ const updateTripStatus = async (req, res) => {
         ? "completed"
         : status === "arrived" || status === "arrived_at_destination"
         ? "arrived"
+        : status === "in_transit" || status === "on_the_way"
+        ? "in_transit"
+        : status === "picked_up"
+        ? "picked_up"
         : status;
 
-    const currentStep =
-      trip.status === "arrived_at_destination" ? "arrived" : trip.status || "pending";
+    const normalizeCurrent = (s) => {
+      if (["pending", "assigned", "booked"].includes(s)) return "booked";
+      if (s === "picked_up") return "picked_up";
+      if (s === "in_transit" || s === "on_the_way") return "in_transit";
+      if (s === "arrived" || s === "arrived_at_destination") return "arrived";
+      if (s === "completed" || s === "delivered") return "completed";
+      return s || "booked";
+    };
 
-    // 3. Strict Sequential Step Enforcement (Cannot skip steps)
+    const currentStep = normalizeCurrent(trip.status);
+
+    // 3. Strict 5-Stage Sequential Step Enforcement (Cannot skip steps)
+    // Booked -> Picked Up -> In Transit -> Arrived -> Delivered (Completed)
     const allowedNextSteps = {
-      pending: ["picked_up", "on_the_way", "arrived_at_pickup"],
-      on_the_way: ["arrived_at_pickup", "picked_up"],
-      arrived_at_pickup: ["picked_up"],
+      booked: ["picked_up"],
       picked_up: ["in_transit"],
       in_transit: ["arrived"],
       arrived: ["completed"],
@@ -296,22 +308,20 @@ const updateTripStatus = async (req, res) => {
 
     const validTransitions = allowedNextSteps[currentStep] || [];
     if (
-      req.user.role === "driver" &&
       validTransitions.length > 0 &&
       !validTransitions.includes(targetStatus) &&
       currentStep !== targetStatus
     ) {
+      const stepLabels = {
+        booked: "Booked / Assigned",
+        picked_up: "Picked Up",
+        in_transit: "In Transit",
+        arrived: "Arrived",
+        completed: "Delivered",
+      };
       return res.status(400).json({
         success: false,
-        message: `Workflow step violation: Cannot jump from '${currentStep.replace(
-          /_/g,
-          " "
-        )}' to '${targetStatus.replace(
-          /_/g,
-          " "
-        )}'. Next required step is: ${validTransitions
-          .map((s) => s.replace(/_/g, " "))
-          .join(" or ")}.`,
+        message: `Workflow step violation: Cannot jump from '${stepLabels[currentStep] || currentStep}' to '${stepLabels[targetStatus] || targetStatus}'. Next required step is: '${stepLabels[validTransitions[0]] || validTransitions[0]}'.`,
       });
     }
 
@@ -345,7 +355,7 @@ const updateTripStatus = async (req, res) => {
     }
 
     // Update timestamps
-    if (["picked_up", "on_the_way", "in_transit"].includes(targetStatus) && !trip.startTime) {
+    if (["picked_up", "in_transit"].includes(targetStatus) && !trip.startTime) {
       trip.startTime = new Date();
     }
 
@@ -391,7 +401,9 @@ const updateTripStatus = async (req, res) => {
 
       if (shipment) {
         shipment.status = "delivered";
-        shipment.actualDeliveryDate = new Date();
+        if (!shipment.actualDeliveryDate) {
+          shipment.actualDeliveryDate = new Date();
+        }
       }
     } else {
       if (driver) {
@@ -407,7 +419,7 @@ const updateTripStatus = async (req, res) => {
         if (targetStatus === "picked_up") {
           shipment.status = "picked_up";
           if (!shipment.actualPickupDate) shipment.actualPickupDate = new Date();
-        } else if (targetStatus === "in_transit" || targetStatus === "on_the_way") {
+        } else if (targetStatus === "in_transit") {
           shipment.status = "in_transit";
         } else if (targetStatus === "arrived") {
           shipment.status = "arrived";
@@ -422,6 +434,7 @@ const updateTripStatus = async (req, res) => {
         status: shipment.status,
         updatedBy: req.user._id,
         remarks: remarks || `Status updated to "${targetStatus.replace(/_/g, " ")}" by driver.`,
+        timestamp: new Date(),
       });
       await shipment.save();
 
@@ -429,29 +442,33 @@ const updateTripStatus = async (req, res) => {
       setImmediate(async () => {
         try {
           const customer = await Customer.findById(shipment.customerId);
+          const pickupCity = shipment.pickupLocation?.city || "Origin";
+          const destCity = shipment.destination?.city || "Destination";
+          const driverName = driver?.fullName || "Assigned Driver";
+          const plateNum = vehicle?.plateNumber || "Fleet Vehicle";
 
           const statusTitles = {
-            picked_up: "Cargo Received & Loaded",
-            in_transit: "Trip Started & In Transit",
-            arrived_at_destination: "Driver Arrived at Destination",
-            completed: "Shipment Delivered Successfully",
+            picked_up: "Cargo Picked Up ✓",
+            in_transit: "Shipment In Transit ✓",
+            arrived: "Driver Arrived at Destination ✓",
+            completed: "Shipment Delivered ✓",
           };
 
           const customerMessages = {
-            picked_up: `Driver ${driver?.fullName || "Assigned Driver"} has received and loaded your cargo for shipment ${shipment.shipmentNumber}.`,
-            in_transit: `Driver ${driver?.fullName || "Assigned Driver"} has started the journey for shipment ${shipment.shipmentNumber}. Live tracking is active!`,
-            arrived_at_destination: `Driver ${driver?.fullName || "Assigned Driver"} has arrived at the destination for shipment ${shipment.shipmentNumber}.`,
-            completed: `Your shipment ${shipment.shipmentNumber} has been delivered successfully! Your digital receipt is available in the portal.`,
+            picked_up: `Driver ${driverName} (${plateNum}) has picked up and loaded your cargo for shipment #${shipment.shipmentNumber} at ${pickupCity}.`,
+            in_transit: `Driver ${driverName} has started the journey for shipment #${shipment.shipmentNumber} from ${pickupCity} to ${destCity}. Live tracking is active!`,
+            arrived: `Driver ${driverName} has arrived at destination (${destCity}) for shipment #${shipment.shipmentNumber}.`,
+            completed: `Your shipment #${shipment.shipmentNumber} has been delivered successfully! Thank you for choosing NTMS.`,
           };
 
           if (customer && customer.userId) {
             await Notification.create({
               userId: customer.userId._id || customer.userId,
-              title: statusTitles[status] || "Shipment Progress Update",
-              message: customerMessages[status] || `Your shipment ${shipment.shipmentNumber} is now ${status.replace(/_/g, " ")}.`,
+              title: statusTitles[targetStatus] || "Shipment Progress Update",
+              message: customerMessages[targetStatus] || `Your shipment #${shipment.shipmentNumber} is now ${targetStatus.replace(/_/g, " ")}.`,
               type: "shipment",
-              priority: status === "completed" ? "high" : "medium",
-              actionUrl: `/customer/track-shipment/${shipment._id}`,
+              priority: targetStatus === "completed" ? "high" : "medium",
+              actionUrl: `/customer/track-shipment?id=${shipment._id}`,
               relatedEntity: {
                 entityType: "shipment",
                 entityId: shipment._id,
@@ -464,12 +481,12 @@ const updateTripStatus = async (req, res) => {
           for (const admin of admins) {
             await Notification.create({
               userId: admin._id,
-              title: `Shipment ${status.replace(/_/g, " ").toUpperCase()}`,
-              message: status === "completed"
-                ? `Shipment ${shipment.shipmentNumber} delivered by ${driver?.fullName || "Driver"}. Commission: ${commissionEarned.toLocaleString()} ETB.`
-                : `Shipment ${shipment.shipmentNumber} status updated to "${status.replace(/_/g, " ")}" by driver ${driver?.fullName || ""}.`,
+              title: `Shipment #${shipment.shipmentNumber}: ${targetStatus === "completed" ? "DELIVERED" : targetStatus.replace(/_/g, " ").toUpperCase()}`,
+              message: targetStatus === "completed"
+                ? `Shipment #${shipment.shipmentNumber} delivered by ${driverName} (${plateNum}). Driver Commission: ${commissionEarned.toLocaleString()} ETB.`
+                : `Shipment #${shipment.shipmentNumber} (${pickupCity} → ${destCity}) status updated to "${targetStatus.replace(/_/g, " ")}" by ${driverName}.`,
               type: "shipment",
-              priority: status === "completed" ? "high" : "low",
+              priority: targetStatus === "completed" ? "high" : "low",
               actionUrl: "/admin/shipments",
               relatedEntity: {
                 entityType: "shipment",
@@ -479,11 +496,11 @@ const updateTripStatus = async (req, res) => {
           }
 
           // Driver notification on completion
-          if (status === "completed" && driver && driver.userId) {
+          if (targetStatus === "completed" && driver && driver.userId) {
             await Notification.create({
               userId: driver.userId._id || driver.userId,
-              title: "Delivery Complete & Commission Earned",
-              message: `Great job! You completed trip ${trip.tripNumber}. You earned ${commissionEarned.toLocaleString()} ETB commission.`,
+              title: "Delivery Complete & Commission Earned ✓",
+              message: `Great job! You completed trip #${trip.tripNumber}. You earned ${commissionEarned.toLocaleString()} ETB commission.`,
               type: "payment",
               priority: "high",
               actionUrl: "/driver/my-trips",

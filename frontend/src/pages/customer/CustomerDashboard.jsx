@@ -24,13 +24,13 @@ const CustomerDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchShipments();
+    fetchShipments(false);
   }, []);
 
-  const fetchShipments = async () => {
+  const fetchShipments = async (force = false) => {
     try {
-      setLoading(true);
-      const response = await shipmentService.getAllShipments({ limit: 50 });
+      if (shipments.length === 0) setLoading(true);
+      const response = await shipmentService.getAllShipments({ limit: 20 }, { force, ttl: 30000 });
       const all = response.data || [];
       setShipments(all.slice(0, 10));
 

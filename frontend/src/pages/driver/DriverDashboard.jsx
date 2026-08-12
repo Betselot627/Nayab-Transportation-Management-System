@@ -47,8 +47,8 @@ const DriverDashboard = () => {
     const loadData = async (showLoader = false) => {
       if (document.hidden && !showLoader) return;
       try {
-        if (showLoader) setLoading(true);
-        const response = await tripService.getMyTrips();
+        if (showLoader && trips.length === 0) setLoading(true);
+        const response = await tripService.getMyTrips({ force: showLoader, ttl: 20000 });
         if (!isMounted) return;
         const all = response.data || [];
         setTrips(all);
@@ -60,7 +60,7 @@ const DriverDashboard = () => {
           completed: all.filter((t) => t.status === "completed").length,
         });
       } catch (err) {
-        if (isMounted) console.error("Failed to fetch trips:", err);
+        if (isMounted) console.warn("Failed to fetch trips:", err.message);
       } finally {
         if (isMounted && showLoader) setLoading(false);
       }
@@ -70,7 +70,7 @@ const DriverDashboard = () => {
 
     const interval = setInterval(() => {
       loadData(false);
-    }, 8000); // 8s optimal polling
+    }, 20000); // 20s optimal polling
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {

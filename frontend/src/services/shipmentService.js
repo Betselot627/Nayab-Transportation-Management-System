@@ -1,15 +1,24 @@
 import api from "./api";
 
 export const shipmentService = {
-  // Get all shipments
-  getAllShipments: async (params = {}) => {
-    const response = await api.get("/shipments", { params });
+  // Get all shipments with caching & pagination
+  getAllShipments: async (params = {}, options = {}) => {
+    const { force = false, ttl = 30000 } = options;
+    const response = await api.cachedGet("/shipments", {
+      params,
+      force,
+      ttl,
+    });
     return response.data;
   },
 
   // Get single shipment
-  getShipmentById: async (id) => {
-    const response = await api.get(`/shipments/${id}`);
+  getShipmentById: async (id, options = {}) => {
+    const { force = false, ttl = 20000 } = options;
+    const response = await api.cachedGet(`/shipments/${id}`, {
+      force,
+      ttl,
+    });
     return response.data;
   },
 
@@ -38,8 +47,12 @@ export const shipmentService = {
   },
 
   // Get shipment statistics
-  getShipmentStats: async () => {
-    const response = await api.get("/shipments/stats");
+  getShipmentStats: async (options = {}) => {
+    const { force = false, ttl = 60000 } = options;
+    const response = await api.cachedGet("/shipments/stats", {
+      force,
+      ttl,
+    });
     return response.data;
   },
 

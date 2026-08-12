@@ -45,6 +45,11 @@ const Login = () => {
       label: "Driver",
       icon: Car,
     },
+    {
+      name: "dispatcher",
+      label: "Dispatcher",
+      icon: Truck,
+    },
   ];
 
   const handleChange = (e) => {
@@ -68,7 +73,8 @@ const Login = () => {
 
         if (role === "admin") navigate("/admin/dashboard");
         else if (role === "driver") navigate("/driver/dashboard");
-        else if (role === "customer") navigate("/customer/dashboard");
+        else if (role === "dispatcher") navigate("/dispatcher/dashboard");
+        else navigate("/customer/dashboard");
       } else {
         setError(result.error);
       }

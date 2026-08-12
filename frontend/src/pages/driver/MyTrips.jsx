@@ -25,20 +25,22 @@ const MyTrips = () => {
   useEffect(() => {
     fetchTrips(true);
     const interval = setInterval(() => {
-      fetchTrips(false);
-    }, 5000);
+      if (!document.hidden) {
+        fetchTrips(false);
+      }
+    }, 20000);
 
     return () => clearInterval(interval);
   }, []);
 
   const fetchTrips = async (showLoader = false) => {
     try {
-      if (showLoader) setLoading(true);
-      const response = await tripService.getMyTrips();
+      if (showLoader && trips.length === 0) setLoading(true);
+      const response = await tripService.getMyTrips({ force: showLoader, ttl: 20000 });
       setTrips(response.data || []);
     } catch (error) {
-      console.error(error);
-      if (showLoader) toast.error("Failed to load trips");
+      console.warn("Failed to load trips:", error.message);
+      if (showLoader && trips.length === 0) toast.error("Failed to load trips");
     } finally {
       if (showLoader) setLoading(false);
     }
@@ -47,37 +49,47 @@ const MyTrips = () => {
   const getStatusConfig = (status) => {
     const configs = {
       pending: {
-        label: "Pending",
+        label: "Booked / Assigned",
         badgeStyle: "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
         borderStyle: "border-l-4 border-l-yellow-500",
       },
+      assigned: {
+        label: "Assigned",
+        badgeStyle: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
+        borderStyle: "border-l-4 border-l-indigo-500",
+      },
       on_the_way: {
-        label: "Assigned",
-        badgeStyle: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20",
-        borderStyle: "border-l-4 border-l-blue-500",
-      },
-      arrived_at_pickup: {
-        label: "Assigned",
-        badgeStyle: "bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/20",
-        borderStyle: "border-l-4 border-l-teal-500",
-      },
-      picked_up: {
-        label: "In Transit",
-        badgeStyle: "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/20",
-        borderStyle: "border-l-4 border-l-purple-500",
-      },
-      in_transit: {
         label: "In Transit",
         badgeStyle: "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/20",
         borderStyle: "border-l-4 border-l-sky-500",
       },
+      picked_up: {
+        label: "Picked Up ✓",
+        badgeStyle: "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/20",
+        borderStyle: "border-l-4 border-l-purple-500",
+      },
+      in_transit: {
+        label: "In Transit ✓",
+        badgeStyle: "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/20",
+        borderStyle: "border-l-4 border-l-sky-500",
+      },
+      arrived: {
+        label: "Arrived ✓",
+        badgeStyle: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20",
+        borderStyle: "border-l-4 border-l-amber-500",
+      },
       arrived_at_destination: {
-        label: "Delivered",
-        badgeStyle: "bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/20",
-        borderStyle: "border-l-4 border-l-orange-500",
+        label: "Arrived ✓",
+        badgeStyle: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20",
+        borderStyle: "border-l-4 border-l-amber-500",
       },
       completed: {
-        label: "Completed",
+        label: "Delivered ✓",
+        badgeStyle: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+        borderStyle: "border-l-4 border-l-emerald-600",
+      },
+      delivered: {
+        label: "Delivered ✓",
         badgeStyle: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
         borderStyle: "border-l-4 border-l-emerald-600",
       },
@@ -88,7 +100,7 @@ const MyTrips = () => {
       },
     };
     return configs[status] || {
-      label: status.replace(/_/g, " "),
+      label: (status || "Pending").replace(/_/g, " "),
       badgeStyle: "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
       borderStyle: "border-l-4 border-l-yellow-500",
     };
@@ -96,9 +108,9 @@ const MyTrips = () => {
 
   const filteredTrips = trips.filter((trip) => {
     if (filter === "all") return true;
-    if (filter === "pending") return trip.status === "pending";
-    if (filter === "active") return ["on_the_way", "arrived_at_pickup", "picked_up", "in_transit", "arrived_at_destination"].includes(trip.status);
-    if (filter === "completed") return trip.status === "completed";
+    if (filter === "pending") return trip.status === "pending" || trip.status === "assigned";
+    if (filter === "active") return ["picked_up", "in_transit", "on_the_way", "arrived", "arrived_at_destination"].includes(trip.status);
+    if (filter === "completed") return trip.status === "completed" || trip.status === "delivered";
     if (filter === "cancelled") return trip.status === "cancelled";
     return true;
   });

@@ -29,13 +29,13 @@ const MyBookings = () => {
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   useEffect(() => {
-    fetchShipments();
+    fetchShipments(false);
   }, []);
 
-  const fetchShipments = async () => {
+  const fetchShipments = async (force = false) => {
     try {
-      setLoading(true);
-      const response = await shipmentService.getAllShipments();
+      if (shipments.length === 0) setLoading(true);
+      const response = await shipmentService.getAllShipments({ limit: 50 }, { force, ttl: 30000 });
       setShipments(response.data || []);
     } catch (err) {
       console.error("Failed to fetch shipments:", err);

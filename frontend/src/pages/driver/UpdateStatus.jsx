@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Clock, AlertCircle, Save, ArrowLeft, Navigation } from "lucide-react";
+import { MapPin, Clock, AlertCircle, Save, ArrowLeft, Navigation, CheckCircle } from "lucide-react";
 import { tripService } from "../../services/tripService";
+import ShipmentTimeline from "../../components/common/ShipmentTimeline";
 import toast, { Toaster } from "react-hot-toast";
 
 const UpdateStatus = () => {
@@ -11,6 +12,7 @@ const UpdateStatus = () => {
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [updatingStage, setUpdatingStage] = useState(false);
 
   const [updateData, setUpdateData] = useState({
     currentLocation: "",
@@ -48,6 +50,23 @@ const UpdateStatus = () => {
 
   const handleChange = (e) => {
     setUpdateData({ ...updateData, [e.target.name]: e.target.value });
+  };
+
+  const handleStageUpdate = async (newStage) => {
+    try {
+      setUpdatingStage(true);
+      setTrip((prev) => (prev ? { ...prev, status: newStage } : prev));
+      const res = await tripService.updateTripStatus(id, { status: newStage, remarks: updateData.notes });
+      if (res && res.data) {
+        setTrip(res.data);
+      }
+      toast.success(`Trip status progressed to "${newStage.replace(/_/g, " ")}"`);
+    } catch (err) {
+      fetchTripDetails();
+      toast.error(err.response?.data?.message || "Failed to update trip stage");
+    } finally {
+      setUpdatingStage(false);
+    }
   };
 
   const handleUpdateLocation = async (e) => {
@@ -92,20 +111,20 @@ const UpdateStatus = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <div className="w-10 h-10 border-2 border-t-transparent border-green-700 rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="w-10 h-10 border-2 border-t-transparent border-purple-600 rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!trip) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
         <div className="text-center space-y-4">
           <p className="text-slate-500 text-lg">Trip not found</p>
           <button
             onClick={() => navigate("/driver/my-trips")}
-            className="px-5 py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-xl font-bold transition text-xs shadow-md"
+            className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition text-xs shadow-md"
           >
             Go back
           </button>
@@ -117,55 +136,36 @@ const UpdateStatus = () => {
   const shipment = trip.shipmentId;
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto min-h-screen bg-slate-50">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-5xl mx-auto min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors">
       <Toaster position="top-right" />
 
       <button
         onClick={() => navigate(`/driver/trip-details/${id}`)}
-        className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-green-700 transition"
+        className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600 transition"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Trip Details
       </button>
 
       <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-          Update Trip Status
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          Update Trip Status & Route
         </h1>
-        <p className="text-xs font-mono text-slate-550 mt-1">Trip ID: #{trip.tripNumber || trip._id}</p>
+        <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-1">
+          Trip ID: #{trip.tripNumber || trip._id} | Shipment #{shipment?.shipmentNumber || "N/A"}
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white border p-5 rounded-2xl flex items-center justify-between shadow-xs">
-          <div>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Pickup city</p>
-            <p className="font-extrabold text-slate-900 mt-1">{shipment?.pickupLocation?.city || "N/A"}</p>
-          </div>
-          <div className="p-3 rounded-xl bg-green-50 text-green-700 border">
-            <MapPin className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-white border p-5 rounded-2xl flex items-center justify-between shadow-xs">
-          <div>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Current Status</p>
-            <p className="font-extrabold text-slate-900 mt-1 capitalize">{trip.status.replace(/_/g, " ")}</p>
-          </div>
-          <div className="p-3 rounded-xl bg-green-50 text-green-700 border">
-            <Clock className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-white border p-5 rounded-2xl flex items-center justify-between shadow-xs">
-          <div>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Destination city</p>
-            <p className="font-extrabold text-slate-900 mt-1">{shipment?.destination?.city || "N/A"}</p>
-          </div>
-          <div className="p-3 rounded-xl bg-green-50 text-green-700 border">
-            <MapPin className="w-5 h-5 text-red-500" />
-          </div>
-        </div>
-      </div>
+      {/* 5-Step Live Shipment Timeline with Next Step Button */}
+      <ShipmentTimeline
+        shipment={shipment}
+        trip={trip}
+        currentStatus={trip.status}
+        isDriver={true}
+        updating={updatingStage}
+        onUpdateStatus={handleStageUpdate}
+        showDetailsCard={false}
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 15 }}

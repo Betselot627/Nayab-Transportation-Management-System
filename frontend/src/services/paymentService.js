@@ -5,7 +5,7 @@ import api from "./api";
  * Handles Chapa checkout initialization, backend verification, receipts, and admin financial reports.
  */
 export const paymentService = {
-  // Initialize Chapa payment (Security: backend retrieves final price from DB)
+  // Initialize Chapa payment
   initializePayment: async (shipmentId) => {
     const response = await api.post("/payments/initialize", { shipmentId });
     return response.data;
@@ -17,33 +17,38 @@ export const paymentService = {
     return response.data;
   },
 
-  // Get authenticated customer's payment history
-  getMyPayments: async () => {
-    const response = await api.get("/payments/my-payments");
+  // Get authenticated customer's payment history with caching
+  getMyPayments: async (options = {}) => {
+    const { force = false, ttl = 30000 } = options;
+    const response = await api.cachedGet("/payments/my-payments", { force, ttl });
     return response.data;
   },
 
   // Get single printable receipt
-  getReceipt: async (txRef) => {
-    const response = await api.get(`/payments/receipt/${encodeURIComponent(txRef)}`);
+  getReceipt: async (txRef, options = {}) => {
+    const { force = false, ttl = 60000 } = options;
+    const response = await api.cachedGet(`/payments/receipt/${encodeURIComponent(txRef)}`, { force, ttl });
     return response.data;
   },
 
   // Get all payments (Admin with search/filters)
-  getAllPayments: async (params = {}) => {
-    const response = await api.get("/payments", { params });
+  getAllPayments: async (params = {}, options = {}) => {
+    const { force = false, ttl = 30000 } = options;
+    const response = await api.cachedGet("/payments", { params, force, ttl });
     return response.data;
   },
 
   // Get single payment details
-  getPaymentById: async (id) => {
-    const response = await api.get(`/payments/${id}`);
+  getPaymentById: async (id, options = {}) => {
+    const { force = false, ttl = 30000 } = options;
+    const response = await api.cachedGet(`/payments/${id}`, { force, ttl });
     return response.data;
   },
 
   // Get payment statistics (Admin financial summary)
-  getPaymentStats: async () => {
-    const response = await api.get("/payments/stats");
+  getPaymentStats: async (options = {}) => {
+    const { force = false, ttl = 60000 } = options;
+    const response = await api.cachedGet("/payments/stats", { force, ttl });
     return response.data;
   },
 

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ReceiptModal from "../../components/payment/ReceiptModal";
+import ShipmentTimeline from "../../components/common/ShipmentTimeline";
 import toast, { Toaster } from "react-hot-toast";
 
 const ShipmentDetails = () => {
@@ -34,26 +35,28 @@ const ShipmentDetails = () => {
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
-  // Set up 5-second polling interval
+  // Set up visibility-aware 15-second polling interval
   useEffect(() => {
     fetchShipmentDetails(true);
     const interval = setInterval(() => {
-      fetchShipmentDetails(false);
-    }, 5000);
+      if (!document.hidden) {
+        fetchShipmentDetails(false);
+      }
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [id]);
 
   const fetchShipmentDetails = async (showLoader = false) => {
     try {
-      if (showLoader) setLoading(true);
-      const res = await shipmentService.getShipmentById(id);
+      if (showLoader && !shipment) setLoading(true);
+      const res = await shipmentService.getShipmentById(id, { force: showLoader, ttl: 15000 });
       if (res && res.data) {
         setShipment(res.data);
       }
     } catch (error) {
       console.error(error);
-      if (showLoader) toast.error("Failed to load shipment details");
+      if (showLoader && !shipment) toast.error("Failed to load shipment details");
     } finally {
       if (showLoader) setLoading(false);
     }
@@ -188,58 +191,13 @@ const ShipmentDetails = () => {
         </div>
       </div>
 
-      {/* 6-Stage Progress Tracker */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 shadow-sm transition-colors">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Shipment Lifecycle Progress</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-          {[
-            { key: "pending", label: "1. Booking Created", done: true },
-            {
-              key: "assigned",
-              label: "2. Driver Assigned",
-              done: ["assigned", "picked_up", "in_transit", "arrived", "arrived_at_destination", "delivered", "completed"].includes(shipment.status),
-            },
-            {
-              key: "picked_up",
-              label: "3. Picked Up",
-              done: ["picked_up", "in_transit", "arrived", "arrived_at_destination", "delivered", "completed"].includes(shipment.status),
-            },
-            {
-              key: "in_transit",
-              label: "4. In Transit",
-              done: ["in_transit", "arrived", "arrived_at_destination", "delivered", "completed"].includes(shipment.status),
-            },
-            {
-              key: "arrived",
-              label: "5. Arrived",
-              done: ["arrived", "arrived_at_destination", "delivered", "completed"].includes(shipment.status),
-            },
-            {
-              key: "delivered",
-              label: "6. Delivered",
-              done: ["delivered", "completed"].includes(shipment.status),
-            },
-          ].map((stage, idx) => (
-            <div
-              key={idx}
-              className={`p-3 rounded-xl border text-center transition-all ${
-                stage.done
-                  ? "bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400 font-bold"
-                  : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-400 font-medium"
-              }`}
-            >
-              <div className="flex items-center justify-center mb-1">
-                <CheckCircle
-                  className={`w-4 h-4 ${
-                    stage.done ? "text-purple-600 dark:text-purple-400" : "text-slate-300 dark:text-slate-600"
-                  }`}
-                />
-              </div>
-              <p className="text-[11px] leading-tight">{stage.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* 5-Stage Sequential Shipment Timeline */}
+      <ShipmentTimeline
+        shipment={shipment}
+        currentStatus={shipment.status}
+        isDriver={false}
+        showDetailsCard={false}
+      />
 
       {/* Main Details Grid */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-8 shadow-sm space-y-6 transition-colors">

@@ -1,21 +1,24 @@
 import api from "./api";
 
 export const tripService = {
-  // Get all trips
-  getAllTrips: async (params = {}) => {
-    const response = await api.get("/trips", { params });
+  // Get all trips (Dispatcher/Admin)
+  getAllTrips: async (params = {}, options = {}) => {
+    const { force = false, ttl = 30000 } = options;
+    const response = await api.cachedGet("/trips", { params, force, ttl });
     return response.data;
   },
 
   // Get driver's trips
-  getMyTrips: async () => {
-    const response = await api.get("/trips/my-trips");
+  getMyTrips: async (options = {}) => {
+    const { force = false, ttl = 20000 } = options;
+    const response = await api.cachedGet("/trips/my-trips", { force, ttl });
     return response.data;
   },
 
   // Get single trip
-  getTripById: async (id) => {
-    const response = await api.get(`/trips/${id}`);
+  getTripById: async (id, options = {}) => {
+    const { force = false, ttl = 15000 } = options;
+    const response = await api.cachedGet(`/trips/${id}`, { force, ttl });
     return response.data;
   },
 

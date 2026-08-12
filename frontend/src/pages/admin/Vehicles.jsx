@@ -67,15 +67,15 @@ const Vehicles = () => {
 
   // Load vehicles
   useEffect(() => {
-    fetchVehicles();
+    fetchVehicles(false);
   }, []);
 
-  const fetchVehicles = async () => {
+  const fetchVehicles = async (force = false) => {
     try {
-      setLoading(true);
+      if (vehicles.length === 0) setLoading(true);
       const [allRes, pendingRes] = await Promise.all([
-        vehicleService.getAllVehicles({ limit: 100 }).catch(() => ({ data: [] })),
-        vehicleService.getPendingVehicles().catch(() => ({ data: [] })),
+        vehicleService.getAllVehicles({ limit: 100 }, { force, ttl: 35000 }).catch(() => ({ data: [] })),
+        vehicleService.getPendingVehicles({ force, ttl: 20000 }).catch(() => ({ data: [] })),
       ]);
 
       setVehicles(allRes.data || []);

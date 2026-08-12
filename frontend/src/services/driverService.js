@@ -2,20 +2,23 @@ import api from "./api";
 
 export const driverService = {
   // Get all drivers
-  getAllDrivers: async (params = {}) => {
-    const response = await api.get("/drivers", { params });
+  getAllDrivers: async (params = {}, options = {}) => {
+    const { force = false, ttl = 35000 } = options;
+    const response = await api.cachedGet("/drivers", { params, force, ttl });
     return response.data;
   },
 
   // Get available drivers
-  getAvailableDrivers: async () => {
-    const response = await api.get("/drivers/available");
+  getAvailableDrivers: async (options = {}) => {
+    const { force = false, ttl = 20000 } = options;
+    const response = await api.cachedGet("/drivers/available", { force, ttl });
     return response.data;
   },
 
   // Get single driver
-  getDriverById: async (id) => {
-    const response = await api.get(`/drivers/${id}`);
+  getDriverById: async (id, options = {}) => {
+    const { force = false, ttl = 30000 } = options;
+    const response = await api.cachedGet(`/drivers/${id}`, { force, ttl });
     return response.data;
   },
 

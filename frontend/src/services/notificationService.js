@@ -2,14 +2,16 @@ import api from "./api";
 
 export const notificationService = {
   // Get user's notifications
-  getMyNotifications: async (params = {}) => {
-    const response = await api.get("/notifications", { params });
+  getMyNotifications: async (params = {}, options = {}) => {
+    const { force = false, ttl = 20000 } = options;
+    const response = await api.cachedGet("/notifications", { params, force, ttl });
     return response.data;
   },
 
   // Get unread count
-  getUnreadCount: async () => {
-    const response = await api.get("/notifications/unread-count");
+  getUnreadCount: async (options = {}) => {
+    const { force = false, ttl = 20000 } = options;
+    const response = await api.cachedGet("/notifications/unread-count", { force, ttl });
     return response.data;
   },
 

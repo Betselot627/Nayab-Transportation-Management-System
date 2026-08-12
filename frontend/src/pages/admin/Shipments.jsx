@@ -15,8 +15,10 @@ import {
   Check,
   DollarSign,
   CreditCard,
+  Eye,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import ShipmentTimeline from "../../components/common/ShipmentTimeline";
 import toast, { Toaster } from "react-hot-toast";
 
 const Shipments = () => {
@@ -30,6 +32,10 @@ const Shipments = () => {
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [assignData, setAssignData] = useState({ driverId: "", vehicleId: "" });
 
+  // Tracking Modal State
+  const [showTimelineModal, setShowTimelineModal] = useState(false);
+  const [timelineShipment, setTimelineShipment] = useState(null);
+
   // Price Confirmation Modal State
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [priceShipment, setPriceShipment] = useState(null);
@@ -37,16 +43,16 @@ const Shipments = () => {
   const [savingPrice, setSavingPrice] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    fetchData(false);
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (force = false) => {
     try {
-      setLoading(true);
+      if (shipments.length === 0) setLoading(true);
       const [shipmentsRes, driversRes, vehiclesRes] = await Promise.all([
-        shipmentService.getAllShipments({ limit: 1000 }),
-        driverService.getAvailableDrivers(),
-        vehicleService.getAllVehicles({ available: "true", limit: 1000 }),
+        shipmentService.getAllShipments({ limit: 100 }, { force, ttl: 30000 }),
+        driverService.getAvailableDrivers({ force, ttl: 20000 }),
+        vehicleService.getAllVehicles({ available: "true", limit: 100 }, { force, ttl: 30000 }),
       ]);
 
       setShipments(shipmentsRes.data || []);
@@ -88,10 +94,13 @@ const Shipments = () => {
       return;
     }
 
-    // Verify driver association (must match or be a company fleet vehicle with no driver)
-    const vehicleOwnerId = selectedVehicle.registeredBy?._id || selectedVehicle.registeredBy;
-    if (vehicleOwnerId && String(vehicleOwnerId) !== String(assignData.driverId)) {
-      toast.error("The selected vehicle is not registered to the chosen driver.");
+    // Verify driver association (must match or be an available company fleet vehicle)
+    const vehicleOwnerId = String(selectedVehicle.registeredBy?._id || selectedVehicle.registeredBy || "");
+    const driverIdStr = String(selectedDriver._id || "");
+    const driverUserIdStr = String(selectedDriver.userId?._id || selectedDriver.userId || "");
+
+    if (vehicleOwnerId && vehicleOwnerId !== driverIdStr && vehicleOwnerId !== driverUserIdStr) {
+      toast.error(`Vehicle ${selectedVehicle.plateNumber} is registered to another driver.`);
       return;
     }
 
@@ -408,6 +417,19 @@ const Shipments = () => {
                             <span>{finalPrice > 0 ? "Price" : "Set Price"}</span>
                           </button>
 
+                          {/* Track Live Timeline Action */}
+                          <button
+                            onClick={() => {
+                              setTimelineShipment(shipment);
+                              setShowTimelineModal(true);
+                            }}
+                            className="px-2.5 py-1.5 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-xl font-bold border border-purple-200 dark:border-purple-800/40 transition cursor-pointer text-xs flex items-center gap-1"
+                            title="Inspect 5-Stage Live Timeline"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Track</span>
+                          </button>
+
                           {/* Assign Driver Action */}
                           {(!shipment.driverId || shipment.status === "pending" || shipment.status === "approved") && (
                             <button
@@ -628,6 +650,51 @@ const Shipments = () => {
                 className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow transition"
               >
                 Confirm Assignment
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Live Timeline Modal for Admin Inspection */}
+      {showTimelineModal && timelineShipment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-4xl w-full p-6 shadow-2xl space-y-5 my-8"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Live Tracking Inspector
+                </span>
+                <h3 className="text-xl font-extrabold text-slate-900 dark:text-white font-mono">
+                  {timelineShipment.shipmentNumber}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowTimelineModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* 5-Stage Timeline */}
+            <ShipmentTimeline
+              shipment={timelineShipment}
+              currentStatus={timelineShipment.status}
+              isDriver={false}
+              showDetailsCard={true}
+            />
+
+            <div className="flex justify-end pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                onClick={() => setShowTimelineModal(false)}
+                className="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold rounded-xl transition"
+              >
+                Close Inspector
               </button>
             </div>
           </motion.div>

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAdminData } from "../../context/AdminDataContext";
 import { driverService } from "../../services/driverService";
 import api from "../../services/api";
 import {
@@ -29,7 +30,7 @@ const Drivers = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const [filterStatus, setFilterStatus] = useState("all");
-  
+
   // Sorting State
   const [sortField, setSortField] = useState("rollNumber");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -47,87 +48,113 @@ const Drivers = () => {
     {
       id: 1,
       rollNumber: "D001",
-      photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
+      photo:
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
       fullName: "Abebe Kebede",
       mobileNumber: "+251911223344",
       licenseNumber: "DL-908123",
       licenseExpiryDate: "2028-09-12",
       dateJoined: "2021-04-15",
       status: "Available",
-      documentUrl: "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400&auto=format&fit=crop",
+      documentUrl:
+        "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400&auto=format&fit=crop",
     },
     {
       id: 2,
       rollNumber: "D002",
-      photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
+      photo:
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
       fullName: "Meseret Haile",
       mobileNumber: "+251912445566",
       licenseNumber: "DL-671234",
       licenseExpiryDate: "2027-11-30",
       dateJoined: "2022-08-10",
       status: "On Trip",
-      documentUrl: "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400&auto=format&fit=crop",
+      documentUrl:
+        "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400&auto=format&fit=crop",
     },
     {
       id: 3,
       rollNumber: "D003",
-      photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop",
+      photo:
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop",
       fullName: "Dawit Tesfaye",
       mobileNumber: "+251913778899",
       licenseNumber: "DL-112233",
       licenseExpiryDate: "2026-08-24",
       dateJoined: "2023-01-05",
       status: "Available",
-      documentUrl: "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400&auto=format&fit=crop",
+      documentUrl:
+        "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400&auto=format&fit=crop",
     },
     {
       id: 4,
       rollNumber: "D004",
-      photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop",
+      photo:
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop",
       fullName: "Tigist Alemayehu",
       mobileNumber: "+251914556677",
       licenseNumber: "DL-445566",
       licenseExpiryDate: "2029-03-15",
       dateJoined: "2023-06-18",
       status: "Maintenance",
-      documentUrl: "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400&auto=format&fit=crop",
+      documentUrl:
+        "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400&auto=format&fit=crop",
     },
     {
       id: 5,
       rollNumber: "D005",
-      photo: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=150&auto=format&fit=crop",
+      photo:
+        "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=150&auto=format&fit=crop",
       fullName: "Solomon Girma",
       mobileNumber: "+251915998877",
       licenseNumber: "DL-789012",
       licenseExpiryDate: "2026-05-10",
       dateJoined: "2020-11-20",
       status: "Suspended",
-      documentUrl: "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400&auto=format&fit=crop",
+      documentUrl:
+        "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400&auto=format&fit=crop",
     },
   ];
 
   useEffect(() => {
-    fetchDrivers();
+    fetchDrivers(false);
   }, []);
 
-  const fetchDrivers = async () => {
+  const fetchDrivers = async (force = false) => {
     try {
-      setLoading(true);
-      const res = await driverService.getAllDrivers();
+      if (drivers.length === 0) setLoading(true);
+      const res = await driverService.getAllDrivers(
+        { limit: 100 },
+        { force, ttl: 35000 },
+      );
       if (res && res.data && res.data.length > 0) {
         const mapped = res.data.map((d, idx) => ({
           id: d._id,
           userId: d.userId?._id || null,
           rollNumber: `D${String(idx + 1).padStart(3, "0")}`,
-          photo: d.photoUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150",
+          photo:
+            d.photoUrl ||
+            "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150",
           fullName: d.fullName,
           mobileNumber: d.userId?.phone || "+251910000000",
           licenseNumber: d.licenseNumber,
           licenseExpiryDate: d.licenseExpiry?.split("T")[0] || "2028-12-31",
-          dateJoined: d.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
-          status: d.status === "available" ? "Available" : d.status === "on_trip" ? "On Trip" : d.status === "suspended" ? "Suspended" : "Off Duty",
+          dateJoined:
+            d.createdAt?.split("T")[0] ||
+            new Date().toISOString().split("T")[0],
+          status:
+            d.status === "available"
+              ? "Available"
+              : d.status === "on_trip"
+                ? "On Trip"
+                : d.status === "suspended"
+                  ? "Suspended"
+                  : "Off Duty",
           userStatus: d.userId?.status || "active",
-          documentUrl: d.licenseDocumentUrl || "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400",
+          documentUrl:
+            d.licenseDocumentUrl ||
+            "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?q=80&w=400",
         }));
         setDrivers(mapped);
       } else {
@@ -157,10 +184,10 @@ const Drivers = () => {
       if (typeof deleteId === "string") {
         await driverService.deleteDriver(deleteId);
       }
-      setDrivers(drivers.filter((d) => d.id !== deleteId));
+      fetchDrivers(true); // Refresh cached data
       toast.success("Driver profile removed successfully!");
     } catch (err) {
-      setDrivers(drivers.filter((d) => d.id !== deleteId));
+      fetchDrivers(true); // Refresh anyway
       toast.success("Driver profile removed successfully! (Simulated)");
     }
   };
@@ -169,7 +196,7 @@ const Drivers = () => {
     try {
       await api.put(`/users/${userId}/status`, { status: "active" });
       toast.success("Driver account approved successfully!");
-      fetchDrivers();
+      fetchDrivers(true); // Refresh cached data
     } catch (err) {
       console.error("Failed to approve driver:", err);
       toast.error(err.response?.data?.message || "Failed to approve driver");
@@ -218,7 +245,10 @@ const Drivers = () => {
   // Pagination columns
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentDrivers = filteredDrivers.slice(indexOfFirstItem, indexOfLastItem);
+  const currentDrivers = filteredDrivers.slice(
+    indexOfFirstItem,
+    indexOfLastItem,
+  );
   const totalPages = Math.ceil(filteredDrivers.length / itemsPerPage);
 
   return (
@@ -234,34 +264,57 @@ const Drivers = () => {
 
       {/* Driver Photo Preview Modal */}
       {previewPhoto && (
-        <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 animate-fade-in" onClick={() => setPreviewPhoto(null)}>
-          <div className="relative bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-2xl p-2 max-w-sm w-full shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={() => setPreviewPhoto(null)}
+        >
+          <div
+            className="relative bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-2xl p-2 max-w-sm w-full shadow-2xl animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setPreviewPhoto(null)}
               className="absolute top-4 right-4 p-1.5 bg-black/60 hover:bg-black/85 text-white rounded-full transition-transform hover:scale-105 z-10"
             >
               <X className="w-4 h-4" />
             </button>
-            <img src={previewPhoto} alt="Driver Preview" className="w-full rounded-xl object-cover max-h-96" />
+            <img
+              src={previewPhoto}
+              alt="Driver Preview"
+              className="w-full rounded-xl object-cover max-h-96"
+            />
           </div>
         </div>
       )}
 
       {/* Driver Document Viewer Modal */}
       {previewDoc && (
-        <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 animate-fade-in" onClick={() => setPreviewDoc(null)}>
-          <div className="relative bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl animate-scale-up flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={() => setPreviewDoc(null)}
+        >
+          <div
+            className="relative bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl animate-scale-up flex flex-col max-h-[85vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center pb-4 border-b border-gray-250 dark:border-gray-800">
               <h3 className="text-md font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-500" />
                 Driver License & Documents Viewer
               </h3>
-              <button onClick={() => setPreviewDoc(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-400">
+              <button
+                onClick={() => setPreviewDoc(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto mt-6 flex justify-center bg-gray-50 dark:bg-gray-900 border dark:border-gray-800 p-4 rounded-xl">
-              <img src={previewDoc} alt="Document View" className="object-contain max-h-[50vh] rounded-lg shadow-sm border border-gray-200 dark:border-gray-800" />
+              <img
+                src={previewDoc}
+                alt="Document View"
+                className="object-contain max-h-[50vh] rounded-lg shadow-sm border border-gray-200 dark:border-gray-800"
+              />
             </div>
             <div className="flex justify-end gap-3 mt-6 border-t border-gray-250 dark:border-gray-800 pt-4">
               <button
@@ -278,7 +331,9 @@ const Drivers = () => {
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Driver Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Driver Management
+          </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Display, search, edit and register delivery drivers.
           </p>
@@ -294,7 +349,6 @@ const Drivers = () => {
 
       {/* Filter and Search Panel */}
       <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-        
         {/* Searching */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -338,34 +392,52 @@ const Drivers = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/75 dark:bg-gray-900/50 border-b border-gray-250 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase select-none">
-                <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("rollNumber")}>
+                <th
+                  className="py-4 px-6 cursor-pointer"
+                  onClick={() => handleSort("rollNumber")}
+                >
                   <div className="flex items-center gap-1">
                     Roll # <ArrowUpDown className="w-3.5 h-3.5" />
                   </div>
                 </th>
                 <th className="py-4 px-6">Photo</th>
-                <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("fullName")}>
+                <th
+                  className="py-4 px-6 cursor-pointer"
+                  onClick={() => handleSort("fullName")}
+                >
                   <div className="flex items-center gap-1">
                     Driver Name <ArrowUpDown className="w-3.5 h-3.5" />
                   </div>
                 </th>
                 <th className="py-4 px-6">Mobile Number</th>
-                <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("licenseNumber")}>
+                <th
+                  className="py-4 px-6 cursor-pointer"
+                  onClick={() => handleSort("licenseNumber")}
+                >
                   <div className="flex items-center gap-1">
                     License # <ArrowUpDown className="w-3.5 h-3.5" />
                   </div>
                 </th>
-                <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("licenseExpiryDate")}>
+                <th
+                  className="py-4 px-6 cursor-pointer"
+                  onClick={() => handleSort("licenseExpiryDate")}
+                >
                   <div className="flex items-center gap-1">
                     License Expiry <ArrowUpDown className="w-3.5 h-3.5" />
                   </div>
                 </th>
-                <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("dateJoined")}>
+                <th
+                  className="py-4 px-6 cursor-pointer"
+                  onClick={() => handleSort("dateJoined")}
+                >
                   <div className="flex items-center gap-1">
                     Date Joined <ArrowUpDown className="w-3.5 h-3.5" />
                   </div>
                 </th>
-                <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("status")}>
+                <th
+                  className="py-4 px-6 cursor-pointer"
+                  onClick={() => handleSort("status")}
+                >
                   <div className="flex items-center gap-1">
                     Status <ArrowUpDown className="w-3.5 h-3.5" />
                   </div>
@@ -377,7 +449,10 @@ const Drivers = () => {
             <tbody className="divide-y divide-gray-250 dark:divide-gray-800 text-sm">
               {currentDrivers.length > 0 ? (
                 currentDrivers.map((driver) => (
-                  <tr key={driver.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors">
+                  <tr
+                    key={driver.id}
+                    className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors"
+                  >
                     <td className="py-4 px-6 font-semibold text-gray-900 dark:text-white">
                       {driver.rollNumber}
                     </td>
@@ -405,8 +480,16 @@ const Drivers = () => {
                       {driver.dateJoined}
                     </td>
                     <td className="py-4 px-6">
-                      <Badge variant={driver.userStatus === "inactive" ? "error" : getBadgeVariant(driver.status)}>
-                        {driver.userStatus === "inactive" ? "Pending Approval" : driver.status}
+                      <Badge
+                        variant={
+                          driver.userStatus === "inactive"
+                            ? "error"
+                            : getBadgeVariant(driver.status)
+                        }
+                      >
+                        {driver.userStatus === "inactive"
+                          ? "Pending Approval"
+                          : driver.status}
                       </Badge>
                     </td>
                     <td className="py-4 px-6">
@@ -436,7 +519,9 @@ const Drivers = () => {
                           <Trash2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => navigate(`/admin/drivers/edit/${driver.id}`)}
+                          onClick={() =>
+                            navigate(`/admin/drivers/edit/${driver.id}`)
+                          }
                           className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-lg transition-colors"
                           title="Edit"
                         >
@@ -461,7 +546,9 @@ const Drivers = () => {
         {filteredDrivers.length > itemsPerPage && (
           <div className="p-4 bg-gray-50/50 dark:bg-gray-900/10 border-t border-gray-250 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>
-              Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredDrivers.length)} of {filteredDrivers.length} drivers
+              Showing {indexOfFirstItem + 1} to{" "}
+              {Math.min(indexOfLastItem, filteredDrivers.length)} of{" "}
+              {filteredDrivers.length} drivers
             </span>
             <div className="flex gap-1">
               <button
@@ -485,7 +572,9 @@ const Drivers = () => {
                 </button>
               ))}
               <button
-                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(p + 1, totalPages))
+                }
                 disabled={currentPage === totalPages}
                 className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors flex items-center gap-1"
               >

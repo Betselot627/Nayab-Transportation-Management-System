@@ -64,35 +64,20 @@ const AdminDashboard = () => {
   useEffect(() => {
     // Fetch data using cached context on mount
     if (typeof fetchAllData === "function") {
-      fetchAllData();
+      fetchAllData(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchAllData]);
 
   useEffect(() => {
-    // Calculate vehicle stats from cached vehicles
-    if (vehicles && vehicles.length > 0) {
-      const availableCount = vehicles.filter(
-        (v) => v.status === "available" || v.approvalStatus === "approved",
-      ).length;
-      const inUseCount = vehicles.filter((v) => v.status === "in_use").length;
-      const maintenanceCount = vehicles.filter(
-        (v) => v.status === "maintenance",
-      ).length;
-
+    // Derive vehicle stats from cached stats or dashboardData
+    if (stats) {
       setVehicleStats({
-        available: availableCount,
-        inUse: inUseCount,
-        maintenance: maintenanceCount,
-      });
-    } else {
-      setVehicleStats({
-        available: 0,
-        inUse: 0,
-        maintenance: 0,
+        available: stats.availableVehicles || 0,
+        inUse: stats.inUseVehicles || 0,
+        maintenance: stats.maintenanceVehicles || 0,
       });
     }
-  }, [vehicles]);
+  }, [stats]);
 
   const handleRefreshData = async () => {
     if (typeof fetchAllData === "function") {

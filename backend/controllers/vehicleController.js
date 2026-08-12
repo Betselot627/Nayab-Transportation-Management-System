@@ -37,16 +37,17 @@ const getAllVehicles = async (req, res) => {
 
     const query = {};
 
-    // For drivers, show only their own vehicles
+    // For drivers, show ONLY their own vehicles that they personally registered
     if (req.user.role === "driver") {
-      let driver = await Driver.findOne({ userId: req.user._id })
+      const userId = req.user._id || req.user.id;
+      let driver = await Driver.findOne({ userId })
         .select("_id")
         .lean();
       if (!driver) {
         const created = await Driver.create({
-          userId: req.user._id,
-          fullName: req.user.name,
-          licenseNumber: `PENDING-${req.user._id.toString().substring(18)}`,
+          userId: userId,
+          fullName: req.user.name || "Driver",
+          licenseNumber: `PENDING-${userId.toString().substring(18)}`,
           licenseExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
           experience: 0,
         });
@@ -118,16 +119,29 @@ const getAllVehicles = async (req, res) => {
  */
 const getVehicleById = async (req, res) => {
   try {
-    const vehicle = await Vehicle.findById(req.params.id).populate(
-      "currentDriver",
-      "fullName phone email licenseNumber",
-    );
+    const vehicle = await Vehicle.findById(req.params.id)
+      .populate("currentDriver", "fullName phone email licenseNumber")
+      .populate("registeredBy", "fullName licenseNumber userId")
+      .populate("approvedBy", "name email");
 
     if (!vehicle) {
       return res.status(404).json({
         success: false,
         message: "Vehicle not found",
       });
+    }
+
+    // If driver, verify vehicle belongs to them
+    if (req.user.role === "driver") {
+      const userId = req.user._id || req.user.id;
+      const driver = await Driver.findOne({ userId }).select("_id").lean();
+      const vehicleOwnerId = vehicle.registeredBy?._id || vehicle.registeredBy;
+      if (!driver || !vehicleOwnerId || String(vehicleOwnerId) !== String(driver._id)) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. You can only view details of vehicles you personally registered.",
+        });
+      }
     }
 
     res.status(200).json({
@@ -216,13 +230,14 @@ const createVehicle = async (req, res) => {
 
     // If non-admin is registering vehicle
     if (req.user.role !== "admin") {
-      let driver = await Driver.findOne({ userId: req.user._id });
+      const userId = req.user._id || req.user.id;
+      let driver = await Driver.findOne({ userId });
 
       if (!driver) {
         // Auto-create driver profile if it doesn't exist
-        const uniqueLicense = `DL-${req.user._id.toString().slice(-6).toUpperCase()}-${Date.now().toString().slice(-3)}`;
+        const uniqueLicense = `DL-${userId.toString().slice(-6).toUpperCase()}-${Date.now().toString().slice(-3)}`;
         driver = await Driver.create({
-          userId: req.user._id,
+          userId: userId,
           fullName: req.user.name || "Driver",
           licenseNumber: uniqueLicense,
           licenseExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),

@@ -1,65 +1,96 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useCallback } from "react";
 import { authService } from "../services/authService";
+import { cacheManager } from "../services/api";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Synchronously initialize user from localStorage for instant 0ms app start & route transitions
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("user");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const [loading, setLoading] = useState(() => {
+    const token = localStorage.getItem("token");
+    const savedUser = localStorage.getItem("user");
+    // If we have token but no cached user profile, we must wait for first load
+    return !!token && !savedUser;
+  });
+
   const [error, setError] = useState(null);
 
-  // Check if user is logged in on mount
-  useEffect(() => {
-    checkAuth();
+  // Background auth revalidation without blocking page rendering
+  const checkAuth = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    // Session preservation for local simulation
+    if (token === "mock-jwt-token-ntms-admin") {
+      const mockAdmin = {
+        _id: "mock-admin-999",
+        name: "Admin User",
+        email: "admin@ntms.com",
+        phone: "+251911223344",
+        role: "admin",
+        status: "active",
+        token: "mock-jwt-token-ntms-admin",
+      };
+      setUser(mockAdmin);
+      localStorage.setItem("user", JSON.stringify(mockAdmin));
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await authService.getCurrentUser();
+      if (response && response.data) {
+        setUser(response.data);
+        localStorage.setItem("user", JSON.stringify(response.data));
+        localStorage.setItem("role", response.data.role);
+      }
+    } catch (err) {
+      console.warn("Silent auth check failed:", err.message);
+      // Only clear if server explicitly rejected token (401)
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("role");
+        setUser(null);
+        cacheManager.clear();
+      }
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const checkAuth = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      // Session preservation for local simulation
-      if (token === "mock-jwt-token-ntms-admin") {
-        setUser({
-          _id: "mock-admin-999",
-          name: "Admin User",
-          email: "admin@ntms.com",
-          phone: "+251911223344",
-          role: "admin",
-          status: "active",
-          token: "mock-jwt-token-ntms-admin",
-        });
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await authService.getCurrentUser();
-        setUser(response.data);
-      } catch (err) {
-        console.error("Auth check failed:", err);
-        localStorage.removeItem("token");
-      }
-    }
-    setLoading(false);
-  };
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const login = async (credentials) => {
     try {
       setError(null);
       const response = await authService.login(credentials);
-      // If login succeeds, check if response has data
       if (response && response.data) {
-        setUser(response.data);
-        localStorage.setItem("token", response.data.token);
-        return { success: true, data: response.data };
+        const userData = response.data;
+        setUser(userData);
+        localStorage.setItem("token", userData.token);
+        localStorage.setItem("user", JSON.stringify(userData));
+        localStorage.setItem("role", userData.role);
+        return { success: true, data: userData };
       }
       throw new Error("Invalid response format");
     } catch (err) {
-      console.warn(
-        "Backend login failed or server offline. Trying local admin simulation...",
-        err,
-      );
-
-      // Fallback: Check for default admin credentials to allow testing of pages
+      // Fallback: Check for default admin credentials
       if (
         credentials.email === "admin@ntms.com" &&
         credentials.password === "admin123"
@@ -80,6 +111,8 @@ export const AuthProvider = ({ children }) => {
         };
         setUser(mockAdminUser);
         localStorage.setItem("token", mockAdminUser.token);
+        localStorage.setItem("user", JSON.stringify(mockAdminUser));
+        localStorage.setItem("role", "admin");
         return { success: true, data: mockAdminUser };
       }
 
@@ -95,9 +128,12 @@ export const AuthProvider = ({ children }) => {
     try {
       setError(null);
       const response = await authService.register(userData);
-      if (response.data.token) {
-        setUser(response.data);
-        localStorage.setItem("token", response.data.token);
+      if (response.data && response.data.token) {
+        const userObj = response.data;
+        setUser(userObj);
+        localStorage.setItem("token", userObj.token);
+        localStorage.setItem("user", JSON.stringify(userObj));
+        localStorage.setItem("role", userObj.role);
       }
       return { success: true, data: response.data };
     } catch (err) {
@@ -111,13 +147,18 @@ export const AuthProvider = ({ children }) => {
     authService.logout();
     setUser(null);
     setError(null);
+    cacheManager.clear();
   };
 
   const updateUser = (updatedData) => {
-    setUser((prevUser) => ({
-      ...prevUser,
-      ...updatedData,
-    }));
+    setUser((prevUser) => {
+      const updated = {
+        ...prevUser,
+        ...updatedData,
+      };
+      localStorage.setItem("user", JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const value = {

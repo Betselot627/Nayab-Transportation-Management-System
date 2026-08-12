@@ -76,24 +76,31 @@ const AddCustomer = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const payload = {
-        companyName: formData.company,
-        address: formData.address,
-        gender: formData.gender,
-        status: formData.status === "Active" ? "active" : "inactive",
-      };
-
       if (isEditMode) {
-        await customerService.updateCustomer(id, payload);
+        const updatePayload = {
+          companyName: formData.company,
+          address: formData.address,
+          gender: formData.gender,
+        };
+        await customerService.updateCustomer(id, updatePayload);
         toast.success("Customer profile updated successfully!");
       } else {
-        await customerService.createCustomer(payload);
+        const createPayload = {
+          fullName: formData.fullName,
+          email: formData.email,
+          mobileNumber: formData.mobileNumber,
+          companyName: formData.company,
+          address: formData.address,
+          gender: formData.gender,
+        };
+        await customerService.createCustomer(createPayload);
         toast.success("New customer profile registered successfully!");
       }
+      navigate("/admin/customers");
     } catch (err) {
-      toast.success(isEditMode ? "Customer records updated (Simulated)" : "Customer registered (Simulated)");
+      console.error("Failed to save customer:", err);
+      toast.error(err.response?.data?.message || "Failed to save customer profile");
     }
-    navigate("/admin/customers");
   };
 
   return (

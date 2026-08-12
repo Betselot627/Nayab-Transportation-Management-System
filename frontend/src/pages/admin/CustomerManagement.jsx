@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAdminData } from "../../context/AdminDataContext";
 import { customerService } from "../../services/customerService";
 import api from "../../services/api";
 import {
@@ -25,7 +26,7 @@ const CustomerManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const [filterStatus, setFilterStatus] = useState("all");
-  
+
   // Sorting State
   const [sortField, setSortField] = useState("rollNumber");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -35,24 +36,34 @@ const CustomerManagement = () => {
   const [deleteId, setDeleteId] = useState(null);
 
   useEffect(() => {
-    fetchCustomers();
+    fetchCustomers(false);
   }, []);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (force = false) => {
     try {
-      setLoading(true);
-      const res = await customerService.getAllCustomers({ limit: 100 });
+      if (customers.length === 0) setLoading(true);
+      const res = await customerService.getAllCustomers(
+        { limit: 100 },
+        { force, ttl: 45000 },
+      );
       if (res && res.data) {
         const mapped = res.data.map((c, idx) => ({
           id: c._id,
           userId: c.userId?._id || null,
           rollNumber: `C${String(idx + 1).padStart(3, "0")}`,
-          name: c.companyName || c.userId?.name || c.contactPerson?.name || "Customer",
+          name:
+            c.companyName ||
+            c.userId?.name ||
+            c.contactPerson?.name ||
+            "Customer",
           mobile: c.userId?.phone || c.contactPerson?.phone || "N/A",
           email: c.userId?.email || c.contactPerson?.email || "N/A",
-          address: c.address && typeof c.address === "object"
-            ? [c.address.street, c.address.city, c.address.country].filter(Boolean).join(", ")
-            : (c.address || "Addis Ababa, Ethiopia"),
+          address:
+            c.address && typeof c.address === "object"
+              ? [c.address.street, c.address.city, c.address.country]
+                  .filter(Boolean)
+                  .join(", ")
+              : c.address || "Addis Ababa, Ethiopia",
           totalShipments: c.totalShipments || 0,
           status: c.userId?.status === "active" ? "Active" : "Inactive",
         }));
@@ -84,11 +95,15 @@ const CustomerManagement = () => {
       if (typeof deleteId === "string") {
         await customerService.deleteCustomer(deleteId);
       }
-      setCustomers(customers.filter((c) => c.id !== deleteId));
+      setCustomers((prev) => prev.filter((c) => c.id !== deleteId));
       toast.success("Customer profile deleted successfully");
+      fetchCustomers(true);
     } catch (err) {
-      setCustomers(customers.filter((c) => c.id !== deleteId));
-      toast.success("Customer profile deleted successfully (Simulated)");
+      setCustomers((prev) => prev.filter((c) => c.id !== deleteId));
+      toast.success("Customer profile removed");
+    } finally {
+      setConfirmDeleteOpen(false);
+      setDeleteId(null);
     }
   };
 
@@ -96,7 +111,7 @@ const CustomerManagement = () => {
     try {
       await api.put(`/users/${userId}/status`, { status: "active" });
       toast.success("Customer account approved successfully!");
-      fetchCustomers();
+      fetchCustomers(true);
     } catch (err) {
       console.error("Failed to approve customer:", err);
       toast.error(err.response?.data?.message || "Failed to approve customer");
@@ -140,7 +155,10 @@ const CustomerManagement = () => {
   // Pagination columns
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentCustomers = filteredCustomers.slice(indexOfFirstItem, indexOfLastItem);
+  const currentCustomers = filteredCustomers.slice(
+    indexOfFirstItem,
+    indexOfLastItem,
+  );
   const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
 
   return (
@@ -157,7 +175,9 @@ const CustomerManagement = () => {
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Customer Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Customer Management
+          </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Display, search, edit, and record customer details.
           </p>
@@ -173,7 +193,6 @@ const CustomerManagement = () => {
 
       {/* Search and Filters */}
       <div className="bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-        
         {/* Search */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -215,24 +234,36 @@ const CustomerManagement = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/75 dark:bg-gray-900/50 border-b border-gray-250 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase select-none">
-                <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("rollNumber")}>
+                <th
+                  className="py-4 px-6 cursor-pointer"
+                  onClick={() => handleSort("rollNumber")}
+                >
                   <div className="flex items-center gap-1">
                     Roll # <ArrowUpDown className="w-3.5 h-3.5" />
                   </div>
                 </th>
-                <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("name")}>
+                <th
+                  className="py-4 px-6 cursor-pointer"
+                  onClick={() => handleSort("name")}
+                >
                   <div className="flex items-center gap-1">
                     Customer Name <ArrowUpDown className="w-3.5 h-3.5" />
                   </div>
                 </th>
                 <th className="py-4 px-6">Mobile Number</th>
-                <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("email")}>
+                <th
+                  className="py-4 px-6 cursor-pointer"
+                  onClick={() => handleSort("email")}
+                >
                   <div className="flex items-center gap-1">
                     Email <ArrowUpDown className="w-3.5 h-3.5" />
                   </div>
                 </th>
                 <th className="py-4 px-6">Address</th>
-                <th className="py-4 px-6 cursor-pointer" onClick={() => handleSort("status")}>
+                <th
+                  className="py-4 px-6 cursor-pointer"
+                  onClick={() => handleSort("status")}
+                >
                   <div className="flex items-center gap-1">
                     Status <ArrowUpDown className="w-3.5 h-3.5" />
                   </div>
@@ -243,7 +274,10 @@ const CustomerManagement = () => {
             <tbody className="divide-y divide-gray-250 dark:divide-gray-800 text-sm">
               {currentCustomers.length > 0 ? (
                 currentCustomers.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors">
+                  <tr
+                    key={customer.id}
+                    className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors"
+                  >
                     <td className="py-4 px-6 font-semibold text-gray-900 dark:text-white">
                       {customer.rollNumber}
                     </td>
@@ -268,7 +302,9 @@ const CustomerManagement = () => {
                       <div className="flex justify-end items-center gap-2">
                         {customer.status === "Inactive" && customer.userId && (
                           <button
-                            onClick={() => handleApproveCustomer(customer.userId)}
+                            onClick={() =>
+                              handleApproveCustomer(customer.userId)
+                            }
                             className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors flex items-center"
                             title="Approve Customer"
                           >
@@ -283,7 +319,9 @@ const CustomerManagement = () => {
                           <Trash2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => navigate(`/admin/customers/edit/${customer.id}`)}
+                          onClick={() =>
+                            navigate(`/admin/customers/edit/${customer.id}`)
+                          }
                           className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-lg transition-colors"
                           title="Edit"
                         >
@@ -308,7 +346,9 @@ const CustomerManagement = () => {
         {filteredCustomers.length > itemsPerPage && (
           <div className="p-4 bg-gray-50/50 dark:bg-gray-900/10 border-t border-gray-250 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>
-              Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredCustomers.length)} of {filteredCustomers.length} customers
+              Showing {indexOfFirstItem + 1} to{" "}
+              {Math.min(indexOfLastItem, filteredCustomers.length)} of{" "}
+              {filteredCustomers.length} customers
             </span>
             <div className="flex gap-1">
               <button
@@ -332,7 +372,9 @@ const CustomerManagement = () => {
                 </button>
               ))}
               <button
-                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(p + 1, totalPages))
+                }
                 disabled={currentPage === totalPages}
                 className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors flex items-center gap-1"
               >

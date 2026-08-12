@@ -38,20 +38,22 @@ const MyVehicles = () => {
   useEffect(() => {
     fetchVehicles(true);
     const interval = setInterval(() => {
-      fetchVehicles(false);
-    }, 6000);
+      if (!document.hidden) {
+        fetchVehicles(false);
+      }
+    }, 25000);
 
     return () => clearInterval(interval);
   }, []);
 
   const fetchVehicles = async (showLoader = false) => {
     try {
-      if (showLoader) setLoading(true);
-      const response = await vehicleService.getAllVehicles();
+      if (showLoader && vehicles.length === 0) setLoading(true);
+      const response = await vehicleService.getAllVehicles({}, { force: showLoader, ttl: 30000 });
       setVehicles(response.data || []);
     } catch (error) {
-      console.error("Error fetching driver vehicles:", error);
-      if (showLoader) toast.error("Failed to load vehicle fleet");
+      console.warn("Error fetching driver vehicles:", error.message);
+      if (showLoader && vehicles.length === 0) toast.error("Failed to load vehicle fleet");
     } finally {
       if (showLoader) setLoading(false);
     }

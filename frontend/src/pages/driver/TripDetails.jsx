@@ -17,6 +17,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { tripService } from "../../services/tripService";
+import ShipmentTimeline from "../../components/common/ShipmentTimeline";
 import toast, { Toaster } from "react-hot-toast";
 
 const TripDetails = () => {
@@ -24,27 +25,30 @@ const TripDetails = () => {
   const navigate = useNavigate();
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
 
-  // Set up 5-second polling interval
+  // Set up visibility-aware 15-second polling interval
   useEffect(() => {
     fetchTripDetails(true);
     const interval = setInterval(() => {
-      fetchTripDetails(false);
-    }, 5000);
+      if (!document.hidden) {
+        fetchTripDetails(false);
+      }
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [id]);
 
   const fetchTripDetails = async (showLoader = false) => {
     try {
-      if (showLoader) setLoading(true);
-      const res = await tripService.getTripById(id);
+      if (showLoader && !trip) setLoading(true);
+      const res = await tripService.getTripById(id, { force: showLoader, ttl: 15000 });
       if (res && res.data) {
         setTrip(res.data);
       }
     } catch (error) {
-      console.error(error);
-      if (showLoader) toast.error("Failed to load trip details");
+      console.warn("Failed to load trip details:", error.message);
+      if (showLoader && !trip) toast.error("Failed to load trip details");
     } finally {
       if (showLoader) setLoading(false);
     }
@@ -52,43 +56,53 @@ const TripDetails = () => {
 
   const handleUpdateStatus = async (newStatus) => {
     try {
-      await tripService.updateTripStatus(id, { status: newStatus });
-      toast.success(`Trip status updated to "${newStatus.replace(/_/g, " ")}"!`);
-      fetchTripDetails(false);
+      setUpdating(true);
+      // In-place optimistic update
+      setTrip((prev) => (prev ? { ...prev, status: newStatus } : prev));
+      const res = await tripService.updateTripStatus(id, { status: newStatus });
+      if (res && res.data) {
+        setTrip(res.data);
+      }
+      toast.success(`Stage updated to "${newStatus.replace(/_/g, " ")}" successfully!`);
     } catch (error) {
-      toast.error("Failed to update status");
+      // Revert if error
+      fetchTripDetails(true);
+      toast.error(error.response?.data?.message || "Failed to update status");
+    } finally {
+      setUpdating(false);
     }
   };
 
   const getStatusColor = (status) => {
     const colors = {
-      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      on_the_way: "bg-blue-100 text-blue-800 border-blue-200",
-      arrived_at_pickup: "bg-teal-100 text-teal-800 border-teal-200",
-      picked_up: "bg-purple-100 text-purple-800 border-purple-200",
-      in_transit: "bg-sky-100 text-sky-850 border-sky-200",
-      arrived_at_destination: "bg-orange-100 text-orange-850 border-orange-200",
-      completed: "bg-green-100 text-green-800 border-green-200",
-      cancelled: "bg-red-100 text-red-800 border-red-200",
+      pending: "bg-yellow-100 dark:bg-yellow-950/60 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
+      on_the_way: "bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+      picked_up: "bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800",
+      in_transit: "bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border-sky-200 dark:border-sky-800",
+      arrived: "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+      arrived_at_destination: "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+      completed: "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+      delivered: "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+      cancelled: "bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800",
     };
     return colors[status] || "bg-yellow-100 text-yellow-800 border-yellow-200";
   };
 
   if (loading && !trip) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <div className="w-10 h-10 border-2 border-t-transparent border-green-700 rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="w-10 h-10 border-2 border-t-transparent border-purple-600 rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!trip) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 space-y-4">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950 space-y-4">
         <p className="text-slate-500 text-lg">Trip details could not be found.</p>
         <button
           onClick={() => navigate("/driver/my-trips")}
-          className="px-5 py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-xl font-bold transition text-xs shadow-md"
+          className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition text-xs shadow-md"
         >
           Back to My Trips
         </button>
@@ -101,12 +115,12 @@ const TripDetails = () => {
   const customerUser = customer?.userId;
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto min-h-screen bg-slate-50">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors">
       <Toaster position="top-right" />
 
       <button
         onClick={() => navigate("/driver/my-trips")}
-        className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-green-700 transition"
+        className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600 transition"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to My Trips
@@ -114,82 +128,37 @@ const TripDetails = () => {
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Trip Details</h1>
-          <p className="text-xs font-mono text-slate-500 mt-1">Trip ID: #{trip.tripNumber || trip._id}</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Trip Details & Tracking
+          </h1>
+          <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-1">
+            Trip ID: #{trip.tripNumber || trip._id} | Shipment #{shipment?.shipmentNumber || "N/A"}
+          </p>
         </div>
-        <span
-          className={`px-4 py-1.5 rounded-full text-xs font-bold border capitalize ${getStatusColor(trip.status)}`}
-        >
-          {trip.status.replace(/_/g, " ")}
-        </span>
-      </div>
-
-      {/* Interactive Status Progression Card - 4 Direct Actions */}
-      <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">Trip Stage Controller</h3>
-            <p className="text-xs text-slate-500">Perform sequential transportation actions below:</p>
-          </div>
+        <div className="flex items-center gap-3">
           {trip.driverCommission?.amount > 0 && (
-            <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-bold font-mono">
+            <div className="bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-3.5 py-1.5 rounded-xl text-xs font-bold font-mono">
               Commission: {trip.driverCommission.amount.toLocaleString()} ETB ({trip.driverCommission.percentage || 15}%)
             </div>
           )}
-        </div>
-        
-        <div className="flex flex-wrap gap-3 pt-2">
-          {(trip.status === "pending" || trip.status === "on_the_way" || trip.status === "arrived_at_pickup") && (
-            <button
-              onClick={() => handleUpdateStatus("picked_up")}
-              className="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition text-xs shadow-md cursor-pointer flex items-center gap-2"
-            >
-              <Package className="w-4 h-4" />
-              <span>Package Picked Up</span>
-            </button>
-          )}
-
-          {trip.status === "picked_up" && (
-            <button
-              onClick={() => handleUpdateStatus("in_transit")}
-              className="px-5 py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition text-xs shadow-md cursor-pointer flex items-center gap-2"
-            >
-              <Navigation className="w-4 h-4" />
-              <span>Start Trip / In Transit</span>
-            </button>
-          )}
-
-          {trip.status === "in_transit" && (
-            <button
-              onClick={() => handleUpdateStatus("arrived")}
-              className="px-5 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition text-xs shadow-md cursor-pointer flex items-center gap-2"
-            >
-              <MapPin className="w-4 h-4" />
-              <span>Arrived at Destination</span>
-            </button>
-          )}
-
-          {(trip.status === "arrived" || trip.status === "arrived_at_destination") && (
-            <button
-              onClick={() => handleUpdateStatus("completed")}
-              className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition text-xs shadow-md cursor-pointer flex items-center gap-2"
-            >
-              <CheckCircle className="w-4 h-4" />
-              <span>Delivered</span>
-            </button>
-          )}
-
-          {trip.status === "completed" && (
-            <div className="flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200 px-4 py-3 rounded-xl text-xs font-semibold w-full">
-              <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-              <div>
-                <p className="font-bold">Shipment delivered successfully!</p>
-                <p className="text-[11px] text-emerald-700">Driver commission has been calculated and credited to your earnings balance.</p>
-              </div>
-            </div>
-          )}
+          <span
+            className={`px-4 py-1.5 rounded-full text-xs font-bold border capitalize ${getStatusColor(trip.status)}`}
+          >
+            {trip.status.replace(/_/g, " ")}
+          </span>
         </div>
       </div>
+
+      {/* Professional 5-Stage Live Timeline */}
+      <ShipmentTimeline
+        shipment={shipment}
+        trip={trip}
+        currentStatus={trip.status}
+        isDriver={true}
+        updating={updating}
+        onUpdateStatus={handleUpdateStatus}
+        showDetailsCard={false}
+      />
 
       {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -348,12 +348,19 @@ const assignShipment = async (req, res) => {
       });
     }
 
-    // Verify driver-vehicle relationship (either registered by driver or is a fleet vehicle)
-    if (vehicle.registeredBy && String(vehicle.registeredBy) !== String(driver._id)) {
-      return res.status(400).json({
-        success: false,
-        message: `Vehicle ${vehicle.plateNumber} is registered to another driver and cannot be manually assigned to ${driver.fullName}`,
-      });
+    // Verify driver-vehicle relationship (if registered by driver, check driver._id or driver.userId)
+    if (vehicle.registeredBy) {
+      const ownerId = String(vehicle.registeredBy._id || vehicle.registeredBy);
+      const isMatch =
+        ownerId === String(driver._id) ||
+        (driver.userId && ownerId === String(driver.userId));
+
+      if (!isMatch && req.user.role !== "admin") {
+        return res.status(400).json({
+          success: false,
+          message: `Vehicle ${vehicle.plateNumber} is registered to another driver and cannot be manually assigned to ${driver.fullName}`,
+        });
+      }
     }
 
     // Update shipment
@@ -473,14 +480,27 @@ const assignShipment = async (req, res) => {
 
 /**
  * @route   PATCH /api/shipments/:id/status
- * @desc    Update shipment status
+ * @desc    Update shipment status (Enforces strict 5-stage workflow: Booked -> Picked Up -> In Transit -> Arrived -> Delivered)
  * @access  Private
  */
 const updateShipmentStatus = async (req, res) => {
   try {
     const { status, remarks } = req.body;
 
-    const shipment = await Shipment.findById(req.params.id);
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Status is required",
+      });
+    }
+
+    const shipment = await Shipment.findById(req.params.id)
+      .populate("driverId")
+      .populate("vehicleId")
+      .populate({
+        path: "customerId",
+        populate: { path: "userId" },
+      });
 
     if (!shipment) {
       return res.status(404).json({
@@ -489,72 +509,203 @@ const updateShipmentStatus = async (req, res) => {
       });
     }
 
-    const oldStatus = shipment.status;
-    shipment.status = status;
+    // Role check: If driver, verify assigned
+    if (req.user.role === "driver") {
+      const userId = req.user._id || req.user.id;
+      const driver = await Driver.findOne({ userId }).select("_id");
+      const assignedDriverId = shipment.driverId?._id || shipment.driverId;
+      if (!driver || !assignedDriverId || String(driver._id) !== String(assignedDriverId)) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. Only the assigned driver can update this shipment status.",
+        });
+      }
+    }
 
-    // Update dates based on status
-    if (status === "picked_up" && !shipment.actualPickupDate) {
+    // Normalize target status
+    const targetStatus =
+      status === "delivered" || status === "completed"
+        ? "delivered"
+        : status === "arrived" || status === "arrived_at_destination"
+        ? "arrived"
+        : status === "in_transit" || status === "on_the_way"
+        ? "in_transit"
+        : status;
+
+    // Map current status to step category
+    const normalizeCurrent = (s) => {
+      if (["pending", "approved", "assigned", "booked"].includes(s)) return "booked";
+      if (s === "picked_up") return "picked_up";
+      if (s === "in_transit" || s === "on_the_way") return "in_transit";
+      if (s === "arrived" || s === "arrived_at_destination") return "arrived";
+      if (s === "delivered" || s === "completed") return "delivered";
+      return s || "booked";
+    };
+
+    const currentStep = normalizeCurrent(shipment.status);
+
+    // Strict 5-Stage Sequential Validation:
+    // Booked -> Picked Up -> In Transit -> Arrived -> Delivered
+    const allowedNextSteps = {
+      booked: ["picked_up"],
+      picked_up: ["in_transit"],
+      in_transit: ["arrived"],
+      arrived: ["delivered"],
+      delivered: [],
+    };
+
+    const validTransitions = allowedNextSteps[currentStep] || [];
+
+    if (validTransitions.length > 0 && !validTransitions.includes(targetStatus) && currentStep !== targetStatus) {
+      const stepNames = {
+        booked: "Booked / Assigned",
+        picked_up: "Picked Up",
+        in_transit: "In Transit",
+        arrived: "Arrived",
+        delivered: "Delivered",
+      };
+      return res.status(400).json({
+        success: false,
+        message: `Workflow step violation: Cannot jump from '${stepNames[currentStep] || currentStep}' to '${stepNames[targetStatus] || targetStatus}'. Next required step is: '${stepNames[validTransitions[0]] || validTransitions[0]}'.`,
+      });
+    }
+
+    const oldStatus = shipment.status;
+    shipment.status = targetStatus;
+
+    // Update timestamps
+    if (targetStatus === "picked_up" && !shipment.actualPickupDate) {
       shipment.actualPickupDate = new Date();
     }
-    if (status === "delivered" && !shipment.actualDeliveryDate) {
-      shipment.actualDeliveryDate = new Date();
+    if (targetStatus === "delivered") {
+      if (!shipment.actualDeliveryDate) {
+        shipment.actualDeliveryDate = new Date();
+      }
     }
 
     shipment.statusHistory.push({
-      status,
+      status: targetStatus,
       updatedBy: req.user._id,
-      remarks,
+      remarks: remarks || `Status transitioned from ${oldStatus} to ${targetStatus}`,
+      timestamp: new Date(),
     });
 
     await shipment.save();
 
-    // Notify Customer when status changes
-    try {
-      const customer = await Customer.findById(shipment.customerId);
-      if (customer && customer.userId) {
-        await Notification.create({
-          userId: customer.userId,
-          title: "Shipment Status Updated",
-          message: `Your booking ${shipment.shipmentNumber || shipment._id} status has been updated to "${status.replace("_", " ")}".`,
-          type: "shipment",
-          priority: "medium",
-          relatedEntity: {
-            entityType: "shipment",
-            entityId: shipment._id,
-          },
+    // Synchronize Trip, Driver, and Vehicle
+    const trip = await Trip.findOne({ shipmentId: shipment._id });
+    if (trip) {
+      trip.status = targetStatus === "delivered" ? "completed" : targetStatus;
+      if (targetStatus === "picked_up" && !trip.startTime) {
+        trip.startTime = new Date();
+      }
+      if (targetStatus === "delivered") {
+        trip.endTime = new Date();
+        if (trip.startTime) {
+          const duration = (new Date() - new Date(trip.startTime)) / (1000 * 60 * 60);
+          trip.actualDuration = parseFloat(duration.toFixed(2));
+        }
+      }
+      if (remarks) {
+        trip.checkpoints.push({
+          location: targetStatus.replace(/_/g, " "),
+          timestamp: new Date(),
+          status: targetStatus,
+          remarks,
         });
       }
-    } catch (notifErr) {
-      console.error("Failed to notify customer on status update:", notifErr);
+      await trip.save();
     }
 
-    // Notify Driver when status changes
-    try {
-      if (shipment.driverId) {
-        const Driver = require("../models/Driver");
-        const driver = await Driver.findById(shipment.driverId);
-        if (driver && driver.userId) {
-          const Notification = require("../models/Notification");
+    // On Delivered: Release vehicle & driver and calculate commission
+    let commissionEarned = 0;
+    if (targetStatus === "delivered") {
+      const driver = shipment.driverId?._id ? await Driver.findById(shipment.driverId._id) : null;
+      const vehicle = shipment.vehicleId?._id ? await Vehicle.findById(shipment.vehicleId._id) : null;
+
+      if (vehicle) {
+        vehicle.status = "available";
+        vehicle.assignedCustomer = null;
+        vehicle.assignedItemType = null;
+        await vehicle.save();
+      }
+
+      if (driver) {
+        const shipmentRevenue = shipment.finalPrice || shipment.pricing?.totalAmount || 0;
+        const commissionRate = driver.commissionRate || 15;
+        commissionEarned = Math.round(shipmentRevenue * (commissionRate / 100));
+
+        driver.status = "available";
+        driver.completedTrips = (driver.completedTrips || 0) + 1;
+        driver.totalEarnings = (driver.totalEarnings || 0) + commissionEarned;
+        await driver.save();
+      }
+    }
+
+    // Milestone Notifications (Customer & Admin)
+    setImmediate(async () => {
+      try {
+        const pickupCity = shipment.pickupLocation?.city || "Origin";
+        const destCity = shipment.destination?.city || "Destination";
+        const driverName = shipment.driverId?.fullName || "Assigned Driver";
+        const plateNum = shipment.vehicleId?.plateNumber || "Fleet Vehicle";
+        const customerUser = shipment.customerId?.userId;
+
+        const customerTitles = {
+          picked_up: "Cargo Picked Up ✓",
+          in_transit: "Shipment In Transit ✓",
+          arrived: "Driver Arrived at Destination ✓",
+          delivered: "Shipment Delivered ✓",
+        };
+
+        const customerMsgs = {
+          picked_up: `Driver ${driverName} (${plateNum}) has picked up and loaded your shipment #${shipment.shipmentNumber} at ${pickupCity}.`,
+          in_transit: `Your shipment #${shipment.shipmentNumber} is now in transit from ${pickupCity} to ${destCity}. Live tracking is active!`,
+          arrived: `Driver ${driverName} has arrived at destination (${destCity}) for shipment #${shipment.shipmentNumber}.`,
+          delivered: `Your shipment #${shipment.shipmentNumber} has been successfully delivered! Thank you for using NTMS.`,
+        };
+
+        // Notify Customer
+        if (customerUser) {
+          const custUserId = customerUser._id || customerUser;
           await Notification.create({
-            userId: driver.userId,
-            title: "Shipment Details Updated",
-            message: `Shipment ${shipment.shipmentNumber || shipment._id} status has been updated to "${status.replace("_", " ")}".`,
-            type: "trip",
-            priority: "medium",
+            userId: custUserId,
+            title: customerTitles[targetStatus] || `Shipment ${targetStatus.replace(/_/g, " ")}`,
+            message: customerMsgs[targetStatus] || `Shipment #${shipment.shipmentNumber} status is now ${targetStatus}.`,
+            type: "shipment",
+            priority: targetStatus === "delivered" ? "high" : "medium",
+            actionUrl: `/customer/track-shipment?id=${shipment._id}`,
             relatedEntity: {
               entityType: "shipment",
               entityId: shipment._id,
             },
           });
         }
+
+        // Notify Admins
+        const admins = await User.find({ role: "admin" });
+        for (const admin of admins) {
+          await Notification.create({
+            userId: admin._id,
+            title: `Shipment #${shipment.shipmentNumber}: ${targetStatus.replace(/_/g, " ").toUpperCase()}`,
+            message: `Shipment #${shipment.shipmentNumber} (${pickupCity} → ${destCity}) was updated to "${targetStatus.replace(/_/g, " ")}" by ${driverName} (Vehicle: ${plateNum}).`,
+            type: "shipment",
+            priority: targetStatus === "delivered" ? "high" : "low",
+            actionUrl: "/admin/shipments",
+            relatedEntity: {
+              entityType: "shipment",
+              entityId: shipment._id,
+            },
+          });
+        }
+      } catch (notifError) {
+        console.error("Status update notification error:", notifError);
       }
-    } catch (driverNotifErr) {
-      console.error("Failed to notify driver on status update:", driverNotifErr);
-    }
+    });
 
     res.status(200).json({
       success: true,
-      message: "Shipment status updated successfully",
+      message: `Shipment status updated to ${targetStatus} successfully`,
       data: shipment,
     });
   } catch (error) {
