@@ -6,8 +6,8 @@ import api from "./api";
  */
 export const paymentService = {
   // Initialize Chapa payment
-  initializePayment: async (shipmentId) => {
-    const response = await api.post("/payments/initialize", { shipmentId });
+  initializePayment: async (shipmentId, paymentMethod = "Chapa", simulated = false) => {
+    const response = await api.post("/payments/initialize", { shipmentId, paymentMethod, simulated });
     return response.data;
   },
 

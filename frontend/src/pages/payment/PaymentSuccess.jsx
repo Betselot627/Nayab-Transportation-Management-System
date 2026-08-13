@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
-import { CheckCircle, AlertCircle, Loader, ArrowRight, FileText, ShoppingBag, Truck } from "lucide-react";
+import {
+  CheckCircle,
+  AlertCircle,
+  Loader,
+  ArrowRight,
+  FileText,
+  ShoppingBag,
+  Truck,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { paymentService } from "../../services/paymentService";
 import ReceiptModal from "../../components/payment/ReceiptModal";
@@ -16,16 +24,29 @@ const PaymentSuccess = () => {
   const [receiptData, setReceiptData] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
-  const txRef = searchParams.get("tx_ref") || searchParams.get("trx_ref");
+  const txRef =
+    searchParams.get("tx_ref") ||
+    searchParams.get("trx_ref") ||
+    searchParams.get("txRef") ||
+    searchParams.get("reference");
 
   useEffect(() => {
+    console.log(
+      "Payment Success Page - All URL params:",
+      Object.fromEntries(searchParams.entries()),
+    );
+    console.log("Extracted txRef:", txRef);
+
     if (!txRef) {
-      setError("No transaction reference found in return URL.");
+      setError(
+        "No transaction reference found in return URL. Please check the payment link.",
+      );
       setLoading(false);
       return;
     }
 
     verifyPayment();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [txRef]);
 
   const verifyPayment = async () => {
@@ -35,7 +56,7 @@ const PaymentSuccess = () => {
       if (res && res.success) {
         setVerificationData(res.data);
         toast.success("Payment verified successfully!");
-        
+
         // Auto-fetch receipt
         try {
           const receiptRes = await paymentService.getReceipt(txRef);
@@ -50,7 +71,10 @@ const PaymentSuccess = () => {
       }
     } catch (err) {
       console.error("Payment Verification Error:", err);
-      setError(err?.response?.data?.message || "Failed to verify transaction with Chapa.");
+      setError(
+        err?.response?.data?.message ||
+          "Failed to verify transaction with Chapa.",
+      );
     } finally {
       setLoading(false);
     }
@@ -82,9 +106,12 @@ const PaymentSuccess = () => {
           <div className="w-16 h-16 bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center mx-auto">
             <Loader className="w-8 h-8 animate-spin" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Verifying Payment with Chapa...</h2>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+            Verifying Payment with Chapa...
+          </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Please wait while we confirm your transaction securely with the bank gateway.
+            Please wait while we confirm your transaction securely with the bank
+            gateway.
           </p>
           <div className="font-mono text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 py-1.5 px-3 rounded-lg">
             Ref: {txRef}
@@ -106,7 +133,9 @@ const PaymentSuccess = () => {
           <div className="w-16 h-16 bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center mx-auto">
             <AlertCircle className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">Payment Unconfirmed</h2>
+          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+            Payment Unconfirmed
+          </h2>
           <p className="text-xs text-slate-600 dark:text-slate-400">{error}</p>
           <div className="pt-2 flex flex-col gap-2.5">
             <button
@@ -163,13 +192,19 @@ const PaymentSuccess = () => {
           <div className="flex justify-between items-center text-xs">
             <span className="text-slate-400 font-medium">Amount Paid:</span>
             <span className="font-extrabold text-slate-900 dark:text-white text-base font-mono text-purple-600 dark:text-purple-400">
-              {Number(verificationData?.amount || 0).toLocaleString()} {verificationData?.currency || "ETB"}
+              {Number(verificationData?.amount || 0).toLocaleString()}{" "}
+              {verificationData?.currency || "ETB"}
             </span>
           </div>
 
           <div className="flex justify-between items-center text-xs">
-            <span className="text-slate-400 font-medium">Transaction Reference:</span>
-            <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-[11px] truncate max-w-[200px]" title={txRef}>
+            <span className="text-slate-400 font-medium">
+              Transaction Reference:
+            </span>
+            <span
+              className="font-mono font-bold text-slate-800 dark:text-slate-200 text-[11px] truncate max-w-[200px]"
+              title={txRef}
+            >
               {txRef}
             </span>
           </div>

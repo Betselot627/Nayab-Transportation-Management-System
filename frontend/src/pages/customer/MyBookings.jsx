@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ReceiptModal from "../../components/payment/ReceiptModal";
+import CheckoutModal from "../../components/payment/CheckoutModal";
 import toast, { Toaster } from "react-hot-toast";
 
 const MyBookings = () => {
@@ -27,6 +28,8 @@ const MyBookings = () => {
   const [initializingId, setInitializingId] = useState(null);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [selectedCheckoutShipment, setSelectedCheckoutShipment] = useState(null);
 
   useEffect(() => {
     fetchShipments(false);
@@ -290,19 +293,15 @@ const MyBookings = () => {
 
                           {canPay && (
                             <button
-                              onClick={() => handlePayNow(shipment._id)}
-                              disabled={initializingId === shipment._id}
+                              onClick={() => {
+                                setSelectedCheckoutShipment(shipment);
+                                setIsCheckoutOpen(true);
+                              }}
                               className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold flex items-center gap-1 shadow-md shadow-emerald-500/20 transition cursor-pointer text-xs disabled:opacity-50"
-                              title="Pay via Chapa (Telebirr / CBE Birr)"
+                              title="Pay via Telebirr, CBE Birr, or Chapa"
                             >
-                              {initializingId === shipment._id ? (
-                                <Loader className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <>
-                                  <CreditCard className="w-3.5 h-3.5" />
-                                  <span>PAY NOW</span>
-                                </>
-                              )}
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span>PAY NOW</span>
                             </button>
                           )}
 
@@ -333,6 +332,15 @@ const MyBookings = () => {
           </div>
         </div>
       )}
+
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => {
+          setIsCheckoutOpen(false);
+          setSelectedCheckoutShipment(null);
+        }}
+        shipment={selectedCheckoutShipment}
+      />
     </div>
   );
 };

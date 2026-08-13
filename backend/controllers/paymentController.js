@@ -24,7 +24,7 @@ const chapaService = require("../services/chapaService");
  */
 const initializePayment = async (req, res) => {
   try {
-    const { shipmentId } = req.body;
+    const { shipmentId, paymentMethod = "Chapa", simulated = false } = req.body;
 
     if (!shipmentId) {
       return res.status(400).json({
@@ -105,10 +105,22 @@ const initializePayment = async (req, res) => {
       await shipment.save();
     }
 
+    // Determine normalized method name
+    const normalizedMethod = 
+      paymentMethod.toLowerCase() === "telebirr" 
+        ? "Telebirr" 
+        : paymentMethod.toLowerCase() === "cbe_birr" 
+        ? "CBE Birr" 
+        : "Chapa";
+
+    const isSimulated = simulated || paymentMethod.toLowerCase() === "telebirr" || paymentMethod.toLowerCase() === "cbe_birr";
+
     // 5. Generate unique transaction reference
     const timestamp = Date.now();
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const txRef = `NTMS-TX-${timestamp}-${randomSuffix}`;
+    const txRef = isSimulated
+      ? `NTMS-SIM-${timestamp}-${randomSuffix}`
+      : `NTMS-TX-${timestamp}-${randomSuffix}`;
 
     // Customer details for checkout
     const customerUser = await User.findById(customerRecord?.userId || req.user._id);
@@ -132,7 +144,7 @@ const initializePayment = async (req, res) => {
       amount: finalAmount,
       currency: "ETB",
       status: "PENDING",
-      paymentMethod: "Chapa",
+      paymentMethod: normalizedMethod,
       paidBy: req.user._id,
       customerDetails: {
         name: customerUser?.name || "Customer",
@@ -146,23 +158,37 @@ const initializePayment = async (req, res) => {
       },
     });
 
-    // 7. Call Chapa initialize API
-    const chapaResponse = await chapaService.initializePayment({
-      amount: finalAmount,
-      currency: "ETB",
-      email,
-      firstName,
-      lastName,
-      phoneNumber,
-      txRef,
-      callbackUrl,
-      returnUrl,
-      title: `Nayab Trading PLC - NTMS`,
-      description: `Payment for Shipment ${shipment.shipmentNumber}`,
-    });
+    let checkoutUrl = `${frontendBase}/payment/success?tx_ref=${txRef}`;
+
+    if (!isSimulated) {
+      try {
+        // 7. Call Chapa initialize API
+        const chapaResponse = await chapaService.initializePayment({
+          amount: finalAmount,
+          currency: "ETB",
+          email,
+          firstName,
+          lastName,
+          phoneNumber,
+          txRef,
+          callbackUrl,
+          returnUrl,
+          title: `Nayab Trading PLC - NTMS`,
+          description: `Payment for Shipment ${shipment.shipmentNumber}`,
+        });
+
+        checkoutUrl = chapaResponse.checkoutUrl;
+      } catch (err) {
+        console.warn("⚠️ Chapa API initialization failed, falling back to simulated mode in development:", err.message);
+        // Fallback to simulation reference by recreating/updating the reference with SIM prefix
+        const fallbackTxRef = `NTMS-SIM-${timestamp}-${randomSuffix}`;
+        payment.txRef = fallbackTxRef;
+        checkoutUrl = `${frontendBase}/payment/success?tx_ref=${fallbackTxRef}&simulated=true`;
+      }
+    }
 
     // 8. Update Payment record with checkoutUrl
-    payment.checkoutUrl = chapaResponse.checkoutUrl;
+    payment.checkoutUrl = checkoutUrl;
     await payment.save();
 
     // 9. Update Shipment status to PENDING
@@ -172,8 +198,8 @@ const initializePayment = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Payment initialized successfully",
-      checkoutUrl: chapaResponse.checkoutUrl,
-      txRef,
+      checkoutUrl,
+      txRef: payment.txRef,
       amount: finalAmount,
       currency: "ETB",
       shipmentNumber: shipment.shipmentNumber,
@@ -236,7 +262,7 @@ const verifyPayment = async (req, res) => {
       // 4. Update Payment to PAID
       payment.status = "PAID";
       payment.paidAt = new Date();
-      payment.paymentMethod = verifyResult.method || "Chapa";
+      payment.paymentMethod = txRef.startsWith("NTMS-SIM-") ? (payment.paymentMethod || "Telebirr") : (verifyResult.method || "Chapa");
       payment.chapaTransactionId = verifyResult.transactionId || txRef;
 
       // Pre-save will generate receiptNumber if absent

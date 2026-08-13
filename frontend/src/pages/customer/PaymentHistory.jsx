@@ -14,6 +14,7 @@ import {
 import { motion } from "framer-motion";
 import { paymentService } from "../../services/paymentService";
 import ReceiptModal from "../../components/payment/ReceiptModal";
+import CheckoutModal from "../../components/payment/CheckoutModal";
 import toast, { Toaster } from "react-hot-toast";
 
 const PaymentHistory = () => {
@@ -24,6 +25,8 @@ const PaymentHistory = () => {
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [initializingId, setInitializingId] = useState(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [selectedCheckoutShipment, setSelectedCheckoutShipment] = useState(null);
 
   useEffect(() => {
     fetchPayments();
@@ -247,18 +250,14 @@ const PaymentHistory = () => {
                             </button>
                           ) : isPending ? (
                             <button
-                              onClick={() => handlePayNow(shipmentId)}
-                              disabled={initializingId === shipmentId}
+                              onClick={() => {
+                                setSelectedCheckoutShipment(p.shipmentId);
+                                setIsCheckoutOpen(true);
+                              }}
                               className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold flex items-center gap-1 shadow-xs transition cursor-pointer disabled:opacity-50"
                             >
-                              {initializingId === shipmentId ? (
-                                <Loader className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <>
-                                  <span>Pay Now</span>
-                                  <ArrowUpRight className="w-3.5 h-3.5" />
-                                </>
-                              )}
+                              <span>Pay Now</span>
+                              <ArrowUpRight className="w-3.5 h-3.5" />
                             </button>
                           ) : null}
 
@@ -281,6 +280,15 @@ const PaymentHistory = () => {
           </div>
         )}
       </div>
+
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => {
+          setIsCheckoutOpen(false);
+          setSelectedCheckoutShipment(null);
+        }}
+        shipment={selectedCheckoutShipment}
+      />
     </div>
   );
 };

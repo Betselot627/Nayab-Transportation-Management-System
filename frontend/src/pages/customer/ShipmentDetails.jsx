@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ReceiptModal from "../../components/payment/ReceiptModal";
+import CheckoutModal from "../../components/payment/CheckoutModal";
 import ShipmentTimeline from "../../components/common/ShipmentTimeline";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -34,6 +35,7 @@ const ShipmentDetails = () => {
   const [initializingPayment, setInitializingPayment] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   // Set up visibility-aware 15-second polling interval
   useEffect(() => {
@@ -273,18 +275,11 @@ const ShipmentDetails = () => {
 
               {canPay && (
                 <button
-                  onClick={handlePayNow}
-                  disabled={initializingPayment}
+                  onClick={() => setIsCheckoutOpen(true)}
                   className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 cursor-pointer disabled:opacity-50"
                 >
-                  {initializingPayment ? (
-                    <Loader className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <CreditCard className="w-4 h-4" />
-                      <span>PAY NOW ({Number(finalPrice).toLocaleString()} ETB)</span>
-                    </>
-                  )}
+                  <CreditCard className="w-4 h-4" />
+                  <span>PAY NOW ({Number(finalPrice).toLocaleString()} ETB)</span>
                 </button>
               )}
 
@@ -352,6 +347,12 @@ const ShipmentDetails = () => {
           </div>
         )}
       </div>
+
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        shipment={shipment}
+      />
     </div>
   );
 };
