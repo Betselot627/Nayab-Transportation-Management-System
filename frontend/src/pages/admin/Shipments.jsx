@@ -50,14 +50,27 @@ const Shipments = () => {
     try {
       if (shipments.length === 0) setLoading(true);
       const [shipmentsRes, driversRes, vehiclesRes] = await Promise.all([
-        shipmentService.getAllShipments({ limit: 100 }, { force, ttl: 30000 }),
-        driverService.getAvailableDrivers({ force, ttl: 20000 }),
-        vehicleService.getAllVehicles({ available: "true", limit: 100 }, { force, ttl: 30000 }),
+        shipmentService.getAllShipments({ limit: 100 }, { force, ttl: 30000 })
+          .catch(err => {
+            console.error("Failed to fetch shipments:", err);
+            toast.error("Failed to load shipments. Please check your connection.");
+            return { data: [] };
+          }),
+        driverService.getAvailableDrivers({ force, ttl: 20000 })
+          .catch(err => {
+            console.error("Failed to fetch available drivers:", err);
+            return { data: [] };
+          }),
+        vehicleService.getAllVehicles({ available: "true", limit: 100 }, { force, ttl: 30000 })
+          .catch(err => {
+            console.error("Failed to fetch available vehicles:", err);
+            return { data: [] };
+          }),
       ]);
 
-      setShipments(shipmentsRes.data || []);
-      setDrivers(driversRes.data || []);
-      setVehicles(vehiclesRes.data || []);
+      setShipments(shipmentsRes?.data || []);
+      setDrivers(driversRes?.data || []);
+      setVehicles(vehiclesRes?.data || []);
     } catch (err) {
       console.error("Failed to fetch data:", err);
       toast.error("Failed to load shipment data");

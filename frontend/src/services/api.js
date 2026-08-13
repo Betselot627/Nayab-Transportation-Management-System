@@ -2,14 +2,35 @@ import axios from "axios";
 
 // Dynamically determine backend API URL so phone and local browsers both work seamlessly
 const getBaseUrl = () => {
+  // 1. If we are running in the browser on Vercel, force the Render backend URL
   if (typeof window !== "undefined" && window.location && window.location.hostname) {
     const host = window.location.hostname;
-    // If not localhost or 127.0.0.1, use the current machine's network IP on port 5002
-    if (host !== "localhost" && host !== "127.0.0.1") {
+    if (host.includes("vercel.app")) {
+      return "https://nayab-transportation-management-system-2.onrender.com/api";
+    }
+  }
+
+  // 2. Prioritize VITE_API_URL if it is set and does not point to localhost (since .env might specify localhost)
+  const envApiUrl = import.meta.env.VITE_API_URL;
+  if (envApiUrl && !envApiUrl.includes("localhost") && !envApiUrl.includes("127.0.0.1")) {
+    return envApiUrl;
+  }
+
+  if (typeof window !== "undefined" && window.location && window.location.hostname) {
+    const host = window.location.hostname;
+    const protocol = window.location.protocol;
+
+    // Only apply the port 5002 dynamic override if loaded over HTTP and on a local network IP/host
+    const isLocalHost = host === "localhost" || host === "127.0.0.1";
+    const isLocalIp = /^192\.168\.\d{1,3}\.\d{1,3}$|^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$|^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host);
+
+    if (protocol === "http:" && (isLocalHost || isLocalIp)) {
       return `http://${host}:5002/api`;
     }
   }
-  return import.meta.env.VITE_API_URL || "http://localhost:5002/api";
+
+  // Fallback default
+  return envApiUrl || "http://localhost:5002/api";
 };
 
 const api = axios.create({
