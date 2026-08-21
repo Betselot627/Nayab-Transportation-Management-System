@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const mongoSanitize = require("express-mongo-sanitize");
+
 require("dotenv").config();
 
 const connectDB = require("./config/db");
@@ -43,7 +43,7 @@ app.use(
     contentSecurityPolicy: false,
   }),
 ); // Set security HTTP headers
-app.use(mongoSanitize()); // Prevent MongoDB injection
+
 
 // Rate limiting (generous for active dashboard usage)
 const limiter = rateLimit({

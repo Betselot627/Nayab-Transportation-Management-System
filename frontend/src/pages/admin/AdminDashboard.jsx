@@ -66,7 +66,8 @@ const AdminDashboard = () => {
     if (typeof fetchAllData === "function") {
       fetchAllData(false);
     }
-  }, [fetchAllData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
   useEffect(() => {
     // Derive vehicle stats from cached stats or dashboardData

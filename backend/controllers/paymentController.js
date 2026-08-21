@@ -469,7 +469,7 @@ const getMyPayments = async (req, res) => {
 const getPaymentReceipt = async (req, res) => {
   try {
     const { txRef } = req.params;
-    const isObjectId = Boolean(txRef && txRef.match(/^[0-9a-fA-F]{24}$/));
+    const isObjectId = Boolean(txRef && (txRef.match(/^[0-9a-fA-F]{24}$/) || txRef.match(/^[0-9a-fA-F-]{36}$/)));
     const payment = await Payment.findOne({
       $or: [
         { txRef },

@@ -91,7 +91,7 @@ const TripDetails = () => {
   if (loading && !trip) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
-        <div className="w-10 h-10 border-2 border-t-transparent border-purple-600 rounded-full animate-spin" />
+        <div className="w-10 h-10 border-2 border-t-transparent border-emerald-600 rounded-full animate-spin" />
       </div>
     );
   }
@@ -102,7 +102,7 @@ const TripDetails = () => {
         <p className="text-slate-500 text-lg">Trip details could not be found.</p>
         <button
           onClick={() => navigate("/driver/my-trips")}
-          className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition text-xs shadow-md"
+          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition text-xs shadow-md"
         >
           Back to My Trips
         </button>
@@ -120,7 +120,7 @@ const TripDetails = () => {
 
       <button
         onClick={() => navigate("/driver/my-trips")}
-        className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600 transition"
+        className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-emerald-600 transition"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to My Trips

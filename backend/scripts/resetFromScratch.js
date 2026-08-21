@@ -1,11 +1,11 @@
-const mongoose = require("mongoose");
+const prisma = require("../config/prisma");
 const bcrypt = require("bcryptjs");
 require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 
 const resetFromScratch = async () => {
   try {
-    console.log("Connecting to MongoDB...");
-    await mongoose.connect(process.env.MONGO_URI);
+    console.log("Connecting to PostgreSQL...");
+    await prisma.$connect();
     console.log("Connected successfully.");
 
     const User = require("../models/User");

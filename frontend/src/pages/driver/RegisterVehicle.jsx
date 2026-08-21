@@ -188,7 +188,7 @@ const RegisterVehicle = () => {
       <div className="mb-8 space-y-3">
         <button
           onClick={() => navigate("/driver/my-vehicles")}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-purple-600 dark:text-slate-400 dark:hover:text-purple-400 transition"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 transition"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to My Vehicles</span>
@@ -229,7 +229,7 @@ const RegisterVehicle = () => {
         {/* Section 1: Basic Vehicle Specs */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-            <Truck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <Truck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             <h2 className="text-base font-bold text-slate-900 dark:text-white">
               Vehicle Specifications
             </h2>
@@ -262,7 +262,7 @@ const RegisterVehicle = () => {
                 onChange={handleChange}
                 required
                 placeholder="e.g. Isuzu / Toyota"
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
               />
             </div>
 
@@ -277,7 +277,7 @@ const RegisterVehicle = () => {
                 onChange={handleChange}
                 required
                 placeholder="e.g. FSR / Dyna / Hino"
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
               />
             </div>
 
@@ -290,7 +290,7 @@ const RegisterVehicle = () => {
                 value={formData.type}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
               >
                 <option value="truck" className="dark:bg-slate-900">Truck</option>
                 <option value="van" className="dark:bg-slate-900">Van</option>
@@ -309,7 +309,7 @@ const RegisterVehicle = () => {
                 value={formData.year}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
               >
                 {years.map((y) => (
                   <option key={y} value={y} className="dark:bg-slate-900">
@@ -330,7 +330,7 @@ const RegisterVehicle = () => {
                 onChange={handleChange}
                 required
                 placeholder="e.g. White / Blue"
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
               />
             </div>
 
@@ -347,7 +347,7 @@ const RegisterVehicle = () => {
                 min="0"
                 step="0.1"
                 placeholder="e.g. 5"
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
               />
             </div>
 
@@ -360,7 +360,7 @@ const RegisterVehicle = () => {
                 value={formData.capacityUnit}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
               >
                 <option value="ton" className="dark:bg-slate-900">Tons</option>
                 <option value="kg" className="dark:bg-slate-900">Kilograms (kg)</option>
@@ -376,7 +376,7 @@ const RegisterVehicle = () => {
                 value={formData.fuelType}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
               >
                 <option value="diesel" className="dark:bg-slate-900">Diesel</option>
                 <option value="petrol" className="dark:bg-slate-900">Petrol</option>
@@ -390,7 +390,7 @@ const RegisterVehicle = () => {
         {/* Section 2: Vehicle Photos */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-            <Camera className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <Camera className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
                 Vehicle Photos
@@ -406,7 +406,7 @@ const RegisterVehicle = () => {
               <div
                 key={pos}
                 onClick={() => refs[pos].current.click()}
-                className="relative cursor-pointer border border-dashed border-slate-300 dark:border-slate-700 hover:border-purple-500 dark:hover:border-purple-500 rounded-2xl p-3 flex flex-col items-center justify-center text-center bg-slate-50 dark:bg-slate-800/40 aspect-square group transition-all"
+                className="relative cursor-pointer border border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-2xl p-3 flex flex-col items-center justify-center text-center bg-slate-50 dark:bg-slate-800/40 aspect-square group transition-all"
               >
                 {vehiclePhotos[pos] ? (
                   <>
@@ -425,7 +425,7 @@ const RegisterVehicle = () => {
                   </>
                 ) : (
                   <div className="space-y-1.5 flex flex-col items-center">
-                    <Camera className="w-6 h-6 text-slate-400 group-hover:text-purple-500 transition-colors" />
+                    <Camera className="w-6 h-6 text-slate-400 group-hover:text-emerald-500 transition-colors" />
                     <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">
                       {pos}
                     </span>
@@ -446,7 +446,7 @@ const RegisterVehicle = () => {
         {/* Section 3: Registration & Insurance Documents */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-            <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <FileText className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             <h2 className="text-base font-bold text-slate-900 dark:text-white">
               Documents & Certifications
             </h2>
@@ -484,13 +484,13 @@ const RegisterVehicle = () => {
                     name="registrationExpiryDate"
                     value={formData.registrationExpiryDate}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
                 <div
                   onClick={() => refs.registration.current.click()}
-                  className="border border-dashed border-slate-300 dark:border-slate-700 hover:border-purple-500 rounded-xl p-3 text-center cursor-pointer bg-white dark:bg-slate-900 transition flex flex-col items-center justify-center space-y-1"
+                  className="border border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 rounded-xl p-3 text-center cursor-pointer bg-white dark:bg-slate-900 transition flex flex-col items-center justify-center space-y-1"
                 >
                   {documents.registration ? (
                     <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
@@ -541,7 +541,7 @@ const RegisterVehicle = () => {
                     value={formData.insuranceCompany}
                     onChange={handleChange}
                     placeholder="e.g. Ethiopian Insurance Corp"
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
@@ -569,13 +569,13 @@ const RegisterVehicle = () => {
                     required
                     value={formData.insuranceExpiryDate}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
                 <div
                   onClick={() => refs.insurance.current.click()}
-                  className="border border-dashed border-slate-300 dark:border-slate-700 hover:border-purple-500 rounded-xl p-3 text-center cursor-pointer bg-white dark:bg-slate-900 transition flex flex-col items-center justify-center space-y-1"
+                  className="border border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 rounded-xl p-3 text-center cursor-pointer bg-white dark:bg-slate-900 transition flex flex-col items-center justify-center space-y-1"
                 >
                   {documents.insurance ? (
                     <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
@@ -660,7 +660,7 @@ const RegisterVehicle = () => {
             onChange={handleChange}
             rows="3"
             placeholder="Special refrigeration, cargo tie-downs, liftgate equipment, or special operational notes..."
-            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition"
+            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
           />
         </div>
 
@@ -669,7 +669,7 @@ const RegisterVehicle = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full sm:flex-1 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50 text-sm cursor-pointer"
+            className="w-full sm:flex-1 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 text-sm cursor-pointer"
           >
             {loading
               ? "Submitting Vehicle Registration..."

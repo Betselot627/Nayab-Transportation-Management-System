@@ -80,7 +80,7 @@ export const AdminDataProvider = ({ children }) => {
     async (force = false) => {
       if (!force && isCacheValid("vehicles")) {
         console.log("Using cached vehicles data");
-        return vehicles;
+        return;
       }
 
       console.log("Fetching fresh vehicles data...");
@@ -93,12 +93,11 @@ export const AdminDataProvider = ({ children }) => {
         return data;
       } catch (error) {
         console.error("Error fetching vehicles:", error);
-        return vehicles;
       } finally {
         setLoading((prev) => ({ ...prev, vehicles: false }));
       }
     },
-    [isCacheValid, vehicles],
+    [isCacheValid],
   );
 
   // Fetch drivers with caching
@@ -106,7 +105,7 @@ export const AdminDataProvider = ({ children }) => {
     async (force = false) => {
       if (!force && isCacheValid("drivers")) {
         console.log("Using cached drivers data");
-        return drivers;
+        return;
       }
 
       console.log("Fetching fresh drivers data...");
@@ -119,12 +118,11 @@ export const AdminDataProvider = ({ children }) => {
         return data;
       } catch (error) {
         console.error("Error fetching drivers:", error);
-        return drivers;
       } finally {
         setLoading((prev) => ({ ...prev, drivers: false }));
       }
     },
-    [isCacheValid, drivers],
+    [isCacheValid],
   );
 
   // Fetch customers with caching
@@ -132,7 +130,7 @@ export const AdminDataProvider = ({ children }) => {
     async (force = false) => {
       if (!force && isCacheValid("customers")) {
         console.log("Using cached customers data");
-        return customers;
+        return;
       }
 
       console.log("Fetching fresh customers data...");
@@ -145,12 +143,11 @@ export const AdminDataProvider = ({ children }) => {
         return data;
       } catch (error) {
         console.error("Error fetching customers:", error);
-        return customers;
       } finally {
         setLoading((prev) => ({ ...prev, customers: false }));
       }
     },
-    [isCacheValid, customers],
+    [isCacheValid],
   );
 
   // Fetch shipments with caching
@@ -158,7 +155,7 @@ export const AdminDataProvider = ({ children }) => {
     async (force = false) => {
       if (!force && isCacheValid("shipments")) {
         console.log("Using cached shipments data");
-        return shipments;
+        return;
       }
 
       console.log("Fetching fresh shipments data...");
@@ -171,56 +168,38 @@ export const AdminDataProvider = ({ children }) => {
         return data;
       } catch (error) {
         console.error("Error fetching shipments:", error);
-        return shipments;
       } finally {
         setLoading((prev) => ({ ...prev, shipments: false }));
       }
     },
-    [isCacheValid, shipments],
+    [isCacheValid],
   );
 
   // Fetch stats with caching
   const fetchStats = useCallback(
     async (force = false) => {
       if (!force && isCacheValid("stats")) {
-        return stats;
+        return;
       }
 
       setLoading((prev) => ({ ...prev, stats: true }));
       try {
         // Fetch all data in parallel
-        const results = await Promise.all([
+        await Promise.all([
           fetchVehicles(force),
           fetchDrivers(force),
           fetchCustomers(force),
           fetchShipments(force),
         ]);
 
-        const statsData = {
-          totalVehicles: results[0].length,
-          totalDrivers: results[1].length,
-          totalCustomers: results[2].length,
-          totalTrips: results[3].length,
-        };
-
-        setStats(statsData);
         cacheTimestamps.current.stats = Date.now();
-        return statsData;
       } catch (error) {
         console.error("Error fetching stats:", error);
-        return stats;
       } finally {
         setLoading((prev) => ({ ...prev, stats: false }));
       }
     },
-    [
-      stats,
-      isCacheValid,
-      fetchVehicles,
-      fetchDrivers,
-      fetchCustomers,
-      fetchShipments,
-    ],
+    [isCacheValid, fetchVehicles, fetchDrivers, fetchCustomers, fetchShipments],
   );
 
   // Fetch all admin data

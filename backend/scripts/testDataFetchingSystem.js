@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const prisma = require("../config/prisma");
 const bcrypt = require("bcryptjs");
 require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 
@@ -8,9 +8,9 @@ const testDataFetchingSystem = async () => {
     console.log("  VERIFYING NTMS COMPLETE DATA-FETCHING AND RELATIONSHIP INTEGRITY");
     console.log("================================================================================\n");
 
-    console.log("1. Connecting to MongoDB...");
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("✓ Connected to MongoDB.\n");
+    console.log("1. Connecting to PostgreSQL...");
+    await prisma.$connect();
+    console.log("✓ Connected to PostgreSQL.\n");
 
     const User = require("../models/User");
     const Customer = require("../models/Customer");

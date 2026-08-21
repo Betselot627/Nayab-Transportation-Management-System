@@ -447,7 +447,7 @@ const DriverDashboard = () => {
                             onClick={() =>
                               handleStepUpdate(trip._id, "picked_up")
                             }
-                            className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                           >
                             <Package className="h-3.5 w-3.5" />
                             Package Picked Up

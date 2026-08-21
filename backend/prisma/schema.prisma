@@ -1,0 +1,290 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String
+  phone        String
+  role         String   @default("customer")
+  status       String   @default("active")
+  profileImage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  customer          Customer?
+  driver            Driver?
+  notifications     Notification[]
+  paymentsPaid      Payment[]      @relation("PaidPayments")
+  paymentsProcessed Payment[]      @relation("ProcessedPayments")
+  shipmentsConfirmed Shipment[]    @relation("ShipmentPriceConfirmers")
+  maintenancesCreated Maintenance[]
+  vehiclesApproved  Vehicle[]      @relation("ApprovedVehicles")
+}
+
+model Customer {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName         String?
+  addressStreet       String?
+  addressCity         String?
+  addressState        String?
+  addressZipCode      String?
+  addressCountry      String?  @default("Ethiopia")
+  contactPersonName   String?
+  contactPersonPhone  String?
+  contactPersonEmail  String?
+  totalShipments      Int      @default(0)
+  totalSpent          Float    @default(0)
+  creditLimit         Float    @default(0)
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  shipments           Shipment[]
+  payments            Payment[]
+  vehicles            Vehicle[]
+}
+
+model Driver {
+  id               String    @id @default(uuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName         String
+  licenseNumber    String    @unique
+  licenseExpiry    DateTime
+  licenseImage     String?
+  experience       Int
+  currentLocation  Json?     // { type: "Point", coordinates: [lng, lat], address: String }
+  status           String    @default("available")
+  rating           Float     @default(0)
+  totalTrips       Int       @default(0)
+  completedTrips   Int       @default(0)
+  emergencyContact Json?     // { name: String, phone: String, relationship: String }
+  documents        Json?     // { cnic: String, medicalCertificate: String, other: [String] }
+  commissionRate   Float     @default(15)
+  totalEarnings    Float     @default(0)
+  pendingPayout    Float     @default(0)
+  lastAssignedAt   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  vehiclesRegistered Vehicle[] @relation("RegisteredVehicles")
+  vehiclesDriven     Vehicle[] @relation("DrivenVehicles")
+  shipments          Shipment[]
+  trips              Trip[]
+}
+
+model Vehicle {
+  id                     String    @id @default(uuid())
+  registeredById         String?
+  registeredBy           Driver?   @relation("RegisteredVehicles", fields: [registeredById], references: [id], onDelete: SetNull)
+  approvalStatus         String    @default("pending")
+  approvedById           String?
+  approvedBy             User?     @relation("ApprovedVehicles", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvalDate           DateTime?
+  rejectionReason        String?
+  plateNumber            String    @unique
+  model                  String
+  manufacturer           String
+  type                   String
+  capacityWeight         Float?
+  capacityUnit           String    @default("kg")
+  year                   Int
+  color                  String
+  fuelType               String
+  insuranceCompany       String?
+  insurancePolicyNumber  String?
+  insuranceExpiryDate    DateTime?
+  insuranceDocument      String?
+  registrationNumber     String?
+  registrationExpiryDate DateTime?
+  registrationDocument   String?
+  inspectionDocument     String?
+  supportingDocuments    Json?     // string[]
+  currentDriverId        String?
+  currentDriver          Driver?   @relation("DrivenVehicles", fields: [currentDriverId], references: [id], onDelete: SetNull)
+  assignedCustomerId     String?
+  assignedCustomer       Customer? @relation(fields: [assignedCustomerId], references: [id], onDelete: SetNull)
+  assignedItemType       String?
+  assignedAt             DateTime?
+  status                 String    @default("available")
+  mileage                Float     @default(0)
+  lastMaintenanceDate    DateTime?
+  nextMaintenanceDate    DateTime?
+  images                 Json?     // string[]
+  notes                  String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  shipments              Shipment[]
+  trips                  Trip[]
+  maintenances           Maintenance[]
+}
+
+model Shipment {
+  id                       String    @id @default(uuid())
+  customerId               String
+  customer                 Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  shipmentNumber           String    @unique
+  pickupAddress            String
+  pickupCity               String
+  pickupCoordinates        Json?     // [lng, lat]
+  pickupContactName        String?
+  pickupContactPhone       String?
+  destinationAddress       String
+  destinationCity          String
+  destinationCoordinates   Json?     // [lng, lat]
+  destinationContactName   String?
+  destinationContactPhone  String?
+  cargoType                String
+  cargoWeight              Float
+  cargoUnit                String    @default("kg")
+  cargoDescription         String?
+  cargoQuantity            Int       @default(1)
+  cargoSpecialInstructions String?
+  vehicleId                String?
+  vehicle                  Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  driverId                 String?
+  driver                   Driver?   @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  status                   String    @default("pending")
+  paymentStatus            String    @default("UNPAID")
+  baseAmount               Float     @default(0)
+  additionalCharges        Float     @default(0)
+  totalAmount              Float     @default(0)
+  currency                 String    @default("ETB")
+  finalPrice               Float     @default(0)
+  priceConfirmedById       String?
+  priceConfirmedBy         User?     @relation("ShipmentPriceConfirmers", fields: [priceConfirmedById], references: [id], onDelete: SetNull)
+  priceConfirmedAt         DateTime?
+  scheduledPickupDate      DateTime
+  estimatedDeliveryDate    DateTime?
+  actualPickupDate         DateTime?
+  actualDeliveryDate       DateTime?
+  distance                 Float     @default(0)
+  invoices                 Json?     // string[]
+  receipts                 Json?     // string[]
+  proofOfDelivery          String?
+  otherDocuments           Json?     // string[]
+  statusHistory            Json?     // Array of { status, timestamp, updatedBy, remarks }
+  notes                    String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  trips                    Trip[]
+  payments                 Payment[]
+}
+
+model Trip {
+  id                 String    @id @default(uuid())
+  tripNumber         String    @unique
+  shipmentId         String
+  shipment           Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  driverId           String
+  driver             Driver    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  vehicleId          String
+  vehicle            Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  startTime          DateTime?
+  endTime            DateTime?
+  estimatedDuration  Float     @default(0)
+  actualDuration     Float     @default(0)
+  currentLocation    Json?     // { type, coordinates, address, lastUpdated }
+  route              Json?     // Array of { location, timestamp }
+  distance           Float     @default(0)
+  status             String    @default("pending")
+  checkpoints        Json?     // Array of { location, timestamp, status, remarks }
+  incidents          Json?     // Array of { type, description, timestamp, resolved }
+  fuelConsumption    Json?     // { start, end, total }
+  expenses           Json?     // { fuel, toll, maintenance, other, total }
+  driverNotes        String?
+  driverCommission   Json?     // { amount, percentage, status, earnedAt, paidAt }
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model Maintenance {
+  id                     String    @id @default(uuid())
+  vehicleId              String
+  vehicle                Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  maintenanceNumber      String    @unique
+  serviceType            String
+  category               String    @default("general")
+  description            String
+  serviceProviderName    String?
+  serviceProviderContact String?
+  serviceProviderAddress String?
+  costLabor              Float     @default(0)
+  costParts              Float     @default(0)
+  costOther              Float     @default(0)
+  costTotal              Float     @default(0)
+  serviceDate            DateTime  @default(now())
+  nextServiceDate        DateTime?
+  nextServiceMileage     Float?
+  currentMileage         Float
+  status                 String    @default("scheduled")
+  priority               String    @default("medium")
+  partsReplaced          Json?     // Array of { partName, partNumber, quantity, cost }
+  performedBy            String?
+  documents              Json?     // string[]
+  notes                  String?
+  createdById            String?
+  createdBy              User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+model Payment {
+  id                 String    @id @default(uuid())
+  paymentNumber      String?   @unique
+  txRef              String    @unique
+  shipmentId         String
+  shipment           Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  customerId         String
+  customer           Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  amount             Float
+  currency           String    @default("ETB")
+  status             String    @default("PENDING")
+  paymentStatus      String    @default("pending") // legacy
+  paymentMethod      String    @default("Chapa")
+  checkoutUrl        String?
+  chapaTransactionId String?
+  receiptNumber      String?   @unique
+  receiptDate        DateTime?
+  paidAt             DateTime?
+  failedAt           DateTime?
+  paidById           String?
+  paidBy             User?     @relation("PaidPayments", fields: [paidById], references: [id], onDelete: SetNull)
+  processedById      String?
+  processedBy        User?     @relation("ProcessedPayments", fields: [processedById], references: [id], onDelete: SetNull)
+  customerDetails    Json?     // { name, email, phone }
+  metadata           Json?
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model Notification {
+  id                String    @id @default(uuid())
+  userId            String?
+  user              User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title             String
+  message           String
+  type              String
+  priority          String    @default("medium")
+  read              Boolean   @default(false)
+  readAt            DateTime?
+  relatedEntityType String?
+  relatedEntityId   String?
+  actionUrl         String?
+  expiresAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
