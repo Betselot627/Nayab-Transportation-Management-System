@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
 import toast, { Toaster } from "react-hot-toast";
-import axios from "axios";
+import api from "../../services/api";
 
 const Profile = () => {
   const { user, setUser } = useContext(AuthContext);
@@ -38,11 +38,7 @@ const Profile = () => {
   // Fetch customer profile
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/customers/profile/me`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const response = await api.get("/customers/profile/me");
       if (response.data && response.data.success && response.data.data) {
         const customer = response.data.data;
         setProfileData({
@@ -91,9 +87,8 @@ const Profile = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/customers/profile/me`,
+      const response = await api.put(
+        "/customers/profile/me",
         {
           name: profileData.name,
           email: profileData.email,
@@ -104,7 +99,6 @@ const Profile = () => {
           companyName: profileData.companyName,
           profileImage: profileData.profileImage,
         },
-        { headers: { Authorization: `Bearer ${token}` } },
       );
       if (response.data && response.data.success) {
         const updated = response.data.data;
@@ -135,15 +129,10 @@ const Profile = () => {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/auth/update-password`,
-        {
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword,
-        },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      await api.put("/auth/update-password", {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
       toast.success("Password changed successfully");
       setPasswordData({
         currentPassword: "",

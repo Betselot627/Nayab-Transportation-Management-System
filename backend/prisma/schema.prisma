@@ -8,16 +8,18 @@ generator client {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  password     String
-  phone        String
-  role         String   @default("customer")
-  status       String   @default("active")
-  profileImage String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                  String    @id @default(uuid())
+  name                String
+  email               String    @unique
+  password            String
+  phone               String
+  role                String    @default("customer")
+  status              String    @default("active")
+  profileImage        String?
+  resetPasswordToken  String?
+  resetPasswordExpire DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   customer          Customer?
   driver            Driver?

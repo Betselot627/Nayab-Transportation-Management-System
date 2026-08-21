@@ -8,6 +8,7 @@ import {
   CheckCircle,
   Loader,
   Lock,
+  KeyRound,
 } from "lucide-react";
 import api from "../../services/api";
 import ThemeToggle from "../../components/common/ThemeToggle";
@@ -22,13 +23,14 @@ import ThemeToggle from "../../components/common/ThemeToggle";
 const ForgotPassword = () => {
   const [step, setStep] = useState(1); // 1: Enter email, 2: Reset password
   const [email, setEmail] = useState("");
+  const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
-  // Step 1: Request password reset
+  // Step 1: Request password reset token
   const handleRequestReset = async (e) => {
     e.preventDefault();
     setError("");
@@ -38,6 +40,10 @@ const ForgotPassword = () => {
       const response = await api.post("/auth/forgot-password", { email });
 
       if (response.data.success) {
+        // In non-production environments the API returns the raw token so the
+        // flow works without an email service; prefill it for convenience.
+        const devToken = response.data.dev_info?.resetToken;
+        if (devToken) setResetToken(devToken);
         setSuccess(true);
         setTimeout(() => {
           setStep(2);
@@ -54,10 +60,15 @@ const ForgotPassword = () => {
     }
   };
 
-  // Step 2: Reset password with email
+  // Step 2: Reset password with email + token
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (!resetToken) {
+      setError("Please enter the reset token you received");
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
       setError("Passwords do not match");
@@ -74,6 +85,7 @@ const ForgotPassword = () => {
     try {
       const response = await api.post("/auth/reset-password", {
         email,
+        resetToken,
         newPassword,
       });
 
@@ -149,8 +161,8 @@ const ForgotPassword = () => {
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
             {step === 1
-              ? "Enter your email to reset your password"
-              : "Enter your new password below"}
+              ? "Enter your email to receive a reset token"
+              : "Paste your reset token and choose a new password"}
           </p>
         </div>
 
@@ -165,7 +177,7 @@ const ForgotPassword = () => {
 
           {step === 1 ? (
             // Step 1: Enter Email
-            <form onSubmit={handleForgotPassword} className="space-y-6">
+            <form onSubmit={handleRequestReset} className="space-y-6">
               <div>
                 <label
                   htmlFor="email"
@@ -205,6 +217,27 @@ const ForgotPassword = () => {
           ) : (
             // Step 2: Reset Password
             <form onSubmit={handleResetPassword} className="space-y-5">
+              <div>
+                <label
+                  htmlFor="resetToken"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Reset Token
+                </label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                  <input
+                    id="resetToken"
+                    type="text"
+                    required
+                    value={resetToken}
+                    onChange={(e) => setResetToken(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-mono text-sm"
+                    placeholder="Paste the reset token you received"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label
                   htmlFor="newPassword"

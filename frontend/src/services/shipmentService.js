@@ -61,4 +61,25 @@ export const shipmentService = {
     const response = await api.put(`/shipments/${id}/approve`);
     return response.data;
   },
+
+  // Get live price quote from server (cargo weight + distance based)
+  getQuote: async ({ pickupCity, deliveryCity, weight, unit }) => {
+    const response = await api.post("/shipments/quote", {
+      pickupCity,
+      deliveryCity,
+      weight,
+      unit,
+    });
+    return response.data;
+  },
+
+  // Ranked driver + vehicle suggestions for a shipment (with driver payment)
+  getSuggestions: async (id, options = {}) => {
+    const { force = false, ttl = 15000 } = options;
+    const response = await api.cachedGet(`/shipments/${id}/suggestions`, {
+      force,
+      ttl,
+    });
+    return response.data;
+  },
 };

@@ -35,17 +35,11 @@ export const AuthProvider = ({ children }) => {
 
     // Session preservation for local simulation
     if (token === "mock-jwt-token-ntms-admin") {
-      const mockAdmin = {
-        _id: "mock-admin-999",
-        name: "Admin User",
-        email: "admin@ntms.com",
-        phone: "+251911223344",
-        role: "admin",
-        status: "active",
-        token: "mock-jwt-token-ntms-admin",
-      };
-      setUser(mockAdmin);
-      localStorage.setItem("user", JSON.stringify(mockAdmin));
+      // Legacy mock token: force re-authentication instead of trusting it
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("role");
+      setUser(null);
       setLoading(false);
       return;
     }
@@ -90,32 +84,6 @@ export const AuthProvider = ({ children }) => {
       }
       throw new Error("Invalid response format");
     } catch (err) {
-      // Fallback: Check for default admin credentials
-      if (
-        credentials.email === "admin@ntms.com" &&
-        credentials.password === "admin123"
-      ) {
-        if (credentials.role && credentials.role !== "admin") {
-          const errMsg = `Access Denied: Your account role is 'admin' but you selected the role '${credentials.role}'.`;
-          setError(errMsg);
-          return { success: false, error: errMsg };
-        }
-        const mockAdminUser = {
-          _id: "mock-admin-999",
-          name: "Admin User",
-          email: "admin@ntms.com",
-          phone: "+251911223344",
-          role: "admin",
-          status: "active",
-          token: "mock-jwt-token-ntms-admin",
-        };
-        setUser(mockAdminUser);
-        localStorage.setItem("token", mockAdminUser.token);
-        localStorage.setItem("user", JSON.stringify(mockAdminUser));
-        localStorage.setItem("role", "admin");
-        return { success: true, data: mockAdminUser };
-      }
-
       const errorMessage =
         err.response?.data?.message ||
         "Login failed - Make sure credentials are correct";

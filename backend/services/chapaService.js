@@ -43,6 +43,7 @@ class ChapaService {
    * @param {string} paymentData.returnUrl
    * @param {string} paymentData.title
    * @param {string} paymentData.description
+   * @param {string[]} [paymentData.paymentMethods] - Restrict checkout channels (e.g. ["telebirr"], ["cbe"])
    * @returns {Promise<{ success: boolean, checkoutUrl: string, raw: Object }>}
    */
   async initializePayment(paymentData) {
@@ -58,6 +59,7 @@ class ChapaService {
       returnUrl,
       title = "Nayab Transportation Management System",
       description = "Transportation & Shipment Delivery Payment",
+      paymentMethods,
     } = paymentData;
 
     const payload = {
@@ -74,6 +76,10 @@ class ChapaService {
         description,
       },
     };
+
+    if (Array.isArray(paymentMethods) && paymentMethods.length > 0) {
+      payload.payment_methods = paymentMethods;
+    }
 
     if (phoneNumber) {
       payload.phone_number = phoneNumber;

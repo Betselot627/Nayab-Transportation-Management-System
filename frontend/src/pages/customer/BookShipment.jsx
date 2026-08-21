@@ -1,17 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { shipmentService } from "../../services/shipmentService";
 import {
   Package,
   MapPin,
-  User,
-  Phone,
   Calendar,
   Weight,
-  FileText,
   ArrowRight,
+  ArrowLeft,
   Loader,
+  CheckCircle2,
+  Truck,
+  Route as RouteIcon,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
@@ -20,6 +21,10 @@ const BookShipment = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState(null);
+  const [quote, setQuote] = useState(null);
+  const [quoting, setQuoting] = useState(false);
+  const [created, setCreated] = useState(null);
 
   const {
     register,
@@ -28,47 +33,84 @@ const BookShipment = () => {
     watch,
   } = useForm();
 
-  const onSubmit = async (data) => {
+  // Quote inputs (subscribed for live updates)
+  const pickupCity = watch("pickupCity");
+  const deliveryCity = watch("deliveryCity");
+  const weightVal = watch("weight");
+  const unitVal = watch("weightUnit");
+
+  // Live server-driven price quote (debounced)
+  useEffect(() => {
+    if (step < 3) return undefined;
+    const w = parseFloat(weightVal);
+    if (!pickupCity || !deliveryCity || !w || w <= 0) {
+      setQuote(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setQuoting(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await shipmentService.getQuote({
+          pickupCity,
+          deliveryCity,
+          weight: w,
+          unit: unitVal || "kg",
+        });
+        if (!cancelled) setQuote(res?.data || null);
+      } catch {
+        if (!cancelled) setQuote(null);
+      } finally {
+        if (!cancelled) setQuoting(false);
+      }
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [step, pickupCity, deliveryCity, weightVal, unitVal]);
+
+  const buildPayload = (data) => ({
+    pickupLocation: {
+      address: data.pickupAddress,
+      city: data.pickupCity,
+      contactPerson: {
+        name: data.pickupContactName,
+        phone: data.pickupContactPhone,
+      },
+    },
+    destination: {
+      address: data.deliveryAddress,
+      city: data.deliveryCity,
+      contactPerson: {
+        name: data.deliveryContactName,
+        phone: data.deliveryContactPhone,
+      },
+    },
+    cargoDetails: {
+      type: data.cargoType,
+      weight: parseFloat(data.weight),
+      unit: data.weightUnit,
+      description: data.description,
+      quantity: parseInt(data.quantity) || 1,
+    },
+    scheduledPickupDate: data.pickupDate,
+  });
+
+  // Step 3 -> 4: validate the whole form, store data, show review
+  const handleReview = (data) => {
+    setFormData(data);
+    setStep(4);
+  };
+
+  // Step 4: explicit confirmation -> submit to API
+  const confirmBooking = async () => {
+    if (!formData) return;
     try {
       setLoading(true);
-
-      const shipmentData = {
-        pickupLocation: {
-          address: data.pickupAddress,
-          city: data.pickupCity,
-          contactPerson: {
-            name: data.pickupContactName,
-            phone: data.pickupContactPhone,
-          },
-        },
-        destination: {
-          address: data.deliveryAddress,
-          city: data.deliveryCity,
-          contactPerson: {
-            name: data.deliveryContactName,
-            phone: data.deliveryContactPhone,
-          },
-        },
-        cargoDetails: {
-          type: data.cargoType,
-          weight: parseFloat(data.weight),
-          unit: data.weightUnit,
-          description: data.description,
-          quantity: parseInt(data.quantity) || 1,
-        },
-        scheduledPickupDate: data.pickupDate,
-        pricing: {
-          baseAmount: parseFloat(data.estimatedPrice) || 0,
-          totalAmount: parseFloat(data.estimatedPrice) || 0,
-        },
-        status: "pending",
-      };
-
-      await shipmentService.createShipment(shipmentData);
-      toast.success("Shipment booking submitted! Awaiting admin approval.");
-      setTimeout(() => {
-        navigate("/customer/my-bookings");
-      }, 1500);
+      const res = await shipmentService.createShipment(buildPayload(formData));
+      setCreated(res?.data || null);
+      toast.success("Booking confirmed! Admins have been notified.");
     } catch (err) {
       console.error("Failed to create shipment:", err);
       toast.error(err.response?.data?.message || "Failed to create shipment");
@@ -79,6 +121,87 @@ const BookShipment = () => {
 
   const nextStep = () => setStep(step + 1);
   const prevStep = () => setStep(step - 1);
+
+  // ---------- Success summary screen ----------
+  if (created) {
+    const price =
+      created.pricing?.totalAmount || created.finalPrice || quote?.totalAmount || 0;
+    return (
+      <div className="space-y-6 p-1">
+        <Toaster position="top-right" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-xl mx-auto mt-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-8 shadow-sm text-center transition-colors"
+        >
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <CheckCircle2 className="h-8 w-8" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Booking Confirmed!
+          </h1>
+          <p className="mt-1 text-slate-500 dark:text-slate-400 text-sm font-medium">
+            Shipment{" "}
+            <span className="font-mono font-bold text-slate-900 dark:text-white">
+              #{created.shipmentNumber}
+            </span>{" "}
+            · {created.pickupLocation?.city} → {created.destination?.city}
+          </p>
+
+          <div className="grid grid-cols-3 gap-3 my-6">
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wide">
+                Estimated Price
+              </div>
+              <div className="text-sm sm:text-base font-extrabold font-mono text-purple-700 dark:text-purple-400 mt-1">
+                {price.toLocaleString()} ETB
+              </div>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wide">
+                Distance
+              </div>
+              <div className="text-sm sm:text-base font-extrabold font-mono text-slate-900 dark:text-white mt-1">
+                ~{created.distance || quote?.distanceKm || "?"} km
+              </div>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wide">
+                Status
+              </div>
+              <div className="text-sm sm:text-base font-extrabold text-amber-600 dark:text-amber-400 mt-1">
+                Pending Approval
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-500 dark:text-slate-400 bg-purple-50 dark:bg-purple-950/30 border border-purple-200/60 dark:border-purple-800/30 rounded-xl p-3 text-left">
+            Admins have been automatically notified of your booking and will
+            assign the most suitable driver &amp; vehicle. You&apos;ll receive a
+            notification once the final price is confirmed — then you can pay
+            securely via Chapa (Telebirr / CBE Birr).
+          </p>
+
+          <div className="flex gap-3 mt-6">
+            <button
+              onClick={() =>
+                navigate(`/customer/track-shipment/${created._id}`)
+              }
+              className="flex-1 px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-all shadow-md shadow-purple-500/20 text-sm cursor-pointer"
+            >
+              Track Shipment
+            </button>
+            <button
+              onClick={() => navigate("/customer/my-bookings")}
+              className="flex-1 px-5 py-3 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition-all text-sm cursor-pointer"
+            >
+              View My Bookings
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-1">
@@ -105,7 +228,7 @@ const BookShipment = () => {
         {/* Progress Steps */}
         <div className="mb-8">
           <div className="flex items-center justify-center">
-            {[1, 2, 3].map((s) => (
+            {[1, 2, 3, 4].map((s) => (
               <div key={s} className="flex items-center">
                 <div
                   className={`flex items-center justify-center w-9 h-9 rounded-xl text-xs font-bold transition-all ${
@@ -116,9 +239,9 @@ const BookShipment = () => {
                 >
                   {s}
                 </div>
-                {s < 3 && (
+                {s < 4 && (
                   <div
-                    className={`w-16 sm:w-24 h-1 mx-2 rounded-full ${
+                    className={`w-10 sm:w-14 h-1 mx-2 rounded-full ${
                       step > s ? "bg-purple-600" : "bg-slate-200 dark:bg-slate-800"
                     } transition-colors`}
                   />
@@ -126,10 +249,11 @@ const BookShipment = () => {
               </div>
             ))}
           </div>
-          <div className="flex justify-center mt-2.5 text-xs text-slate-500 dark:text-slate-400 font-semibold gap-14 sm:gap-20">
+          <div className="flex justify-center mt-2.5 text-xs text-slate-500 dark:text-slate-400 font-semibold gap-8 sm:gap-12">
             <span>Pickup</span>
             <span>Delivery</span>
             <span>Cargo Info</span>
+            <span>Review</span>
           </div>
         </div>
 
@@ -455,60 +579,66 @@ const BookShipment = () => {
                   />
                 </div>
 
-                {/* Auto Price Estimation Box */}
-                {(() => {
-                  const pCity = (watch("pickupCity") || "").toLowerCase().trim();
-                  const dCity = (watch("deliveryCity") || "").toLowerCase().trim();
-                  const w = parseFloat(watch("weight")) || 100;
-                  const unit = watch("weightUnit") || "kg";
-                  const wKg = unit === "ton" ? w * 1000 : w;
-
-                  const distances = {
-                    "addis ababa": 0,
-                    "adama": 99,
-                    "hawassa": 275,
-                    "bahir dar": 565,
-                    "gondar": 658,
-                    "dire dawa": 450,
-                    "mekelle": 780,
-                    "jimma": 350,
-                  };
-
-                  let dist = 25;
-                  if (pCity && dCity && pCity !== dCity) {
-                    const pD = distances[pCity];
-                    const dD = distances[dCity];
-                    if (pD !== undefined && dD !== undefined) {
-                      dist = Math.max(Math.abs(pD - dD), 50);
-                    } else {
-                      dist = 120;
-                    }
-                  }
-
-                  const rate = wKg > 3500 ? 55 : 35;
-                  const weightExtra = wKg > 1000 ? Math.round((wKg - 1000) * 1.5) : 0;
-                  const autoEstimate = Math.max(500 + Math.round(dist * rate) + weightExtra, 800);
-
-                  return (
-                    <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/40 p-4 rounded-2xl space-y-2">
+                {/* Live Server Price Estimation Box */}
+                <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/40 p-4 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-purple-900 dark:text-purple-300">
+                      Automated Price Estimate:
+                    </span>
+                    {quoting ? (
+                      <span className="text-base font-extrabold font-mono text-purple-700/60 dark:text-purple-400/60 flex items-center gap-1.5">
+                        <Loader className="h-4 w-4 animate-spin" />
+                        Calculating...
+                      </span>
+                    ) : quote ? (
+                      <span className="text-base font-extrabold font-mono text-purple-700 dark:text-purple-400">
+                        {(quote.totalAmount || 0).toLocaleString()} ETB
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold text-slate-400">
+                        Enter cities &amp; weight
+                      </span>
+                    )}
+                  </div>
+                  {quote && (
+                    <div className="space-y-0.5 text-[11px] text-purple-600 dark:text-purple-400/80">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-purple-900 dark:text-purple-300">
-                          Automated Price Estimate:
+                        <span className="flex items-center gap-1">
+                          <RouteIcon className="h-3 w-3" />
+                          Est. Distance: ~{quote.distanceKm} km
                         </span>
-                        <span className="text-base font-extrabold font-mono text-purple-700 dark:text-purple-400">
-                          {autoEstimate.toLocaleString()} ETB
+                        <span>
+                          Base Fee: {quote.baseFee?.toLocaleString()} ETB
                         </span>
                       </div>
-                      <div className="text-[11px] text-purple-600 dark:text-purple-400/80 flex items-center justify-between">
-                        <span>Est. Distance: ~{dist} km ({unit.toUpperCase()}: {w})</span>
-                        <span>Base Rate + Distance Fare</span>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <Truck className="h-3 w-3" />
+                          Suggested: {quote.vehicleType} ({quote.ratePerKm}{" "}
+                          ETB/km)
+                        </span>
+                        <span>
+                          Distance Fare: {quote.distanceCost?.toLocaleString()}{" "}
+                          ETB
+                        </span>
                       </div>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 border-t border-purple-200/60 dark:border-purple-800/30 pt-1.5 mt-1">
-                        ℹ️ <strong>Workflow:</strong> Submitted bookings start as <em>"Pending Approval"</em>. You will receive an instant notification once Admin reviews and approves the booking, after which you can pay securely with Chapa (Telebirr / CBE Birr).
-                      </p>
+                      {quote.weightSurcharge > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span>Heavy-load surcharge</span>
+                          <span>
+                            +{quote.weightSurcharge.toLocaleString()} ETB
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  );
-                })()}
+                  )}
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 border-t border-purple-200/60 dark:border-purple-800/30 pt-1.5 mt-1">
+                    ℹ️ <strong>Workflow:</strong> Confirming your booking will
+                    notify admins instantly. Once they approve and confirm the
+                    final price, you can pay securely with Chapa (Telebirr / CBE
+                    Birr).
+                  </p>
+                </div>
 
                 <div className="flex gap-4 pt-2">
                   <button
@@ -519,19 +649,123 @@ const BookShipment = () => {
                     Back
                   </button>
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleSubmit(handleReview)}
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-all shadow-md shadow-purple-500/20 text-sm cursor-pointer"
+                  >
+                    Review Booking
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 4: Review & Confirm */}
+            {step === 4 && formData && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-5"
+              >
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  Review &amp; Confirm Booking
+                </h2>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 space-y-1.5 text-xs">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white mb-1">
+                      <MapPin className="h-3.5 w-3.5 text-purple-600" />
+                      Pickup
+                    </div>
+                    <div className="text-slate-600 dark:text-slate-300">
+                      {formData.pickupAddress}, {formData.pickupCity}
+                    </div>
+                    <div className="text-slate-500">
+                      Contact: {formData.pickupContactName} ·{" "}
+                      {formData.pickupContactPhone}
+                    </div>
+                    <div className="text-slate-500 flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {formData.pickupDate
+                        ? new Date(formData.pickupDate).toLocaleString()
+                        : "Not set"}
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 space-y-1.5 text-xs">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white mb-1">
+                      <MapPin className="h-3.5 w-3.5 text-purple-600" />
+                      Delivery
+                    </div>
+                    <div className="text-slate-600 dark:text-slate-300">
+                      {formData.deliveryAddress}, {formData.deliveryCity}
+                    </div>
+                    <div className="text-slate-500">
+                      Receiver: {formData.deliveryContactName} ·{" "}
+                      {formData.deliveryContactPhone}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 space-y-1.5 text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white mb-1">
+                    <Weight className="h-3.5 w-3.5 text-purple-600" />
+                    Cargo
+                  </div>
+                  <div className="text-slate-600 dark:text-slate-300">
+                    {formData.cargoType} ·{" "}
+                    <span className="font-semibold">
+                      {formData.weight} {(formData.weightUnit || "kg").toUpperCase()}
+                    </span>{" "}
+                    · Qty: {parseInt(formData.quantity) || 1}
+                  </div>
+                  {formData.description && (
+                    <div className="text-slate-500">{formData.description}</div>
+                  )}
+                </div>
+
+                {/* Final estimated price from server */}
+                <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/40 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="text-xs font-bold text-purple-900 dark:text-purple-300">
+                    Estimated Price{" "}
+                    <span className="font-normal text-slate-500 dark:text-slate-400">
+                      (final price confirmed by admin)
+                    </span>
+                  </div>
+                  <div className="text-lg font-extrabold font-mono text-purple-700 dark:text-purple-400">
+                    {quote
+                      ? `${quote.totalAmount.toLocaleString()} ETB`
+                      : "—"}
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-2">
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    className="flex-1 px-6 py-3 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition-all text-sm cursor-pointer"
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <ArrowLeft className="h-4 w-4" />
+                      Back to Edit
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmBooking}
                     disabled={loading}
                     className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-all shadow-md shadow-purple-500/20 disabled:opacity-50 text-sm cursor-pointer"
                   >
                     {loading ? (
                       <>
                         <Loader className="animate-spin h-4 w-4" />
-                        Submitting...
+                        Confirming...
                       </>
                     ) : (
                       <>
-                        <Package className="h-4 w-4" />
-                        Submit for Admin Approval
+                        <CheckCircle2 className="h-4 w-4" />
+                        Confirm Booking
                       </>
                     )}
                   </button>

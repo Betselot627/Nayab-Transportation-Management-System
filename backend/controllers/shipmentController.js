@@ -18,6 +18,210 @@ const Notification = require("../models/Notification");
 
 const { calculateShipmentPrice } = require("../utils/pricingCalculator");
 
+// ---------- Assignment helpers (shared) ----------
+const toKg = (weight, unit = "kg") =>
+  String(unit).toLowerCase() === "ton"
+    ? Number(weight || 0) * 1000
+    : Number(weight || 0);
+
+// Cargo type keyword -> suitable vehicle types (see SHIPMENT_ASSIGNMENT_WORKFLOW.md)
+const preferredVehicleTypes = (cargoType = "") => {
+  const t = String(cargoType).toLowerCase();
+  if (/document|envelope|letter|parcel/.test(t)) return ["pickup", "van"];
+  if (/furniture|heavy|machinery|construction|bulk/.test(t)) return ["truck", "trailer"];
+  if (/fragile|electronic|glass/.test(t)) return ["van", "pickup"];
+  return null;
+};
+
+const vehicleCapacityKg = (vehicle) =>
+  toKg(vehicle.capacity?.weight, vehicle.capacity?.unit);
+
+/**
+ * Rank vehicles best-first for a given cargo type/weight:
+ * 1. Prefer vehicles whose capacity can carry the cargo
+ * 2. Among those prefer cargo-type-appropriate vehicles
+ * 3. Within that pool, prefer the smallest sufficient capacity
+ */
+const rankVehiclesForCargo = (vehicles, cargoType, cargoWeightKg) => {
+  if (!vehicles || vehicles.length === 0) return [];
+  const sufficient = vehicles.filter((v) => vehicleCapacityKg(v) >= cargoWeightKg);
+  let pool = sufficient.length > 0 ? sufficient : [...vehicles];
+
+  const preferred = preferredVehicleTypes(cargoType);
+  if (preferred) {
+    const matching = pool.filter((v) =>
+      preferred.includes(String(v.type || "").toLowerCase()),
+    );
+    if (matching.length > 0) pool = matching;
+  }
+
+  return [...pool].sort(
+    (a, b) => vehicleCapacityKg(a) - vehicleCapacityKg(b),
+  );
+};
+
+/**
+ * @route   POST /api/shipments/quote
+ * @desc    Calculate estimated shipping price (cargo weight + delivery distance)
+ * @access  Private
+ *
+ * Body: { pickupCity, deliveryCity, weight, unit, distanceKm? }
+ */
+const quoteShipmentPrice = async (req, res) => {
+  try {
+    const { pickupCity, deliveryCity, weight, unit, distanceKm } = req.body || {};
+
+    const estimate = calculateShipmentPrice({
+      pickupCity,
+      deliveryCity,
+      weight,
+      unit,
+      distanceKm,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...estimate,
+        estimatedPrice: estimate.totalAmount,
+      },
+    });
+  } catch (error) {
+    console.error("Quote Shipment Price Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * @route   GET /api/shipments/:id/suggestions
+ * @desc    Ranked available drivers & recommended vehicles for a shipment,
+ *          including each driver's auto-calculated payment (commission)
+ * @access  Private/Admin/Dispatcher
+ */
+const getShipmentSuggestions = async (req, res) => {
+  try {
+    const shipment = await Shipment.findById(req.params.id);
+    if (!shipment) {
+      return res.status(404).json({
+        success: false,
+        message: "Shipment not found",
+      });
+    }
+
+    if (shipment.driverId && shipment.status !== "pending" && shipment.status !== "approved") {
+      return res.status(400).json({
+        success: false,
+        message: `Shipment is already assigned (status: ${shipment.status})`,
+      });
+    }
+
+    const cargoWeightKg = toKg(shipment.cargoDetails?.weight, shipment.cargoDetails?.unit);
+    const cargoType = shipment.cargoDetails?.type || "";
+    const finalPrice =
+      shipment.finalPrice || shipment.pricing?.totalAmount || 0;
+
+    // Available drivers, fair-queue first
+    const drivers = await Driver.find({ status: "available" })
+      .populate("userId")
+      .sort({ lastAssignedAt: 1, createdAt: 1 });
+
+    // All approved + available vehicles (fleet + driver-registered)
+    const allAvailableVehicles = await Vehicle.find({
+      approvalStatus: "approved",
+      status: "available",
+    }).populate("registeredBy", "fullName userId");
+
+    const suggestions = [];
+
+    for (const driver of drivers) {
+      const driverIdStr = String(driver._id);
+      const driverUserIdStr = driver.userId ? String(driver.userId._id || driver.userId) : "";
+
+      // Vehicles this driver may use: own registered + company fleet (no owner)
+      const eligibleVehicles = allAvailableVehicles.filter((v) => {
+        if (!v.registeredBy) return true;
+        const ownerId = String(v.registeredBy._id || v.registeredBy);
+        const ownerUserId = v.registeredBy.userId
+          ? String(v.registeredBy.userId._id || v.registeredBy.userId)
+          : "";
+        return ownerId === driverIdStr || (driverUserIdStr && ownerUserId === driverUserIdStr);
+      });
+
+      const ranked = rankVehiclesForCargo(eligibleVehicles, cargoType, cargoWeightKg);
+      if (ranked.length === 0) continue;
+
+      const recommended = ranked[0];
+      const commissionRate = Number(driver.commissionRate) > 0 ? Number(driver.commissionRate) : 15;
+      const estimatedDriverPayment = Math.round((finalPrice * commissionRate) / 100);
+      const capacitySufficient = vehicleCapacityKg(recommended) >= cargoWeightKg;
+
+      suggestions.push({
+        driver: {
+          _id: driver._id,
+          fullName: driver.fullName,
+          licenseNumber: driver.licenseNumber,
+          phone: driver.userId?.phone,
+          rating: driver.rating,
+          experience: driver.experience,
+          completedTrips: driver.completedTrips,
+        },
+        vehicle: {
+          _id: recommended._id,
+          plateNumber: recommended.plateNumber,
+          type: recommended.type,
+          manufacturer: recommended.manufacturer,
+          model: recommended.model,
+          capacityWeight: recommended.capacity?.weight,
+          capacityUnit: recommended.capacity?.unit,
+          isOwnerOperated: Boolean(recommended.registeredBy),
+        },
+        alternativeVehicleIds: ranked.slice(1, 4).map((v) => v._id),
+        estimatedDriverPayment,
+        commissionRate,
+        match: {
+          capacitySufficient,
+          typeMatched: (() => {
+            const preferred = preferredVehicleTypes(cargoType);
+            return preferred
+              ? preferred.includes(String(recommended.type || "").toLowerCase())
+              : true;
+          })(),
+        },
+      });
+    }
+
+    // Rank drivers: rating first, then completed trips; fair queue as tie-breaker
+    suggestions.sort((a, b) => {
+      const byRating = (b.driver.rating || 0) - (a.driver.rating || 0);
+      if (byRating !== 0) return byRating;
+      const byTrips = (b.driver.completedTrips || 0) - (a.driver.completedTrips || 0);
+      if (byTrips !== 0) return byTrips;
+      return b.match.capacitySufficient - a.match.capacitySufficient;
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        shipmentId: shipment._id,
+        shipmentNumber: shipment.shipmentNumber,
+        finalPrice,
+        currency: "ETB",
+        count: suggestions.length,
+        suggestions: suggestions.slice(0, 8),
+      },
+    });
+  } catch (error) {
+    console.error("Get Shipment Suggestions Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 /**
  * @route   POST /api/shipments
  * @desc    Create new shipment (Customer)
@@ -42,27 +246,28 @@ const createShipment = async (req, res) => {
 
     const payload = { ...req.body };
 
-    // Auto-calculate price if not supplied or zero
-    if (!payload.pricing?.totalAmount || payload.pricing?.totalAmount <= 0) {
-      const priceEst = calculateShipmentPrice({
-        pickupCity: payload.pickupLocation?.city,
-        deliveryCity: payload.destination?.city,
-        weight: payload.cargoDetails?.weight || 100,
-        unit: payload.cargoDetails?.unit || "kg",
-        distanceKm: payload.distance || 0,
-      });
+    // Always auto-calculate price server-side from cargo size/weight & delivery
+    // distance. Client-supplied amounts are ignored (admin confirms final price later).
+    const priceEst = calculateShipmentPrice({
+      pickupCity: payload.pickupLocation?.city,
+      deliveryCity: payload.destination?.city,
+      weight: payload.cargoDetails?.weight || 100,
+      unit: payload.cargoDetails?.unit || "kg",
+      distanceKm:
+        payload.distance && Number(payload.distance) > 0
+          ? Number(payload.distance)
+          : 0,
+    });
 
-      payload.distance = priceEst.distanceKm;
-      payload.pricing = {
-        baseAmount: priceEst.baseFee,
-        additionalCharges: priceEst.weightSurcharge,
-        totalAmount: priceEst.totalAmount,
-        currency: "ETB",
-      };
-      payload.finalPrice = priceEst.totalAmount;
-    } else {
-      payload.finalPrice = payload.pricing.totalAmount;
-    }
+    payload.distance = priceEst.distanceKm;
+    payload.pricing = {
+      baseAmount: priceEst.baseFee,
+      additionalCharges: priceEst.distanceCost + priceEst.weightSurcharge,
+      totalAmount: priceEst.totalAmount,
+      currency: "ETB",
+    };
+    // Estimated price until an admin confirms the final amount
+    payload.finalPrice = priceEst.totalAmount;
 
     payload.customerId = customer._id;
     payload.status = "pending"; // Always starts as Pending Approval
@@ -333,18 +538,14 @@ const assignShipment = async (req, res) => {
     }
 
     // Verify vehicle capacity meets shipment cargo size requirements
-    const cargoWeight = shipment.cargoDetails?.weight || 0;
-    const cargoUnit = shipment.cargoDetails?.unit || "kg";
-    const cargoWeightKg = cargoUnit === "ton" ? cargoWeight * 1005 : cargoWeight;
+    const cargoWeightKg = toKg(shipment.cargoDetails?.weight, shipment.cargoDetails?.unit);
 
-    const vehicleCap = vehicle.capacity?.weight || 0;
-    const vehicleUnit = vehicle.capacity?.unit || "kg";
-    const vehicleCapKg = vehicleUnit === "ton" ? vehicleCap * 1000 : vehicleCap;
+    const vehicleCapKg = vehicleCapacityKg(vehicle);
 
     if (vehicleCapKg < cargoWeightKg) {
       return res.status(400).json({
         success: false,
-        message: `Vehicle ${vehicle.plateNumber} capacity (${vehicleCap} ${vehicleUnit}) is insufficient for cargo weight (${cargoWeight} ${cargoUnit})`,
+        message: `Vehicle ${vehicle.plateNumber} capacity (${vehicle.capacity?.weight} ${vehicle.capacity?.unit || "kg"}) is insufficient for cargo weight (${shipment.cargoDetails?.weight} ${shipment.cargoDetails?.unit || "kg"})`,
       });
     }
 
@@ -409,10 +610,16 @@ const assignShipment = async (req, res) => {
     const cargoDesc = `${shipment.cargoDetails?.type || "Cargo"} (${shipment.cargoDetails?.weight || 0} ${shipment.cargoDetails?.unit || "kg"})`;
     const schedDate = shipment.scheduledPickupDate ? new Date(shipment.scheduledPickupDate).toLocaleDateString() : "Immediate";
 
+    // Auto-calculated driver payment for this shipment (commission-based)
+    const commissionRate = Number(driver.commissionRate) > 0 ? Number(driver.commissionRate) : 15;
+    const expectedDriverPay = Math.round(
+      ((shipment.finalPrice || shipment.pricing?.totalAmount || 0) * commissionRate) / 100,
+    );
+
     await Notification.create({
       userId: driver.userId,
       title: "New Trip Assigned",
-      message: `You have been assigned to shipment #${shipment.shipmentNumber}. Customer: ${customerName} (${customerPhone}). Route: ${pickupLoc} → ${destLoc}. Cargo: ${cargoDesc}. Vehicle: ${vehicle.plateNumber}. Scheduled: ${schedDate}.`,
+      message: `You have been assigned to shipment #${shipment.shipmentNumber}. Customer: ${customerName} (${customerPhone}). Route: ${pickupLoc} → ${destLoc}. Cargo: ${cargoDesc}. Vehicle: ${vehicle.plateNumber}. Scheduled: ${schedDate}. Estimated payment: ${expectedDriverPay.toLocaleString()} ETB (${commissionRate}% commission).`,
       type: "trip",
       priority: "high",
       actionUrl: "/driver/my-trips",
@@ -776,7 +983,7 @@ const getShipmentStats = async (req, res) => {
       ]),
       Shipment.aggregate([
         {
-          $match: { status: "completed" },
+          $match: { status: { $in: ["delivered", "completed"] } },
         },
         {
           $group: {
@@ -882,9 +1089,8 @@ const approveShipment = async (req, res) => {
         .populate("userId")
         .sort({ lastAssignedAt: 1, createdAt: 1 });
 
-      const cargoWeight = shipment.cargoDetails?.weight || 0;
-      const cargoUnit = shipment.cargoDetails?.unit || "kg";
-      const cargoWeightKg = cargoUnit === "ton" ? cargoWeight * 1000 : cargoWeight;
+      const cargoWeightKg = toKg(shipment.cargoDetails?.weight, shipment.cargoDetails?.unit);
+      const cargoType = shipment.cargoDetails?.type || "";
 
       for (const d of drivers) {
         const vehicles = await Vehicle.find({
@@ -894,13 +1100,8 @@ const approveShipment = async (req, res) => {
         });
 
         if (vehicles.length > 0) {
-          const suitable = vehicles.find((v) => {
-            const capKg = v.capacity.unit === "ton" ? v.capacity.weight * 1000 : v.capacity.weight;
-            return capKg >= cargoWeightKg;
-          }) || vehicles[0];
-
           selectedDriver = d;
-          selectedVehicle = suitable;
+          selectedVehicle = rankVehiclesForCargo(vehicles, cargoType, cargoWeightKg)[0];
           break;
         }
       }
@@ -961,10 +1162,12 @@ const approveShipment = async (req, res) => {
         }
 
         if (selectedDriver && selectedDriver.userId) {
+          const commissionRate = Number(selectedDriver.commissionRate) > 0 ? Number(selectedDriver.commissionRate) : 15;
+          const expectedPay = Math.round(((shipment.finalPrice || shipment.pricing?.totalAmount || 0) * commissionRate) / 100);
           await Notification.create({
             userId: selectedDriver.userId._id || selectedDriver.userId,
             title: "New Shipment Assigned",
-            message: `You have been assigned to shipment ${shipment.shipmentNumber} (${shipment.pickupLocation?.city} → ${shipment.destination?.city}).`,
+            message: `You have been assigned to shipment ${shipment.shipmentNumber} (${shipment.pickupLocation?.city} → ${shipment.destination?.city}). Cargo: ${shipment.cargoDetails?.type || "General"} (${shipment.cargoDetails?.weight || 0} ${shipment.cargoDetails?.unit || "kg"}). Estimated payment: ${expectedPay.toLocaleString()} ETB (${commissionRate}% commission).`,
             type: "trip",
             priority: "medium",
             relatedEntity: {
@@ -1065,6 +1268,8 @@ const confirmFinalPrice = async (req, res) => {
 };
 
 module.exports = {
+  quoteShipmentPrice,
+  getShipmentSuggestions,
   createShipment,
   getAllShipments,
   getShipmentById,

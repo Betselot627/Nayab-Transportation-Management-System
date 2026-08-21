@@ -131,6 +131,9 @@ api.interceptors.response.use(
       if (url.includes("/shipments") || url.includes("/bookings")) {
         cacheManager.invalidate("/shipments");
         cacheManager.invalidate("/reports");
+        // Assignment/status changes affect driver & vehicle availability
+        cacheManager.invalidate("/drivers");
+        cacheManager.invalidate("/vehicles");
       } else if (url.includes("/vehicles")) {
         cacheManager.invalidate("/vehicles");
         cacheManager.invalidate("/reports");

@@ -1,3 +1,4 @@
+require("dotenv").config({ path: require("path").join(__dirname, "../.env"), override: true });
 const { PrismaClient } = require("@prisma/client");
 
 /**
@@ -7,8 +8,8 @@ const { PrismaClient } = require("@prisma/client");
  * - Automatically connects to PostgreSQL/Neon
  * - Manages connection pooling
  *
- * NOTE: This project now uses MongoDB/Mongoose as the primary database.
- * Prisma is kept for legacy compatibility but is not actively used.
+ * NOTE: PostgreSQL is the primary database. All models are accessed through
+ * the Mongoose-style adapter in dbAdapter.js, which is built on this client.
  */
 
 let prisma;
@@ -22,11 +23,11 @@ try {
     });
   } else {
     console.warn(
-      "⚠️  Prisma DATABASE_URL not configured. Using MongoDB/Mongoose instead.",
+      "⚠️  Prisma DATABASE_URL not configured. Running with a no-op client.",
     );
     // Create a mock prisma object to prevent errors
     prisma = {
-      $connect: async () => console.log("Prisma skipped - using MongoDB"),
+      $connect: async () => console.log("Prisma skipped - no DATABASE_URL"),
       $disconnect: async () => {},
     };
   }

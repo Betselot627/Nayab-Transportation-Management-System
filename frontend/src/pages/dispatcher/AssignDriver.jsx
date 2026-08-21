@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { UserCheck, Truck, MapPin, Package, ArrowRight, RefreshCw, CheckCircle2 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import {
+  UserCheck,
+  MapPin,
+  Package,
+  RefreshCw,
+  Sparkles,
+  Star,
+  Wallet,
+  Truck,
+} from "lucide-react";
 import { shipmentService } from "../../services/shipmentService";
 import { driverService } from "../../services/driverService";
 import { vehicleService } from "../../services/vehicleService";
@@ -8,7 +17,6 @@ import toast from "react-hot-toast";
 
 const AssignDriver = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const preselectedShipmentId = searchParams.get("shipmentId");
 
   const [pendingShipments, setPendingShipments] = useState([]);
@@ -17,12 +25,39 @@ const AssignDriver = () => {
   const [selectedShipmentId, setSelectedShipmentId] = useState(preselectedShipmentId || "");
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [selectedVehicleId, setSelectedVehicleId] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsMeta, setSuggestionsMeta] = useState(null);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [assigningSuggestion, setAssigningSuggestion] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchData(false);
   }, []);
+
+  // Fetch smart suggestions whenever the selected shipment changes
+  useEffect(() => {
+    if (!selectedShipmentId) return;
+    let cancelled = false;
+    setSuggestionsLoading(true);
+    shipmentService
+      .getSuggestions(selectedShipmentId)
+      .then((res) => {
+        if (cancelled) return;
+        setSuggestions(res?.data?.suggestions || []);
+        setSuggestionsMeta(res?.data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setSuggestions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSuggestionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedShipmentId]);
 
   const fetchData = async (force = false) => {
     try {
@@ -48,6 +83,26 @@ const AssignDriver = () => {
       toast.error("Failed to load available fleet data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const assignSuggestion = async (s) => {
+    try {
+      setAssigningSuggestion(s.driver._id);
+      await shipmentService.assignShipment(selectedShipmentId, {
+        driverId: s.driver._id,
+        vehicleId: s.vehicle._id,
+      });
+      toast.success(
+        `Assigned ${s.driver.fullName} with vehicle ${s.vehicle.plateNumber}!`,
+      );
+      setSelectedDriverId("");
+      setSelectedVehicleId("");
+      fetchData(true);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Assignment failed");
+    } finally {
+      setAssigningSuggestion("");
     }
   };
 
@@ -161,6 +216,114 @@ const AssignDriver = () => {
               <p className="text-xs text-slate-400 mt-1">Please select a shipment to assign.</p>
             )}
           </div>
+
+          {/* Smart Suggestions */}
+          {currentShipment && (
+            <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-br from-indigo-50/80 to-purple-50/50 dark:from-indigo-950/30 dark:to-purple-950/20 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  Smart Suggestions
+                  <span className="text-[10px] font-semibold text-slate-400 font-normal">
+                    (ranked by rating &amp; cargo match)
+                  </span>
+                </h3>
+                {suggestionsMeta?.finalPrice > 0 && (
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                    Shipment value:{" "}
+                    <span className="font-mono text-slate-900 dark:text-white">
+                      {suggestionsMeta.finalPrice.toLocaleString()} ETB
+                    </span>
+                  </span>
+                )}
+              </div>
+
+              {suggestionsLoading ? (
+                <div className="py-3 text-center text-xs text-slate-400 animate-pulse">
+                  Analyzing available drivers &amp; vehicles...
+                </div>
+              ) : suggestions.length === 0 ? (
+                <div className="py-3 text-center text-xs text-slate-400">
+                  No suitable driver + vehicle combination currently available.
+                  Use manual assignment below.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                  {suggestions.map((s, idx) => (
+                    <div
+                      key={s.driver._id}
+                      className={`p-3 rounded-xl border bg-white dark:bg-slate-900 transition ${
+                        idx === 0
+                          ? "border-emerald-400 shadow-sm ring-1 ring-emerald-300/40"
+                          : "border-slate-200 dark:border-slate-800"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {idx === 0 && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-emerald-500 text-white text-[9px] font-extrabold uppercase tracking-wide">
+                                Best Match
+                              </span>
+                            )}
+                            <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                              {s.driver.fullName}
+                            </span>
+                            <span className="text-[11px] text-amber-500 font-semibold flex items-center gap-0.5">
+                              <Star className="w-3 h-3 fill-current" />
+                              {(s.driver.rating || 0).toFixed(1)}
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              {s.driver.completedTrips || 0} trips ·{" "}
+                              {s.driver.experience || 0}y exp
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
+                            <Truck className="w-3 h-3 shrink-0" />
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">
+                              {s.vehicle.plateNumber}
+                            </span>
+                            <span>
+                              ({s.vehicle.manufacturer} {s.vehicle.model},{" "}
+                              {s.vehicle.capacityWeight} {s.vehicle.capacityUnit})
+                            </span>
+                            {!s.match.typeMatched && (
+                              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold uppercase">
+                                type fallback
+                              </span>
+                            )}
+                            {!s.match.capacitySufficient && (
+                              <span className="px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-[9px] font-semibold uppercase">
+                                over capacity
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right space-y-1.5">
+                          <div className="flex items-center gap-1 justify-end text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                            <Wallet className="w-3.5 h-3.5" />
+                            Driver pays out{" "}
+                            <span className="font-mono">
+                              {s.estimatedDriverPayment?.toLocaleString()} ETB
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => assignSuggestion(s)}
+                            disabled={assigningSuggestion === s.driver._id}
+                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-[11px] font-bold rounded-lg transition shadow-sm"
+                          >
+                            {assigningSuggestion === s.driver._id
+                              ? "Assigning..."
+                              : "Assign"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <form onSubmit={handleAssign} className="space-y-5">
             <div>

@@ -1,6 +1,6 @@
+require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 const prisma = require("../config/prisma");
 const bcrypt = require("bcryptjs");
-require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 
 const testWorkflow = async () => {
   try {

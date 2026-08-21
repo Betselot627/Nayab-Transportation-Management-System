@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
 import toast, { Toaster } from "react-hot-toast";
-import axios from "axios";
+import api from "../../services/api";
 
 const Profile = () => {
   const { user, setUser } = useContext(AuthContext);
@@ -53,11 +53,7 @@ const Profile = () => {
   // Fetch full driver profile and assigned vehicles on mount
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/drivers/profile/me`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const response = await api.get("/drivers/profile/me");
       if (response.data && response.data.success && response.data.data) {
         const driver = response.data.data;
         setProfileData({
@@ -77,10 +73,7 @@ const Profile = () => {
       }
 
       // Fetch driver registered vehicle
-      const vehicleRes = await axios.get(
-        `${import.meta.env.VITE_API_URL}/vehicles`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const vehicleRes = await api.get("/vehicles");
       if (vehicleRes.data && vehicleRes.data.success && vehicleRes.data.data) {
         const myVehicles = vehicleRes.data.data;
         const activeVeh =
@@ -126,9 +119,8 @@ const Profile = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/drivers/profile/me`,
+      const response = await api.put(
+        "/drivers/profile/me",
         {
           name: profileData.name,
           email: profileData.email,
@@ -144,7 +136,6 @@ const Profile = () => {
             medicalCertificate: profileData.medicalCertificate || undefined,
           },
         },
-        { headers: { Authorization: `Bearer ${token}` } },
       );
       if (response.data && response.data.success) {
         const updated = response.data.data;
@@ -174,15 +165,10 @@ const Profile = () => {
     }
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/auth/update-password`,
-        {
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword,
-        },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      await api.put("/auth/update-password", {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
       toast.success("Password updated successfully");
       setPasswordData({
         currentPassword: "",

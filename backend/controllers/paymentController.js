@@ -106,14 +106,26 @@ const initializePayment = async (req, res) => {
     }
 
     // Determine normalized method name
-    const normalizedMethod = 
-      paymentMethod.toLowerCase() === "telebirr" 
-        ? "Telebirr" 
-        : paymentMethod.toLowerCase() === "cbe_birr" 
-        ? "CBE Birr" 
+    const methodLower = String(paymentMethod).toLowerCase();
+    const normalizedMethod =
+      methodLower === "telebirr"
+        ? "Telebirr"
+        : methodLower === "cbe_birr" || methodLower === "cbe"
+        ? "CBE Birr"
         : "Chapa";
 
-    const isSimulated = simulated || paymentMethod.toLowerCase() === "telebirr" || paymentMethod.toLowerCase() === "cbe_birr";
+    // Restrict the Chapa checkout to the customer's chosen channel
+    // (Chapa channel identifiers: "telebirr", "cbe")
+    const chapaPaymentMethods =
+      methodLower === "telebirr"
+        ? ["telebirr"]
+        : methodLower === "cbe_birr" || methodLower === "cbe"
+        ? ["cbe"]
+        : undefined;
+
+    // Explicit simulated flag (frontend USSD-style test flow) forces local simulation;
+    // otherwise a real Chapa checkout restricted to the chosen method is created.
+    const isSimulated = Boolean(simulated);
 
     // 5. Generate unique transaction reference
     const timestamp = Date.now();
@@ -175,6 +187,7 @@ const initializePayment = async (req, res) => {
           returnUrl,
           title: `Nayab Trading PLC - NTMS`,
           description: `Payment for Shipment ${shipment.shipmentNumber}`,
+          paymentMethods: chapaPaymentMethods,
         });
 
         checkoutUrl = chapaResponse.checkoutUrl;
@@ -470,19 +483,20 @@ const getPaymentReceipt = async (req, res) => {
   try {
     const { txRef } = req.params;
     const isObjectId = Boolean(txRef && (txRef.match(/^[0-9a-fA-F]{24}$/) || txRef.match(/^[0-9a-fA-F-]{36}$/)));
-    const payment = await Payment.findOne({
+
+    // A shipment may have several payment attempts (e.g. FAILED then PAID):
+    // prefer the successful one, otherwise fall back to the most recent.
+    const candidates = await Payment.find({
       $or: [
         { txRef },
         { receiptNumber: txRef },
         ...(isObjectId ? [{ _id: txRef }, { shipmentId: txRef }] : []),
       ],
     })
-      .populate({
-        path: "shipmentId",
-        populate: [{ path: "driverId" }, { path: "vehicleId" }],
-      })
-      .populate("customerId")
-      .populate("paidBy", "name email phone");
+      .sort({ createdAt: -1 });
+
+    const payment =
+      candidates.find((p) => p.status === "PAID") || candidates[0];
 
     if (!payment) {
       return res.status(404).json({
@@ -490,6 +504,23 @@ const getPaymentReceipt = async (req, res) => {
         message: "Receipt not found",
       });
     }
+
+    // Populate related records for the receipt payload
+    const populated = await Payment.findById(payment._id)
+      .populate({
+        path: "shipmentId",
+        populate: [{ path: "driverId" }, { path: "vehicleId" }],
+      })
+      .populate("customerId")
+      .populate("paidBy", "name email phone");
+
+    if (populated) {
+      Object.assign(payment, populated);
+      payment.shipmentId = populated.shipmentId;
+      payment.customerId = populated.customerId;
+      payment.paidBy = populated.paidBy;
+    }
+
 
     // Customer authorization check
     if (req.user.role === "customer") {

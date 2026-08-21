@@ -7,12 +7,14 @@ A comprehensive Transport Management System built with React (frontend) and Node
 ```
 nayab/
 ├── backend/          # Node.js/Express backend
-│   ├── config/       # Database configuration
+│   ├── config/       # Prisma client + Mongoose-style db adapter
 │   ├── controllers/  # Route controllers
 │   ├── middleware/   # Custom middleware
-│   ├── models/       # Mongoose models
+│   ├── models/       # Data models (via config/dbAdapter.js)
+│   ├── prisma/       # Prisma schema (PostgreSQL)
 │   ├── routes/       # API routes
-│   ├── .env          # Environment variables
+│   ├── services/     # External services (Chapa payments)
+│   ├── .env          # Environment variables (not committed)
 │   ├── package.json
 │   └── server.js     # Entry point
 │
@@ -54,7 +56,7 @@ npm install
 npm start
 ```
 
-Backend runs on: http://localhost:5000
+Backend runs on: http://localhost:5002
 
 ### Frontend Setup
 
@@ -71,9 +73,11 @@ Frontend runs on: http://localhost:5173
 ### Backend (.env)
 
 ```
-MONGO_URI=your_mongodb_connection_string
-PORT=5000
+DATABASE_URL=your_postgresql_connection_string
+PORT=5002
 NODE_ENV=development
+JWT_SECRET=your_jwt_secret
+FRONTEND_URL=http://localhost:5173
 ```
 
 ### Frontend (.env)
@@ -95,8 +99,9 @@ VITE_API_URL=http://localhost:5000/api
 
 - Node.js
 - Express
-- MongoDB
-- Mongoose
+- PostgreSQL (Neon) via Prisma
+- JWT Authentication
+- Chapa Payment Gateway
 
 ### Frontend
 

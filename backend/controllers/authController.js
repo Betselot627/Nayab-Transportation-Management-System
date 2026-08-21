@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const User = require("../models/User");
 const Customer = require("../models/Customer");
 const Driver = require("../models/Driver");
@@ -278,8 +279,12 @@ const updatePassword = async (req, res) => {
 
 /**
  * @route   POST /api/auth/forgot-password
- * @desc    Send password reset instructions to user's email
+ * @desc    Generate a password reset token for the user
  * @access  Public
+ *
+ * Stores a hashed token (SHA-256) with a 1 hour expiry on the user record.
+ * The raw token is returned ONLY outside production (no email service is
+ * wired up yet); in production this must be delivered via email instead.
  */
 const forgotPassword = async (req, res) => {
   try {
@@ -304,23 +309,36 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // In a production app, you would:
-    // 1. Generate a reset token
-    // 2. Save token to database with expiry
-    // 3. Send email with reset link
-    // For now, we'll just confirm the request
+    // Generate reset token: raw token goes to the user, hash is stored
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+    user.resetPasswordExpire = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    if (process.env.NODE_ENV === "production") {
+      // TODO: deliver `resetToken` to the user via email (e.g. nodemailer)
+      console.warn(
+        `[forgot-password] Reset token generated for ${user.email} but no email service is configured.`,
+      );
+      return res.status(200).json({
+        success: true,
+        message:
+          "If an account exists with this email, you will receive password reset instructions.",
+      });
+    }
 
     res.status(200).json({
       success: true,
-      message:
-        "Password reset instructions have been sent to your email address.",
-      // In development, you might want to return additional info
-      ...(process.env.NODE_ENV === "development" && {
-        dev_info: {
-          email: user.email,
-          userId: user._id,
-        },
-      }),
+      message: "Password reset token generated.",
+      dev_info: {
+        email: user.email,
+        userId: user._id,
+        resetToken,
+        expiresIn: "1 hour",
+      },
     });
   } catch (error) {
     console.error("Forgot Password Error:", error);
@@ -333,17 +351,19 @@ const forgotPassword = async (req, res) => {
 
 /**
  * @route   POST /api/auth/reset-password
- * @desc    Reset password with token
+ * @desc    Reset password using the token from forgot-password
  * @access  Public
+ *
+ * Request Body: { "email", "resetToken", "newPassword" }
  */
 const resetPassword = async (req, res) => {
   try {
-    const { email, newPassword } = req.body;
+    const { email, resetToken, newPassword } = req.body;
 
-    if (!email || !newPassword) {
+    if (!email || !resetToken || !newPassword) {
       return res.status(400).json({
         success: false,
-        message: "Please provide email and new password",
+        message: "Please provide email, reset token and new password",
       });
     }
 
@@ -354,18 +374,31 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    // Find user
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    // Find user with a matching, unexpired token
     const user = await User.findOne({ email });
 
-    if (!user) {
-      return res.status(404).json({
+    const tokenMatches =
+      user &&
+      user.resetPasswordToken &&
+      user.resetPasswordExpire &&
+      new Date(user.resetPasswordExpire).getTime() > Date.now();
+
+    if (!user || !tokenMatches || user.resetPasswordToken !== hashedToken) {
+      return res.status(400).json({
         success: false,
-        message: "User not found",
+        message: "Invalid or expired reset token. Please request a new one.",
       });
     }
 
-    // Update password (will be auto-hashed by User model)
+    // Update password (will be auto-hashed by User model) and clear the token
     user.password = newPassword;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpire = null;
     await user.save();
 
     res.status(200).json({

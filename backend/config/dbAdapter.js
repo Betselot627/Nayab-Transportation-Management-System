@@ -124,6 +124,48 @@ const POPULATE_MAPS = {
   }
 };
 
+const NESTED_INCLUDES = {
+  Shipment: {
+    customerId: { customer: { include: { user: true } } },
+    driverId: { driver: { include: { user: true } } },
+    vehicleId: { vehicle: true },
+    priceConfirmedBy: { priceConfirmedBy: true }
+  },
+  Trip: {
+    shipmentId: {
+      shipment: {
+        include: {
+          customer: { include: { user: true } }
+        }
+      }
+    },
+    driverId: { driver: { include: { user: true } } },
+    vehicleId: { vehicle: true }
+  },
+  Maintenance: {
+    vehicleId: { vehicle: true },
+    createdBy: { createdBy: true }
+  },
+  Payment: {
+    shipmentId: {
+      shipment: {
+        include: {
+          customer: { include: { user: true } }
+        }
+      }
+    },
+    customerId: { customer: { include: { user: true } } },
+    paidBy: { paidBy: true },
+    processedBy: { processedBy: true }
+  },
+  Customer: {
+    userId: { user: true }
+  },
+  Driver: {
+    userId: { user: true }
+  }
+};
+
 // Document wrapper that exposes Mongoose-like properties and methods
 class Document {
   constructor(data, modelName) {
@@ -338,6 +380,10 @@ function toMongooseDoc(dbObj, modelName) {
     delete doc.costTotal;
   }
 
+  if (modelName === "Payment") {
+    doc.paymentDate = dbObj.paidAt;
+  }
+
   if (modelName === "Notification") {
     if (dbObj.relatedEntityType || dbObj.relatedEntityId) {
       doc.relatedEntity = {
@@ -482,6 +528,13 @@ function toDbObj(mongooseData, modelName) {
       dbObj.costOther = Number(mongooseData.cost.other) || 0;
       dbObj.costTotal = Number(mongooseData.cost.total) || 0;
       delete dbObj.cost;
+    }
+  }
+
+  if (modelName === "Payment") {
+    if (mongooseData.paymentDate) {
+      dbObj.paidAt = new Date(mongooseData.paymentDate);
+      delete dbObj.paymentDate;
     }
   }
 
@@ -732,14 +785,17 @@ class QueryChain {
     }
 
     // Apply relations (includes)
-    const popMaps = POPULATE_MAPS[this.modelName] || {};
     if (this._populate.length > 0) {
       queryArgs.include = {};
+      const nestedSpec = NESTED_INCLUDES[this.modelName] || {};
       for (const p of this._populate) {
-        const pSpec = popMaps[p.path];
-        if (pSpec) {
-          queryArgs.include[pSpec.relation] = true;
+        const spec = nestedSpec[p.path];
+        if (spec) {
+          Object.assign(queryArgs.include, spec);
         }
+      }
+      if (Object.keys(queryArgs.include).length === 0) {
+        delete queryArgs.include;
       }
     }
 
@@ -1192,6 +1248,14 @@ function makeModel(modelName) {
       const where = convertMongoQueryToPrisma(queryObj);
       const res = await prismaDelegate.deleteMany({ where });
       return { deletedCount: res.count };
+    },
+
+    async deleteOne(queryObj = {}) {
+      const where = convertMongoQueryToPrisma(queryObj);
+      const first = await prismaDelegate.findFirst({ where });
+      if (!first) return { deletedCount: 0 };
+      await prismaDelegate.delete({ where: { id: first.id } });
+      return { deletedCount: 1 };
     },
 
     // In-memory JS Map-Reduce Aggregator Engine

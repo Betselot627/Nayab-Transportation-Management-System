@@ -12,6 +12,7 @@ import {
   Clock,
   ArrowRight,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { shipmentService } from "../../services/shipmentService";
 import { driverService } from "../../services/driverService";
@@ -28,6 +29,7 @@ const Bookings = () => {
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [availableDrivers, setAvailableDrivers] = useState([]);
   const [availableVehicles, setAvailableVehicles] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [selectedVehicleId, setSelectedVehicleId] = useState("");
   const [assigning, setAssigning] = useState(false);
@@ -56,16 +58,26 @@ const Bookings = () => {
     setSelectedShipment(shipment);
     setSelectedDriverId("");
     setSelectedVehicleId("");
+    setSuggestions([]);
     try {
-      const [driversRes, vehiclesRes] = await Promise.all([
+      const [driversRes, vehiclesRes, suggestionsRes] = await Promise.all([
         driverService.getAvailableDrivers({ force: true }),
         vehicleService.getAllVehicles({ available: "true" }, { force: true }),
+        shipmentService.getSuggestions(shipment._id, { force: true }).catch(() => null),
       ]);
       setAvailableDrivers(driversRes.data || []);
       setAvailableVehicles(vehiclesRes.data || []);
+      if (suggestionsRes?.success) {
+        setSuggestions(suggestionsRes.data?.suggestions || []);
+      }
     } catch (err) {
       toast.error("Failed to load available fleet assets");
     }
+  };
+
+  const applySuggestion = (s) => {
+    setSelectedDriverId(s.driver._id);
+    setSelectedVehicleId(s.vehicle._id);
   };
 
   const handleAssignSubmit = async (e) => {
@@ -241,6 +253,40 @@ const Bookings = () => {
             </div>
 
             <form onSubmit={handleAssignSubmit} className="space-y-4">
+              {suggestions.length > 0 && (
+                <div className="rounded-xl border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/70 dark:bg-indigo-950/30 p-3 space-y-2">
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Recommended (ranked by rating &amp; cargo match)
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.slice(0, 4).map((s, idx) => (
+                      <button
+                        key={s.driver._id}
+                        type="button"
+                        onClick={() => applySuggestion(s)}
+                        className={`px-2.5 py-1.5 rounded-lg text-left text-[11px] border transition ${
+                          selectedDriverId === s.driver._id &&
+                          selectedVehicleId === s.vehicle._id
+                            ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-blue-400"
+                        }`}
+                      >
+                        <span className="font-bold">
+                          #{idx + 1} {s.driver.fullName}
+                        </span>
+                        {" · "}
+                        {s.vehicle.plateNumber}
+                        {" · "}
+                        <span className="font-mono">
+                          {s.estimatedDriverPayment?.toLocaleString()} ETB
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">
                   Select Available Driver

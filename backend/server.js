@@ -13,7 +13,7 @@ const { notFound, errorHandler } = require("./middleware/errorMiddleware");
  *
  * Technology Stack:
  * - Node.js + Express.js
- * - MongoDB + Mongoose
+ * - PostgreSQL (Neon) via Prisma, behind a Mongoose-style adapter (config/dbAdapter.js)
  * - JWT Authentication
  * - Cloudinary File Upload
  *
@@ -30,7 +30,7 @@ const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 // Initialize Express app
 const app = express();
 
-// Connect to MongoDB
+// Connect to PostgreSQL (via Prisma)
 connectDB();
 
 const path = require("path");
@@ -56,10 +56,45 @@ const limiter = rateLimit({
 });
 app.use("/api/", limiter);
 
-// CORS Configuration
+// CORS Configuration - allowlist based (FRONTEND_URL + local development origins)
+const allowedOrigins = new Set(
+  [
+    process.env.FRONTEND_URL,
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://nayab-transportation-management-sys.vercel.app",
+  ].filter(Boolean),
+);
+
+const isPrivateNetworkOrigin = (origin) => {
+  try {
+    const { hostname } = new URL(origin);
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "[::1]" ||
+      /^192\.168\./.test(hostname) ||
+      /^10\./.test(hostname) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+    );
+  } catch {
+    return false;
+  }
+};
+
 app.use(
   cors({
-    origin: true, // Allow any origin dynamically to support any local testing port and network IPs
+    origin: (origin, callback) => {
+      // Allow non-browser requests (curl, health checks) and same-origin
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.has(origin) ||
+        (process.env.NODE_ENV !== "production" && isPrivateNetworkOrigin(origin))
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
     optionsSuccessStatus: 200,
   }),
@@ -97,18 +132,8 @@ app.get("/api", (req, res) => {
   });
 });
 
-// Import and use routes
-app.use("/api/auth", require("./routes/authRoutes"));
-app.use("/api/users", require("./routes/userRoutes"));
-app.use("/api/customers", require("./routes/customerRoutes"));
-app.use("/api/drivers", require("./routes/driverRoutes"));
-app.use("/api/vehicles", require("./routes/vehicleRoutes"));
-app.use("/api/shipments", require("./routes/shipmentRoutes"));
-app.use("/api/trips", require("./routes/tripRoutes"));
-app.use("/api/maintenance", require("./routes/maintenanceRoutes"));
-app.use("/api/payments", require("./routes/paymentRoutes"));
-app.use("/api/notifications", require("./routes/notificationRoutes"));
-app.use("/api/reports", require("./routes/reportRoutes"));
+// Import and use all API routes (see routes/index.js)
+app.use("/api", require("./routes/index"));
 
 // Catch-all for non-API routes to serve SPA index.html if dist exists
 if (fs.existsSync(frontendDistPath)) {

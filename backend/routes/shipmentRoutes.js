@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const {
+  quoteShipmentPrice,
+  getShipmentSuggestions,
   createShipment,
   getAllShipments,
   getShipmentById,
@@ -33,6 +35,12 @@ router
   .post(createShipment);
 
 router.get("/stats", authorize("admin", "dispatcher"), getShipmentStats);
+router.post("/quote", quoteShipmentPrice);
+router.get(
+  "/:id/suggestions",
+  authorize("admin", "dispatcher"),
+  getShipmentSuggestions,
+);
 
 router
   .route("/:id")

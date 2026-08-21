@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { tripService } from "../../services/tripService";
+import { shipmentService } from "../../services/shipmentService";
 import {
   Search,
   Plus,
@@ -10,13 +10,24 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
-  Calendar,
   User,
-  Truck,
 } from "lucide-react";
 import Badge from "../../components/common/Badge";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import toast from "react-hot-toast";
+
+// Shipment status -> display label
+const STATUS_LABELS = {
+  pending: "Pending",
+  approved: "Approved",
+  assigned: "Assigned",
+  picked_up: "Picked Up",
+  in_transit: "Running",
+  arrived: "Arrived",
+  delivered: "Delivered",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
 
 const BookingManagement = () => {
   const navigate = useNavigate();
@@ -25,7 +36,7 @@ const BookingManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
-  
+
   // Filters State
   const [filterDate, setFilterDate] = useState("");
   const [filterDriver, setFilterDriver] = useState("all");
@@ -40,15 +51,6 @@ const BookingManagement = () => {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
 
-  // Mock Bookings Fallback Database
-  const mockBookings = [
-    { id: 1, rollNumber: "B001", customer: "Almaz Belay", vehicle: "Toyota Hiace (AA-12345)", bookingDate: "2026-08-01", tripType: "One Way", assignedDriver: "Abebe Kebede", tripStatus: "Assigned" },
-    { id: 2, rollNumber: "B002", customer: "Bekele Zewde", vehicle: "Isuzu Truck (AA-67890)", bookingDate: "2026-08-02", tripType: "Round Trip", assignedDriver: "Meseret Haile", tripStatus: "Running" },
-    { id: 3, rollNumber: "B003", customer: "Marta Kassa", vehicle: "Hino 500 (AA-11223)", bookingDate: "2026-07-28", tripType: "One Way", assignedDriver: "Dawit Tesfaye", tripStatus: "Completed" },
-    { id: 4, rollNumber: "B004", customer: "Yonas Alemu", vehicle: "Mercedes Sprinter (AA-44556)", bookingDate: "2026-08-05", tripType: "One Way", assignedDriver: "Tigist Alemayehu", tripStatus: "Pending" },
-    { id: 5, rollNumber: "B005", customer: "Helen Solomon", vehicle: "Mitsubishi Canter (AA-78901)", bookingDate: "2026-07-30", tripType: "Round Trip", assignedDriver: "Solomon Girma", tripStatus: "Cancelled" },
-  ];
-
   useEffect(() => {
     fetchBookings();
   }, []);
@@ -56,25 +58,29 @@ const BookingManagement = () => {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const res = await tripService.getAllTrips();
-      if (res && res.data && res.data.length > 0) {
-        const mapped = res.data.map((t, idx) => ({
-          id: t._id,
-          rollNumber: `B${String(idx + 1).padStart(3, "0")}`,
-          customer: t.shipmentId?.userId?.name || "Premium Client",
-          vehicle: t.vehicleId ? `${t.vehicleId.manufacturer} (${t.vehicleId.plateNumber})` : "Unassigned",
-          bookingDate: t.startTime?.split("T")[0] || t.createdAt?.split("T")[0] || "25-12-2024",
-          tripType: t.shipmentId?.cargoDetails?.type || "One Way",
-          assignedDriver: t.driverId?.fullName || "Unassigned",
-          tripStatus: t.status.charAt(0).toUpperCase() + t.status.slice(1),
-        }));
-        setBookings(mapped);
-      } else {
-        setBookings(mockBookings);
-      }
+      const res = await shipmentService.getAllShipments({ limit: 50 }, { ttl: 15000 });
+      const rows = res?.data || [];
+      const mapped = rows.map((s) => ({
+        id: s._id,
+        rollNumber: s.shipmentNumber,
+        customer:
+          s.customerId?.companyName ||
+          s.customerId?.userId?.name ||
+          "Unknown Customer",
+        vehicle: s.vehicleId
+          ? `${s.vehicleId.manufacturer} (${s.vehicleId.plateNumber})`
+          : "Unassigned",
+        bookingDate: s.createdAt ? String(s.createdAt).split("T")[0] : "",
+        tripType: s.cargoDetails?.type || "General Cargo",
+        assignedDriver: s.driverId?.fullName || "Unassigned",
+        tripStatus: STATUS_LABELS[s.status] || s.status,
+        rawStatus: s.status,
+      }));
+      setBookings(mapped);
     } catch (err) {
-      console.warn("REST API offline, fallback to mock bookings:", err);
-      setBookings(mockBookings);
+      console.warn("Failed to load bookings:", err);
+      toast.error("Failed to load bookings");
+      setBookings([]);
     } finally {
       setLoading(false);
     }
@@ -93,25 +99,29 @@ const BookingManagement = () => {
 
   const executeDelete = async () => {
     try {
-      if (typeof deleteId === "string") {
-        await tripService.deleteTrip(deleteId);
-      }
-      setBookings(bookings.filter((b) => b.id !== deleteId));
-      toast.success("Booking cancelled and deleted successfully");
+      await shipmentService.cancelShipment(deleteId);
+      setBookings((prev) => prev.filter((b) => b.id !== deleteId));
+      toast.success("Booking cancelled successfully");
     } catch (err) {
-      setBookings(bookings.filter((b) => b.id !== deleteId));
-      toast.success("Booking cancelled and deleted successfully (Simulated)");
+      toast.error(
+        err.response?.data?.message ||
+          "Only pending or approved bookings can be cancelled",
+      );
     }
   };
 
   const getBadgeVariant = (status) => {
     switch (status.toLowerCase()) {
+      case "approved":
       case "assigned":
         return "info";
       case "running":
+      case "picked up":
       case "in progress":
+      case "arrived":
         return "purple";
       case "completed":
+      case "delivered":
         return "success";
       case "pending":
         return "warning";
@@ -257,9 +267,11 @@ const BookingManagement = () => {
               >
                 <option value="all">All Status</option>
                 <option value="Pending">Pending</option>
+                <option value="Approved">Approved</option>
                 <option value="Assigned">Assigned</option>
+                <option value="Picked Up">Picked Up</option>
                 <option value="Running">Running</option>
-                <option value="Completed">Completed</option>
+                <option value="Delivered">Delivered</option>
                 <option value="Cancelled">Cancelled</option>
               </select>
               <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
@@ -337,13 +349,22 @@ const BookingManagement = () => {
                     </td>
                     <td className="py-4 px-6 text-right">
                       <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => triggerDelete(booking.id)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {["pending", "approved"].includes(booking.rawStatus) ? (
+                          <button
+                            onClick={() => triggerDelete(booking.id)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors"
+                            title="Cancel booking"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <span
+                            className="p-1.5 text-gray-300 dark:text-gray-700 cursor-not-allowed"
+                            title="Only pending or approved bookings can be cancelled"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </span>
+                        )}
                         <button
                           onClick={() => navigate(`/admin/bookings/edit/${booking.id}`)}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-lg transition-colors"
@@ -409,4 +430,3 @@ const BookingManagement = () => {
 };
 
 export default BookingManagement;
-export { BookingManagement };
