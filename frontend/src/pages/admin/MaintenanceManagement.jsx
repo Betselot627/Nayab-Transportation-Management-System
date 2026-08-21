@@ -1,17 +1,17 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Search,
   Plus,
-  Edit2,
+  Pen as Edit2,
   Trash2,
-  Filter,
+  Funnel as Filter,
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
   Wrench,
   DollarSign,
-  AlertTriangle,
+  TriangleAlert as AlertTriangle,
 } from "lucide-react";
 import Badge from "../../components/common/Badge";
 import ConfirmDialog from "../../components/common/ConfirmDialog";

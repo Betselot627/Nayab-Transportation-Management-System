@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../services/authService";
 import {
@@ -7,7 +7,7 @@ import {
   Users,
   ShieldCheck,
   Clock,
-  BarChart3,
+  ChartColumn as BarChart3,
   PackageCheck,
   Route,
 } from "lucide-react";

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   CreditCard,
-  CheckCircle,
+  CircleCheck as CheckCircle,
   Clock,
-  XCircle,
+  CircleX as XCircle,
   FileText,
   Loader,
   ArrowUpRight,
@@ -211,7 +211,7 @@ const PaymentHistory = () => {
                         </span>
                         {p.shipmentId?.pickupLocation?.city && (
                           <span className="block text-[11px] text-slate-500 dark:text-slate-400">
-                            {p.shipmentId.pickupLocation.city} → {p.shipmentId.destination?.city}
+                            {p.shipmentId.pickupLocation.city} â†’ {p.shipmentId.destination?.city}
                           </span>
                         )}
                       </td>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { shipmentService } from "../../services/shipmentService";
 import { paymentService } from "../../services/paymentService";
@@ -12,7 +12,7 @@ import {
   ArrowRight,
   CreditCard,
   FileText,
-  CheckCircle,
+  CircleCheck as CheckCircle,
   ArrowUpRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -230,7 +230,7 @@ const MyBookings = () => {
                         <div className="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
                           <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                           <span>
-                            {shipment.pickupLocation?.city} → {shipment.destination?.city}
+                            {shipment.pickupLocation?.city} â†’ {shipment.destination?.city}
                           </span>
                         </div>
                         <span className="text-[11px] text-slate-400">

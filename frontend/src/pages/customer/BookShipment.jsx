@@ -10,7 +10,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Loader,
-  CheckCircle2,
+  CircleCheckBig as CheckCircle2,
   Truck,
   Route as RouteIcon,
 } from "lucide-react";
@@ -145,7 +145,7 @@ const BookShipment = () => {
             <span className="font-mono font-bold text-slate-900 dark:text-white">
               #{created.shipmentNumber}
             </span>{" "}
-            · {created.pickupLocation?.city} → {created.destination?.city}
+            Â· {created.pickupLocation?.city} â†’ {created.destination?.city}
           </p>
 
           <div className="grid grid-cols-3 gap-3 my-6">
@@ -178,7 +178,7 @@ const BookShipment = () => {
           <p className="text-xs text-slate-500 dark:text-slate-400 bg-purple-50 dark:bg-purple-950/30 border border-purple-200/60 dark:border-purple-800/30 rounded-xl p-3 text-left">
             Admins have been automatically notified of your booking and will
             assign the most suitable driver &amp; vehicle. You&apos;ll receive a
-            notification once the final price is confirmed — then you can pay
+            notification once the final price is confirmed â€” then you can pay
             securely via Chapa (Telebirr / CBE Birr).
           </p>
 
@@ -263,7 +263,7 @@ const BookShipment = () => {
           animate={{ opacity: 1, scale: 1 }}
           className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm transition-colors"
         >
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={(e) => e.preventDefault()}>
             {/* Step 1: Pickup Details */}
             {step === 1 && (
               <motion.div
@@ -633,7 +633,7 @@ const BookShipment = () => {
                     </div>
                   )}
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 border-t border-purple-200/60 dark:border-purple-800/30 pt-1.5 mt-1">
-                    ℹ️ <strong>Workflow:</strong> Confirming your booking will
+                    â„¹ï¸ <strong>Workflow:</strong> Confirming your booking will
                     notify admins instantly. Once they approve and confirm the
                     final price, you can pay securely with Chapa (Telebirr / CBE
                     Birr).
@@ -682,7 +682,7 @@ const BookShipment = () => {
                       {formData.pickupAddress}, {formData.pickupCity}
                     </div>
                     <div className="text-slate-500">
-                      Contact: {formData.pickupContactName} ·{" "}
+                      Contact: {formData.pickupContactName} Â·{" "}
                       {formData.pickupContactPhone}
                     </div>
                     <div className="text-slate-500 flex items-center gap-1">
@@ -702,7 +702,7 @@ const BookShipment = () => {
                       {formData.deliveryAddress}, {formData.deliveryCity}
                     </div>
                     <div className="text-slate-500">
-                      Receiver: {formData.deliveryContactName} ·{" "}
+                      Receiver: {formData.deliveryContactName} Â·{" "}
                       {formData.deliveryContactPhone}
                     </div>
                   </div>
@@ -714,11 +714,11 @@ const BookShipment = () => {
                     Cargo
                   </div>
                   <div className="text-slate-600 dark:text-slate-300">
-                    {formData.cargoType} ·{" "}
+                    {formData.cargoType} Â·{" "}
                     <span className="font-semibold">
                       {formData.weight} {(formData.weightUnit || "kg").toUpperCase()}
                     </span>{" "}
-                    · Qty: {parseInt(formData.quantity) || 1}
+                    Â· Qty: {parseInt(formData.quantity) || 1}
                   </div>
                   {formData.description && (
                     <div className="text-slate-500">{formData.description}</div>
@@ -736,7 +736,7 @@ const BookShipment = () => {
                   <div className="text-lg font-extrabold font-mono text-purple-700 dark:text-purple-400">
                     {quote
                       ? `${quote.totalAmount.toLocaleString()} ETB`
-                      : "—"}
+                      : "â€”"}
                   </div>
                 </div>
 

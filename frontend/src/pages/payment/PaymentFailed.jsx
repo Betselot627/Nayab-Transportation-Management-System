@@ -1,6 +1,6 @@
-import React from "react";
+﻿import React from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { XCircle, ArrowLeft, RefreshCw, ShoppingBag } from "lucide-react";
+import { CircleX as XCircle, ArrowLeft, RefreshCw, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 
 const PaymentFailed = () => {

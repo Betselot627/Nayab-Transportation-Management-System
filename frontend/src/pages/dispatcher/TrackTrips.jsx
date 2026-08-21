@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   TrendingUp,
@@ -9,7 +9,7 @@ import {
   ArrowRight,
   RefreshCw,
   Search,
-  CheckCircle,
+  CircleCheck as CheckCircle,
 } from "lucide-react";
 import { tripService } from "../../services/tripService";
 import toast from "react-hot-toast";

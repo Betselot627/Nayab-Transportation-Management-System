@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -7,7 +7,7 @@ import {
   Clock,
   Package,
   Eye,
-  CheckCircle,
+  CircleCheck as CheckCircle,
   Truck,
   TrendingUp,
   User,
@@ -64,32 +64,32 @@ const MyTrips = () => {
         borderStyle: "border-l-4 border-l-sky-500",
       },
       picked_up: {
-        label: "Picked Up ✓",
+        label: "Picked Up âœ“",
         badgeStyle: "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/20",
         borderStyle: "border-l-4 border-l-purple-500",
       },
       in_transit: {
-        label: "In Transit ✓",
+        label: "In Transit âœ“",
         badgeStyle: "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/20",
         borderStyle: "border-l-4 border-l-sky-500",
       },
       arrived: {
-        label: "Arrived ✓",
+        label: "Arrived âœ“",
         badgeStyle: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20",
         borderStyle: "border-l-4 border-l-amber-500",
       },
       arrived_at_destination: {
-        label: "Arrived ✓",
+        label: "Arrived âœ“",
         badgeStyle: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20",
         borderStyle: "border-l-4 border-l-amber-500",
       },
       completed: {
-        label: "Delivered ✓",
+        label: "Delivered âœ“",
         badgeStyle: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
         borderStyle: "border-l-4 border-l-emerald-600",
       },
       delivered: {
-        label: "Delivered ✓",
+        label: "Delivered âœ“",
         badgeStyle: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
         borderStyle: "border-l-4 border-l-emerald-600",
       },
@@ -222,7 +222,7 @@ const MyTrips = () => {
                       <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                         <MapPin className="w-4 h-4 text-slate-400" />
                         <span>
-                          {trip.shipmentId?.pickupLocation?.city || "N/A"} → {trip.shipmentId?.destination?.city || "N/A"}
+                          {trip.shipmentId?.pickupLocation?.city || "N/A"} â†’ {trip.shipmentId?.destination?.city || "N/A"}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">

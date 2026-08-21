@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import {
   ChevronLeft,
   ChevronRight,
-  Filter,
+  Funnel as Filter,
   Calendar,
   Clock,
   Info,
-  CheckCircle,
-  AlertTriangle,
+  CircleCheck as CheckCircle,
+  TriangleAlert as AlertTriangle,
   X,
 } from "lucide-react";
 import Badge from "../../components/common/Badge";
@@ -22,8 +22,8 @@ const VehicleAvailability = () => {
 
   // Mock Booked/Scheduled Vehicle Events
   const [events, setEvents] = useState([
-    { id: 1, title: "Toyota Hiace [Booked]", vehicle: "Toyota Hiace (AA-12345)", driver: "Abebe Kebede", date: "2026-08-01", timeSlot: "morning", type: "booked", desc: "Addis Ababa → Adama cargo delivery" },
-    { id: 2, title: "Isuzu Truck [Booked]", vehicle: "Isuzu Truck (AA-67890)", driver: "Meseret Haile", date: "2026-08-02", timeSlot: "afternoon", type: "booked", desc: "Adama → Hawassa heavy transit" },
+    { id: 1, title: "Toyota Hiace [Booked]", vehicle: "Toyota Hiace (AA-12345)", driver: "Abebe Kebede", date: "2026-08-01", timeSlot: "morning", type: "booked", desc: "Addis Ababa â†’ Adama cargo delivery" },
+    { id: 2, title: "Isuzu Truck [Booked]", vehicle: "Isuzu Truck (AA-67890)", driver: "Meseret Haile", date: "2026-08-02", timeSlot: "afternoon", type: "booked", desc: "Adama â†’ Hawassa heavy transit" },
     { id: 3, title: "Mercedes Sprinter [Maintenance]", vehicle: "Mercedes Sprinter (AA-44556)", driver: "N/A", date: "2026-08-01", timeSlot: "all-day", type: "maintenance", desc: "Engine overhaul diagnostics at Bole Garage" },
     { id: 4, title: "Hino 500 [Available]", vehicle: "Hino 500 (AA-11223)", driver: "Dawit Tesfaye", date: "2026-08-03", timeSlot: "morning", type: "available", desc: "Fleet standby availability" },
     { id: 5, title: "Mitsubishi Canter [Booked]", vehicle: "Mitsubishi Canter (AA-78901)", driver: "Solomon Girma", date: "2026-07-31", timeSlot: "evening", type: "booked", desc: "Mekelle localized retail delivery" },

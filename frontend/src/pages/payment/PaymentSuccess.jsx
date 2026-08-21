@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import {
-  CheckCircle,
-  AlertCircle,
+  CircleCheck as CheckCircle,
+  CircleAlert as AlertCircle,
   Loader,
   ArrowRight,
   FileText,

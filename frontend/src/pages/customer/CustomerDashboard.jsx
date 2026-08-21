@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { shipmentService } from "../../services/shipmentService";
 import {
   Package,
   TrendingUp,
   Clock,
-  CheckCircle,
+  CircleCheck as CheckCircle,
   Loader,
   Plus,
   MapPin,
@@ -216,7 +216,7 @@ const CustomerDashboard = () => {
                       <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
                         <MapPin className="h-4 w-4 text-slate-400" />
                         <span>
-                          {shipment.pickupLocation?.city} → {shipment.destination?.city}
+                          {shipment.pickupLocation?.city} â†’ {shipment.destination?.city}
                         </span>
                       </div>
                     </td>

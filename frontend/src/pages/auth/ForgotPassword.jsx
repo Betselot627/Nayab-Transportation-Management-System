@@ -1,11 +1,11 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Truck,
   Mail,
   ArrowLeft,
-  AlertCircle,
-  CheckCircle,
+  CircleAlert as AlertCircle,
+  CircleCheck as CheckCircle,
   Loader,
   Lock,
   KeyRound,

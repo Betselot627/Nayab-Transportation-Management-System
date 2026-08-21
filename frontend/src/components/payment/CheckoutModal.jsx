@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   X,
   Smartphone,
@@ -6,9 +6,9 @@ import {
   Lock,
   ArrowRight,
   ShieldCheck,
-  Loader2,
+  LoaderCircle as Loader2,
   Phone,
-  AlertCircle,
+  CircleAlert as AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { paymentService } from "../../services/paymentService";
@@ -296,7 +296,7 @@ const CheckoutModal = ({ isOpen, onClose, shipment }) => {
                 onClick={() => setStep("selection")}
                 className="text-xs font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1 hover:underline cursor-pointer"
               >
-                ← Back to payment methods
+                â† Back to payment methods
               </button>
 
               <div>
@@ -355,7 +355,7 @@ const CheckoutModal = ({ isOpen, onClose, shipment }) => {
                   onClick={() => setStep("phone")}
                   className="text-xs font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1 hover:underline cursor-pointer"
                 >
-                  ← Back to phone input
+                  â† Back to phone input
                 </button>
               </div>
 

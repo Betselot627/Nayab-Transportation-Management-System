@@ -1,6 +1,6 @@
-import React from "react";
+﻿import React from "react";
 import {
-  CheckCircle2,
+  CircleCheckBig as CheckCircle2,
   Clock,
   Truck,
   Package,
@@ -156,10 +156,10 @@ const ShipmentTimeline = ({
       : null;
 
   const nextActionLabels = {
-    picked_up: "Mark as Picked Up ✓",
-    in_transit: "Start Transit / In Transit ✓",
-    arrived: "Mark as Arrived ✓",
-    delivered: "Confirm Delivered ✓",
+    picked_up: "Mark as Picked Up âœ“",
+    in_transit: "Start Transit / In Transit âœ“",
+    arrived: "Mark as Arrived âœ“",
+    delivered: "Confirm Delivered âœ“",
   };
 
   return (
@@ -243,7 +243,7 @@ const ShipmentTimeline = ({
                             : "text-slate-400 dark:text-slate-500"
                         }`}
                       >
-                        {step.title} {isCompleted && "✓"}
+                        {step.title} {isCompleted && "âœ“"}
                       </p>
                     </div>
 

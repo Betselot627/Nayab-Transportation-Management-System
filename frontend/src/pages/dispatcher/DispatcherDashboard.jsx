@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Package,
@@ -9,7 +9,7 @@ import {
   Clock,
   ArrowRight,
   ShieldCheck,
-  CheckCircle,
+  CircleCheck as CheckCircle,
   RefreshCw,
 } from "lucide-react";
 import { shipmentService } from "../../services/shipmentService";
@@ -218,7 +218,7 @@ const DispatcherDashboard = () => {
                     <div className="text-xs text-slate-500 flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-slate-400" />
                       <span>{s.pickupLocation?.city || "Origin"}</span>
-                      <span>→</span>
+                      <span>â†’</span>
                       <span>{s.destination?.city || "Destination"}</span>
                     </div>
                   </div>
@@ -268,7 +268,7 @@ const DispatcherDashboard = () => {
                     </div>
                     <div className="text-xs text-slate-500 flex items-center gap-2">
                       <span>Driver: {t.driverId?.fullName || "Assigned Driver"}</span>
-                      <span>•</span>
+                      <span>â€¢</span>
                       <span>Vehicle: {t.vehicleId?.plateNumber || "Assigned"}</span>
                     </div>
                   </div>

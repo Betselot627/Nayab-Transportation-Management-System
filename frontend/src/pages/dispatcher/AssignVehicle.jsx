@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Truck, ShieldCheck, MapPin, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Truck, ShieldCheck, MapPin, RefreshCw, CircleCheckBig as CheckCircle2 } from "lucide-react";
 import { vehicleService } from "../../services/vehicleService";
 import { shipmentService } from "../../services/shipmentService";
 import toast from "react-hot-toast";

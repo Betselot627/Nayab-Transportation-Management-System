@@ -1,20 +1,20 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { tripService } from "../../services/tripService";
 import {
   Truck,
   MapPin,
   Clock,
-  CheckCircle,
+  CircleCheck as CheckCircle,
   Loader,
   Navigation,
   Package,
-  AlertCircle,
+  CircleAlert as AlertCircle,
   TrendingUp,
   Activity,
-  BarChart3,
+  ChartColumn as BarChart3,
   Calendar,
-  AlertTriangle,
+  TriangleAlert as AlertTriangle,
 } from "lucide-react";
 import {
   BarChart,
@@ -172,7 +172,7 @@ const DriverDashboard = () => {
         reminders.push({
           id: `rem-critical-${t._id}`,
           title: "Pickup Time Approaching (Within 2 Hours)",
-          message: `🚨 Critical Alert: Pickup for Trip ${t.tripNumber} to ${shipment.destination?.city} is scheduled in ${Math.round(diffHours * 60)} minutes!`,
+          message: `ðŸš¨ Critical Alert: Pickup for Trip ${t.tripNumber} to ${shipment.destination?.city} is scheduled in ${Math.round(diffHours * 60)} minutes!`,
           color: "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400",
           icon: <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />,
         });
@@ -180,7 +180,7 @@ const DriverDashboard = () => {
         reminders.push({
           id: `rem-day-${t._id}`,
           title: "Scheduled Shipment Today",
-          message: `📅 Today's Run: Trip ${t.tripNumber} starts today! Scheduled pickup: ${pickupDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
+          message: `ðŸ“… Today's Run: Trip ${t.tripNumber} starts today! Scheduled pickup: ${pickupDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
           color: "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400",
           icon: <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />,
         });
@@ -188,7 +188,7 @@ const DriverDashboard = () => {
         reminders.push({
           id: `rem-upcoming-${t._id}`,
           title: "Upcoming Run (Within 24 Hours)",
-          message: `⏰ Reminder: Trip ${t.tripNumber} starts in ${Math.round(diffHours)} hours (scheduled for ${pickupDate.toLocaleDateString()}).`,
+          message: `â° Reminder: Trip ${t.tripNumber} starts in ${Math.round(diffHours)} hours (scheduled for ${pickupDate.toLocaleDateString()}).`,
           color: "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400",
           icon: <Clock className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />,
         });
@@ -426,7 +426,7 @@ const DriverDashboard = () => {
                           <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-medium">
                             <MapPin className="h-4 w-4 text-slate-400 font-semibold" />
                             <span>
-                              {trip.shipmentId?.pickupLocation?.city} → {trip.shipmentId?.destination?.city}
+                              {trip.shipmentId?.pickupLocation?.city} â†’ {trip.shipmentId?.destination?.city}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-medium">

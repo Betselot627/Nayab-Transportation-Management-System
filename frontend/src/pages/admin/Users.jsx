@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import api from "../../services/api";
 import {
   Users as UsersIcon,
   Plus,
-  Edit,
+  Pencil as Edit,
   Trash2,
   Search,
   Loader,

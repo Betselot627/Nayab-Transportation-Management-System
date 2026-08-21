@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import Sidebar from "../components/common/Sidebar";
 import GlobalSearch from "../components/common/GlobalSearch";
@@ -13,7 +13,7 @@ import {
   Users,
   Calendar,
   Wrench,
-  BarChart3,
+  ChartColumn as BarChart3,
   Settings as SettingsIcon,
   Menu,
 } from "lucide-react";

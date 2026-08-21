@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { shipmentService } from "../../services/shipmentService";
 import {
@@ -6,7 +6,7 @@ import {
   Search,
   Loader,
   Package,
-  CheckCircle,
+  CircleCheck as CheckCircle,
   Clock,
   TrendingUp,
   User,

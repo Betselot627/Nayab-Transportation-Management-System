@@ -1,6 +1,6 @@
-import { Link, useNavigate } from "react-router-dom";
+﻿import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { Truck, Home, ArrowLeft } from "lucide-react";
+import { Truck, House as Home, ArrowLeft } from "lucide-react";
 import ThemeToggle from "../../components/common/ThemeToggle";
 
 const NotFound = () => {

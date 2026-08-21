@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { vehicleService } from "../../services/vehicleService";
 import Loading from "../../components/common/Loading";
@@ -6,17 +6,17 @@ import {
   Plus,
   Truck,
   FileText,
-  AlertCircle,
+  CircleAlert as AlertCircle,
   Clock,
-  CheckCircle2,
-  XCircle,
+  CircleCheckBig as CheckCircle2,
+  CircleX as XCircle,
   User,
   Eye,
   Calendar,
   X,
   ShieldAlert,
   Search,
-  Filter,
+  Funnel as Filter,
   Sparkles,
   ExternalLink,
   Fuel,
@@ -490,7 +490,7 @@ const MyVehicles = () => {
                   {selectedVehicle.manufacturer} {selectedVehicle.model}
                 </h3>
                 <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                  Plate: {selectedVehicle.plateNumber} • {selectedVehicle.year}
+                  Plate: {selectedVehicle.plateNumber} â€¢ {selectedVehicle.year}
                 </p>
               </div>
               <button

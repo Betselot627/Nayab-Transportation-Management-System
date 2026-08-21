@@ -1,10 +1,10 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import {
-  BarChart3,
+  ChartColumn as BarChart3,
   Calendar,
   Download,
   FileText,
-  Filter,
+  Funnel as Filter,
   TrendingUp,
   Truck,
   Users,
@@ -74,11 +74,11 @@ const Reports = () => {
       ],
       headers: ["Booking #", "Customer", "Route Details", "Assigned Driver", "Status", "Fare (ETB)"],
       rows: [
-        ["B001", "Almaz Belay", "Addis Ababa → Adama", "Abebe Kebede", "Assigned", "8,500"],
-        ["B002", "Bekele Zewde", "Adama → Hawassa", "Meseret Haile", "Running", "14,000"],
-        ["B003", "Marta Kassa", "Hawassa → Addis Ababa", "Dawit Tesfaye", "Completed", "9,800"],
-        ["B004", "Yonas Alemu", "Bahir Dar → Gondar", "Tigist Alemayehu", "Pending", "11,500"],
-        ["B005", "Helen Solomon", "Mekelle → Addis Ababa", "Solomon Girma", "Cancelled", "18,200"],
+        ["B001", "Almaz Belay", "Addis Ababa â†’ Adama", "Abebe Kebede", "Assigned", "8,500"],
+        ["B002", "Bekele Zewde", "Adama â†’ Hawassa", "Meseret Haile", "Running", "14,000"],
+        ["B003", "Marta Kassa", "Hawassa â†’ Addis Ababa", "Dawit Tesfaye", "Completed", "9,800"],
+        ["B004", "Yonas Alemu", "Bahir Dar â†’ Gondar", "Tigist Alemayehu", "Pending", "11,500"],
+        ["B005", "Helen Solomon", "Mekelle â†’ Addis Ababa", "Solomon Girma", "Cancelled", "18,200"],
       ],
     },
     maintenance: {

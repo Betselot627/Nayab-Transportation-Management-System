@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef } from "react";
+﻿import React, { useState, useContext, useEffect, useRef } from "react";
 import {
   User,
   Mail,
@@ -8,8 +8,8 @@ import {
   Save,
   FileText,
   Upload,
-  CheckCircle,
-  AlertCircle,
+  CircleCheck as CheckCircle,
+  CircleAlert as AlertCircle,
   Camera,
   Trash2,
   Eye,

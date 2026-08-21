@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Package,
   Search,
-  Filter,
+  Funnel as Filter,
   MapPin,
   Calendar,
   Truck,
   User,
-  CheckCircle,
+  CircleCheck as CheckCircle,
   Clock,
   ArrowRight,
   RefreshCw,
@@ -198,7 +198,7 @@ const Bookings = () => {
                       <div className="flex items-center gap-1.5 text-xs">
                         <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span>{s.pickupLocation?.city || "Origin"}</span>
-                        <span>→</span>
+                        <span>â†’</span>
                         <span>{s.destination?.city || "Destination"}</span>
                       </div>
                     </td>
@@ -247,7 +247,7 @@ const Bookings = () => {
                 Assign Fleet to Shipment #{selectedShipment.shipmentNumber}
               </h3>
               <p className="text-xs text-slate-500 mt-1">
-                Route: {selectedShipment.pickupLocation?.city} → {selectedShipment.destination?.city} | Cargo:{" "}
+                Route: {selectedShipment.pickupLocation?.city} â†’ {selectedShipment.destination?.city} | Cargo:{" "}
                 {selectedShipment.cargoDetails?.weight} {selectedShipment.cargoDetails?.unit}
               </p>
             </div>
@@ -275,9 +275,9 @@ const Bookings = () => {
                         <span className="font-bold">
                           #{idx + 1} {s.driver.fullName}
                         </span>
-                        {" · "}
+                        {" Â· "}
                         {s.vehicle.plateNumber}
-                        {" · "}
+                        {" Â· "}
                         <span className="font-mono">
                           {s.estimatedDriverPayment?.toLocaleString()} ETB
                         </span>

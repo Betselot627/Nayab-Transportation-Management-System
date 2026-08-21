@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { vehicleService } from "../../services/vehicleService";
 import {
@@ -7,7 +7,7 @@ import {
   Trash2,
   X,
   Download,
-  Filter,
+  Funnel as Filter,
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
@@ -17,13 +17,13 @@ import {
   Calendar,
   ExternalLink,
   Loader,
-  CheckCircle2,
+  CircleCheckBig as CheckCircle2,
   Clock,
-  XCircle,
+  CircleX as XCircle,
   ShieldAlert,
   Eye,
   Check,
-  AlertTriangle,
+  TriangleAlert as AlertTriangle,
   RefreshCw,
   Phone,
   Mail,
@@ -786,7 +786,7 @@ const Vehicles = () => {
                   {selectedVehicle.manufacturer} {selectedVehicle.model}
                 </h3>
                 <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                  Plate: {selectedVehicle.plateNumber} • Year:{" "}
+                  Plate: {selectedVehicle.plateNumber} â€¢ Year:{" "}
                   {selectedVehicle.year}
                 </p>
               </div>

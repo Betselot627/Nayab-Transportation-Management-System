@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { shipmentService } from "../../services/shipmentService";
 import { paymentService } from "../../services/paymentService";
@@ -19,7 +19,7 @@ import {
   CreditCard,
   FileText,
   Loader,
-  CheckCircle,
+  CircleCheck as CheckCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ReceiptModal from "../../components/payment/ReceiptModal";

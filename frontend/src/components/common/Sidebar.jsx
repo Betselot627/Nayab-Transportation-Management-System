@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+﻿import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import ThemeToggle from "./ThemeToggle";
 import {
@@ -13,7 +13,7 @@ import {
   User,
   FileText,
   Wrench,
-  BarChart3,
+  ChartColumn as BarChart3,
   MapPin,
   Calendar,
   BookOpen,

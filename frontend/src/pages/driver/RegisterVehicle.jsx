@@ -1,12 +1,12 @@
-import { useState, useRef } from "react";
+﻿import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { vehicleService } from "../../services/vehicleService";
 import {
   Upload,
   Camera,
   FileText,
-  CheckCircle2,
-  AlertCircle,
+  CircleCheckBig as CheckCircle2,
+  CircleAlert as AlertCircle,
   Trash2,
   Image,
   Truck,

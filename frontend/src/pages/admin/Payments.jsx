@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   DollarSign,
-  CheckCircle,
+  CircleCheck as CheckCircle,
   Clock,
-  XCircle,
+  CircleX as XCircle,
   Download,
   FileText,
   Search,
@@ -276,7 +276,7 @@ const Payments = () => {
                         </span>
                         {p.shipmentId?.pickupLocation?.city && (
                           <span className="block text-[11px] text-slate-400">
-                            {p.shipmentId.pickupLocation.city} → {p.shipmentId.destination?.city}
+                            {p.shipmentId.pickupLocation.city} â†’ {p.shipmentId.destination?.city}
                           </span>
                         )}
                       </td>

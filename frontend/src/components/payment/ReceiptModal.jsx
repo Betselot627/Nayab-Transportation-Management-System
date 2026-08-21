@@ -1,5 +1,5 @@
-import React, { useRef } from "react";
-import { X, Printer, Download, CheckCircle, ShieldCheck, Truck, Package, MapPin } from "lucide-react";
+﻿import React, { useRef } from "react";
+import { X, Printer, Download, CircleCheck as CheckCircle, ShieldCheck, Truck, Package, MapPin } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const ReceiptModal = ({ isOpen, onClose, receipt }) => {
@@ -84,7 +84,7 @@ const ReceiptModal = ({ isOpen, onClose, receipt }) => {
               </div>
               <div class="row">
                 <span class="label">Route:</span>
-                <span class="val">${receipt.shipment?.pickupCity || receipt.shipment?.pickup} → ${receipt.shipment?.destinationCity || receipt.shipment?.destination}</span>
+                <span class="val">${receipt.shipment?.pickupCity || receipt.shipment?.pickup} â†’ ${receipt.shipment?.destinationCity || receipt.shipment?.destination}</span>
               </div>
               <div class="row">
                 <span class="label">Cargo & Weight:</span>
@@ -203,7 +203,7 @@ const ReceiptModal = ({ isOpen, onClose, receipt }) => {
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 dark:text-slate-400">Delivery Route:</span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {receipt.shipment?.pickupCity || receipt.shipment?.pickup} → {receipt.shipment?.destinationCity || receipt.shipment?.destination}
+                  {receipt.shipment?.pickupCity || receipt.shipment?.pickup} â†’ {receipt.shipment?.destinationCity || receipt.shipment?.destination}
                 </span>
               </div>
               <div className="flex justify-between items-center">

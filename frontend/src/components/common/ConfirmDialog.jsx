@@ -1,5 +1,5 @@
-import React from "react";
-import { AlertTriangle, X } from "lucide-react";
+﻿import React from "react";
+import { TriangleAlert as AlertTriangle, X } from "lucide-react";
 
 const ConfirmDialog = ({
   isOpen,

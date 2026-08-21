@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Clock, AlertCircle, Save, ArrowLeft, Navigation, CheckCircle } from "lucide-react";
+import { MapPin, Clock, CircleAlert as AlertCircle, Save, ArrowLeft, Navigation, CircleCheck as CheckCircle } from "lucide-react";
 import { tripService } from "../../services/tripService";
 import ShipmentTimeline from "../../components/common/ShipmentTimeline";
 import toast, { Toaster } from "react-hot-toast";
@@ -283,9 +283,9 @@ const UpdateStatus = () => {
             Update Guidelines
           </h4>
           <ul className="text-green-800 text-xs space-y-1 font-medium">
-            <li>• Update your current status address regularly so customers can track you.</li>
-            <li>• Use capturing geolocation to populate browser latitude and longitude points.</li>
-            <li>• Add notes if you experience delays or checkpoints.</li>
+            <li>â€¢ Update your current status address regularly so customers can track you.</li>
+            <li>â€¢ Use capturing geolocation to populate browser latitude and longitude points.</li>
+            <li>â€¢ Add notes if you experience delays or checkpoints.</li>
           </ul>
         </div>
       </div>
